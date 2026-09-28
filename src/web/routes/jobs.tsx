@@ -81,6 +81,7 @@ import {
 } from '../../resume/prompts';
 import { withTableAliases } from '../../resume/keyword-aliases';
 import { loadKeywordMatcher, type CountedKeyword } from '../../resume/keyword-matcher';
+import { termUsage, type TermUsage } from '../../resume/usage';
 import { factCheck } from '../../resume/fact-check';
 import { buildLetterDocx, DOCX_MIME } from '../../resume/docx-write';
 import { buildLetterPdf } from '../../resume/pdf-write';
@@ -353,12 +354,15 @@ jobsRoute.post('/jobs/new', async (c) => {
  * often the posting repeats the term, each row carrying that count (§5).
  */
 async function orderedKeywords(
-  match: { keywords: unknown } | null,
+  match: { keywords: unknown; resumeText: string } | null,
   posting: string,
-): Promise<CountedKeyword[]> {
+): Promise<(CountedKeyword & { usage?: TermUsage })[]> {
   if (!match) return [];
   const matcher = await loadKeywordMatcher();
-  return matcher.orderKeywords(readKeywords(match.keywords).map(withTableAliases), posting);
+  const ordered = matcher.orderKeywords(readKeywords(match.keywords).map(withTableAliases), posting);
+  // How long and how lately the judged text shows each term at work (TASKS R8) — read on every view, never stored.
+  const usage = termUsage(ordered, match.resumeText, matcher, new Date());
+  return ordered.map((k) => (usage.has(k.term) ? { ...k, usage: usage.get(k.term) } : k));
 }
 
 jobsRoute.get('/jobs/:id', async (c) => {
