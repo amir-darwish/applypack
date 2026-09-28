@@ -69,7 +69,7 @@ runsRoute.get('/runs/fetch-now/:id', (c) => {
     );
   }
   if (run.stage === 'done') {
-    const { kind, text } = summarizeFetchRun(run.stats ?? {});
+    const { kind, text } = summarizeFetchRun(run.stats ?? {}, typeof run.scope === 'object' ? `Checked ${run.scope.name}` : undefined);
     return flashRedirect(run.backUrl, kind, text);
   }
   return c.html(<FetchRunPage run={run} />);

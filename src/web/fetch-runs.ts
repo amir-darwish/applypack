@@ -14,8 +14,11 @@ import { isFailureStatus } from '../fetchers/source-health';
  */
 
 export type FetchRunStage = 'fetch' | 'store' | 'done' | 'error';
-/** What the walk asks: every due source, or the aggregators alone (the wizard's test search). */
-export type FetchScope = 'every' | 'aggregators';
+/**
+ * What the walk asks: every due source, the aggregators alone (the wizard's
+ * test search), or one company — the watchlist's Check now (TASKS S23).
+ */
+export type FetchScope = 'every' | 'aggregators' | { companyId: number; name: string };
 
 export const FETCH_RUN_STEPS: FetchRunStage[] = ['fetch', 'store'];
 

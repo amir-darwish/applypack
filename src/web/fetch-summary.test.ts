@@ -64,3 +64,8 @@ test('aborted runs and a blank profile are named honestly', () => {
   assert.equal(midRun.kind, 'warn');
   assert.match(midRun.text, /paused mid-run/);
 });
+
+test('summarizeFetchRun opens with the label the run was started under', () => {
+  const { text } = summarizeFetchRun({ fetched: 0, sources: 1, sourcesUnchanged: 1, durationMs: 400 }, 'Checked Acme');
+  assert.match(text, /^Checked Acme: nothing new in /);
+});

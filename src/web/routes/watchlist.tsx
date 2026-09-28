@@ -22,6 +22,8 @@ import {
 } from '../watchlist-runs';
 import { WatchlistPreviewPage, WatchlistRunPage } from '../pages/watchlist';
 import { newLines, pageLines, pasteSummary, roleLines, titleWordsOf } from '../../watchlist/paste';
+import { beginFetchNow } from '../fetch-now';
+import { activeFetchRun } from '../fetch-runs';
 import { listActiveProfiles } from '../../profiles';
 import { isBlankProfile } from '../../profile-guards';
 import { formatDate } from '../format';
@@ -198,17 +200,28 @@ watchlistRoute.post('/companies/:id/watch', async (c) => {
   return flashRedirect('/companies', 'ok', `${company.name} updated.`);
 });
 
-/** "Check now": due on the next heartbeat, whatever the interval said. */
+/**
+ * "Check now" (TASKS S23): that one company, now, on the progress page every
+ * other fetch uses. It shares the fetch lock, so while another fetch runs the
+ * row is made due on the next heartbeat instead, as it always was.
+ */
 watchlistRoute.post('/companies/:id/check-now', async (c) => {
   const id = idParam(c.req.param('id'));
   if (!Number.isFinite(id)) return c.text('Bad id', 400);
-  const company = await prisma.company.findUnique({ where: { id }, select: { name: true } });
+  const company = await prisma.company.findUnique({ where: { id }, select: { name: true, active: true } });
   if (!company) return c.text('Not found', 404);
+  if (!company.active) {
+    return flashRedirect('/companies', 'err', `${company.name} is switched off — turn it on to check it.`);
+  }
+  if (activeFetchRun() === null) {
+    const run = await beginFetchNow({ backUrl: '/companies', scope: { companyId: id, name: company.name } });
+    return c.redirect(`/runs/fetch-now/${run.id}`, 303);
+  }
   await prisma.company.update({ where: { id }, data: { nextCheckAt: null } });
   return flashRedirect(
     '/companies',
     'ok',
-    `${company.name} will be checked on the next tick — press "Fetch now" to run one straight away.`,
+    `A fetch is already running — ${company.name} will be checked on the next tick.`,
   );
 });
 
