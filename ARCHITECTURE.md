@@ -60,6 +60,7 @@ sequenceDiagram
   participant sendAlert as sendAlert<br/>notifier.ts
 
   cron->>runFetchJob: tick, through recordCronRun
+  runFetchJob->>prisma: tryFetchLock (another fetch holds it: stop here, reason overlap)
   runFetchJob->>runFetchJob: syncFranceTravail (the licence's daily check)
   runFetchJob->>deliverHeldAlerts: matches held by earlier ticks, when shouldDeliverHeld allows this beat and Alerts are on
   runFetchJob->>runFetchJob: deliverPageChanges (careers-page changes still pending, under the same rules)
@@ -225,6 +226,7 @@ src/
   init.ts                      ← boot: prisma migrate deploy (db push without migrations) + seed
                                  + first boot: a blank profile, alert targets from .env
   config.ts                    ← zod-validated env (worker + web); an empty DATABASE_URL reads the built-in database's db.json
+  db-url.ts                    ← pure: a database URL for a client that must hold one connection (the fetch lock)
   logger.ts                    ← pino instance: JSON when NODE_ENV=production (Docker), pino-pretty otherwise
   db.ts                        ← PrismaClient singleton
   types.ts                     ← NormalizedJob, ClaudeClassification, ClassifyInput, AlertJob
@@ -421,7 +423,8 @@ src/
     hn-parser.ts               ← pure heuristic parser
 
   jobs/
-    fetch-job.ts                ← runFetchJob (cron entry; {manual:true} from "Fetch now")
+    fetch-job.ts                ← runFetchJob (cron entry; {manual:true} from "Fetch now"), under the fetch lock
+    fetch-lock.ts               ← tryFetchLock: the Postgres advisory lock that keeps one fetch running across processes
     fetch-pause.ts              ← makeFetchPauseProbe: a pause on /settings stops a running tick within seconds
     process-jobs.ts             ← processNormalizedJobs: the shared inner loop used by fetch + HN
     verdict-merge.ts            ← pure: one verdict per search, the winner, the score line (ADR 0028)

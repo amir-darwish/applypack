@@ -106,6 +106,10 @@ describe('summarizeRun', () => {
     assert.deepEqual(summarizeRun('hn-hiring', { skipped: 1, reason: 'source-disabled' }), ['The source is switched off on Settings → Sources']);
   });
 
+  it('says a tick met another fetch and stood down', () => {
+    assert.deepEqual(summarizeRun('fetch', { skipped: 1, reason: 'overlap' }), ['Another fetch was running; this one did nothing']);
+  });
+
   it('has nothing to say about an empty record', () => {
     assert.deepEqual(summarizeRun('fetch', {}), []);
   });

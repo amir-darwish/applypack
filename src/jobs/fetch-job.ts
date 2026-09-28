@@ -14,6 +14,7 @@ import { deliverHeldAlerts } from './alert-delivery';
 import { recordCandidatesFromText } from '../discovery';
 import { makeFetchPauseProbe } from './fetch-pause';
 import { processNormalizedJobs, type ProcessStats } from './process-jobs';
+import { tryFetchLock } from './fetch-lock';
 import type { CronStats, SourceStat } from './cron-run';
 
 export interface FetchJobOptions {
@@ -31,7 +32,25 @@ export interface FetchJobOptions {
   places?: FetchWalkOptions['places'];
 }
 
+/**
+ * The tick, one at a time: the worker's cron, "Fetch now" and `fetch-once.js`
+ * share the lock (`fetch-lock.ts`), and the one that cannot take it records
+ * `overlap` and does nothing — no source read, no alert sent, no AI spent.
+ */
 export async function runFetchJob(opts: FetchJobOptions = {}): Promise<{ stats: CronStats }> {
+  const lock = await tryFetchLock();
+  if (!lock) {
+    logger.warn({ manual: opts.manual === true }, 'fetch-job: another fetch is running; skipped');
+    return { stats: { skipped: 1, reason: 'overlap' } };
+  }
+  try {
+    return await fetchUnderLock(opts);
+  } finally {
+    await lock.release();
+  }
+}
+
+async function fetchUnderLock(opts: FetchJobOptions): Promise<{ stats: CronStats }> {
   const started = Date.now();
   logger.info({ manual: opts.manual === true }, 'fetch-job: start');
 

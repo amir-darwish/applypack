@@ -28,6 +28,15 @@ let instanceId = '';
 async function main(): Promise<void> {
   await init();
 
+  // node-cron's own notes (a missed beat after the machine slept, a skipped
+  // overlap) go where everything else goes, not to a bare console.
+  cron.setLogger({
+    info: (message) => logger.debug({ cron: true }, message),
+    debug: (message) => logger.debug({ cron: true }, String(message)),
+    warn: (message) => logger.warn({ cron: true }, message),
+    error: (message, err) => logger.error({ cron: true, err }, String(message)),
+  });
+
   // Every install ships the same seed data; without this they would all ask
   // the same board in the same second (docs/scale-plan.md §2).
   instanceId = await getInstanceId();
@@ -107,6 +116,9 @@ function registerCron(
   fn: () => Promise<void>,
 ): void {
   const schedule = spreadMinute(expression, instanceId, name);
+  // noOverlap: a beat that finds its own previous run still going is
+  // skipped in this process. Across processes the fetch lock does the same
+  // (jobs/fetch-lock.ts), because "Fetch now" runs in the dashboard.
   cron.schedule(
     schedule,
     async () => {
@@ -129,7 +141,7 @@ function registerCron(
         );
       }
     },
-    { timezone: config.TZ },
+    { timezone: config.TZ, name, noOverlap: true },
   );
   logger.info({ name, schedule, tz: config.TZ }, 'cron: registered');
 }

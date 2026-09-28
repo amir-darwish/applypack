@@ -10,6 +10,7 @@ import type { CronStats } from '../jobs/cron-run';
 /** Why a run did nothing, as a sentence. The codes are the ones src/jobs/* write into `reason`. */
 const REASON: Record<string, string> = {
   'fetching-paused': 'Fetching is paused',
+  overlap: 'Another fetch was running; this one did nothing',
   'paused-mid-run': 'Fetching was paused mid-run; nothing stored',
   'outside-schedule': "Outside the schedule's hours",
   'no-active-profile': 'No running search',
