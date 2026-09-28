@@ -129,24 +129,66 @@ for the classifier.
 
 ## OpenAI-compatible API (OpenAI, OpenRouter, Groq, local models)
 
-One engine covers every server that speaks `POST /chat/completions`:
+One engine covers every server that speaks `POST /chat/completions`. Its
+card on `/settings` → AI engine carries the **Server address** and the key;
+both are stored in your database, `.env` is the fallback:
 
-| Target | `.env` |
-| --- | --- |
-| OpenAI | `OPENAI_API_KEY=sk-...` (base URL default is `https://api.openai.com/v1`) |
-| OpenRouter | `OPENAI_API_KEY=sk-or-...`, `OPENAI_BASE_URL=https://openrouter.ai/api/v1` |
-| Groq | `OPENAI_API_KEY=gsk_...`, `OPENAI_BASE_URL=https://api.groq.com/openai/v1` |
-| Gemini API key, no CLI | `OPENAI_API_KEY=<AI Studio key>`, `OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai` |
-| Local (LM Studio / Ollama) | `OPENAI_API_KEY=local`, `OPENAI_BASE_URL=http://localhost:1234/v1` |
+| Target | Server address | Key |
+| --- | --- | --- |
+| OpenAI | `https://api.openai.com/v1` (the default) | `sk-...` |
+| OpenRouter | `https://openrouter.ai/api/v1` | `sk-or-...` |
+| Groq | `https://api.groq.com/openai/v1` | `gsk_...` |
+| Gemini API key, no CLI | `https://generativelanguage.googleapis.com/v1beta/openai` | the AI Studio key |
+| Ollama on this machine | `http://127.0.0.1:11434/v1` | none |
+| LM Studio on this machine | `http://127.0.0.1:1234/v1` | none |
 
-The model slots here are free text — type whatever id your endpoint serves
-(`gpt-5-mini`, `meta-llama/llama-3.3-70b-instruct`, …). `OPENAI_MODEL` in
-`.env` sets the default for empty slots.
+The `.env` names are `OPENAI_BASE_URL` and `OPENAI_API_KEY`; an address or
+a key saved on the card wins over them, and **Use .env** forgets the saved
+address. A server on the internet must be `https://`, and the address never
+carries a key.
 
-**Local:** add the lines, restart, **Test**.
-**Docker:** add the lines, `docker compose up -d`. For a local model server,
-use `http://host.docker.internal:1234/v1` as the base URL so the container
-can reach your host.
+**Test** first asks the server what it runs (`GET {address}/models`), then
+makes one tiny call. The answer names the models, fills the model fields'
+suggestions, and says why nothing worked: nothing listening, an address
+without its `/v1`, a model the server does not list. The model slots stay
+free text — type whatever id your server serves (`gpt-5-mini`,
+`meta-llama/llama-3.3-70b-instruct`, `llama3.1:8b`). `OPENAI_MODEL` in
+`.env` sets the default for empty slots; with neither, Test uses the first
+model the server lists.
+
+### A model on this computer (Ollama, LM Studio)
+
+A server on this machine or your own network needs no key, costs nothing
+and keeps the text there: the card says **Local — free**, the spend ledger
+counts its calls apart from billed and plan money, and robots.txt treats an
+install whose every engine is local as no vendor's crawler (ADR 0036
+addendum 2026-09-28).
+
+The quickest way in is step 1 of `/welcome`: it asks Ollama's and LM
+Studio's default addresses whether they are running and offers **Use it**
+with the models they list. That stores the address, puts this engine first
+with the chosen model in every slot, and keeps whatever you had behind it
+as the fallback. On `/settings` the same thing is the Server address plus
+the three model fields.
+
+Three things decide whether it works well, today by hand:
+
+- **Context length.** Ollama cuts a long prompt from the start — the rules
+  — without an error. Start it with `OLLAMA_CONTEXT_LENGTH=16384` (or
+  more); in LM Studio set the context length when you load the model.
+- **One call at a time.** A local server shares one GPU between the calls
+  it gets; set `AI_CONCURRENCY=1` in `.env` so three do not run at a third
+  of the speed each and time out together.
+- **The model.** A small model scores postings less reliably than a hosted
+  one, and a resume comparison or a letter asks more of it than scoring
+  does. Which local models clear the bar is not measured here yet, and a
+  reply that does not parse is asked again of the same engine, once.
+
+**Docker:** the containers reach your machine as `host.docker.internal`,
+so the address is `http://host.docker.internal:11434/v1` (Ollama) or
+`http://host.docker.internal:1234/v1` (LM Studio). Docker Desktop knows
+that name; `docker-compose.yml` maps it on Linux too, where Ollama must
+also listen beyond loopback (`OLLAMA_HOST=0.0.0.0`).
 
 ## Codex CLI (ChatGPT subscription)
 

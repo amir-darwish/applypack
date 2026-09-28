@@ -11,6 +11,7 @@ import {
   providerUnusable,
   resolveAiEngine,
   toggleAiEngine,
+  withEngineFirst,
   type AiEngineEnv,
 } from './ai-engine';
 
@@ -18,6 +19,7 @@ const ENV: AiEngineEnv = {
   provider: 'claude_code',
   hasAnthropicKey: false,
   hasOpenAiKey: false,
+  openAiLocal: false,
   geminiUsable: true,
   codexUsable: false,
   classifierModel: 'claude-haiku-4-5-20251001',
@@ -180,6 +182,11 @@ describe('providerUnusable / isAiProviderId', () => {
     assert.equal(providerUnusable('claude_code', ENV), false);
   });
 
+  it('takes no key for a server on this machine', () => {
+    assert.equal(providerUnusable('openai_api', { ...ENV, openAiLocal: true }), false);
+    assert.equal(providerUnusable('openai_api', { ...ENV, hasOpenAiKey: true }), false);
+  });
+
   it('accepts the five known ids and nothing else', () => {
     assert.equal(isAiProviderId('codex_cli'), true);
     assert.equal(isAiProviderId('openai_api'), true);
@@ -193,6 +200,7 @@ describe('cover role', () => {
     provider: 'claude_code' as const,
     hasAnthropicKey: true,
     hasOpenAiKey: false,
+    openAiLocal: false,
     geminiUsable: true,
     codexUsable: false,
     classifierModel: 'claude-haiku-4-5-20251001',
@@ -249,5 +257,47 @@ describe('bindingProviders', () => {
     const env: AiEngineEnv = { ...ENV, provider: 'anthropic_api' };
     const engine = resolveAiEngine({ order: ['codex_cli', 'gemini_cli'], models: {} }, env);
     assert.deepEqual(bindingProviders(engine, env.provider), ['gemini_cli', 'codex_cli', 'anthropic_api']);
+  });
+});
+
+// ADR 0036 addendum 2026-09-28: a model on this machine is nobody's crawler.
+describe('a local OpenAI-compatible server', () => {
+  const local: AiEngineEnv = { ...ENV, provider: 'anthropic_api', openAiLocal: true };
+
+  it('binds nothing on an install whose every engine it is', () => {
+    const engine = resolveAiEngine({ order: ['openai_api'], models: {} }, local);
+    assert.deepEqual(bindingProviders(engine, local.provider, local), []);
+    assert.deepEqual(aiCrawlerTokens(bindingProviders(engine, local.provider, local), local), []);
+  });
+
+  it('keeps the rule for everything around it: a skipped engine, a second engine, a remote server', () => {
+    const skipped = resolveAiEngine({ order: ['openai_api', 'anthropic_api'], models: {} }, local);
+    assert.deepEqual(aiCrawlerTokens(bindingProviders(skipped, local.provider, local), local), aiCrawlerTokens(['anthropic_api']));
+
+    const withCli = resolveAiEngine({ order: ['openai_api', 'claude_code'], models: {} }, local);
+    const tokens = aiCrawlerTokens(bindingProviders(withCli, local.provider, local), local);
+    assert.ok(tokens.includes('claudebot'));
+    assert.ok(!tokens.includes('gptbot'));
+
+    const remote: AiEngineEnv = { ...local, openAiLocal: false, hasOpenAiKey: true };
+    const openai = resolveAiEngine({ order: ['openai_api'], models: {} }, remote);
+    assert.ok(aiCrawlerTokens(bindingProviders(openai, remote.provider, remote), remote).includes('gptbot'));
+  });
+
+  it('goes first on "Use it", with the stored list behind it and one model in every slot', () => {
+    const stored = { order: ['claude_code' as const, 'openai_api' as const], models: { claude_code: { resume: 'claude-sonnet-5' } } };
+    assert.deepEqual(withEngineFirst(stored, 'openai_api', local, 'llama3.1:8b'), {
+      order: ['openai_api', 'claude_code'],
+      models: {
+        claude_code: { resume: 'claude-sonnet-5' },
+        openai_api: { classifier: 'llama3.1:8b', resume: 'llama3.1:8b', cover: 'llama3.1:8b' },
+      },
+    });
+  });
+
+  it('keeps the .env engine behind it only when that engine can run here', () => {
+    const none = { order: [], models: {} };
+    assert.deepEqual(withEngineFirst(none, 'openai_api', local, 'm').order, ['openai_api']);
+    assert.deepEqual(withEngineFirst(none, 'openai_api', { ...local, hasAnthropicKey: true }, 'm').order, ['openai_api', 'anthropic_api']);
   });
 });

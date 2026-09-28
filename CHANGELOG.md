@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.28.0] — 2026-09-28
+
+### Added
+- **A model on your own computer, without editing a file.** Setup's first
+  step finds Ollama or LM Studio running at their usual addresses and
+  offers **Use it** with the models they have. On Settings → AI engine the
+  OpenAI-compatible engine has a **Server address** of its own, so
+  OpenRouter, Groq or a local server no longer needs `.env`.
+- **A server on your machine needs no key.** It is free in the usage
+  table, and **Test** lists the models it runs, suggests them in the model
+  fields, and says why a call failed: nothing listening, an address without
+  its `/v1`, a model the server does not have.
+- **A search that runs only on a local model is not held to OpenAI's or
+  Anthropic's robots.txt rules** when you add a company's careers page. It
+  still honours the site's rules for ApplyPack and for everyone.
+
+### Fixed
+- **A call on a model the price table does not know read "$0"** in Usage &
+  cost. It reads "not priced" now, as the note under the table says.
+
+### Changed
+- `docker-compose.yml` maps `host.docker.internal` on Linux too, so the
+  containers can reach a model server on the machine they run on.
+
 ## [2.27.0] — 2026-09-28
 
 ### Added

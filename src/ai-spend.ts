@@ -88,6 +88,8 @@ export interface SpendRow {
   billing: AiBilling;
   calls: number;
   failed: number;
+  /** Calls the price table could not price; with no money beside them the cell says so instead of "$0". */
+  unpriced: number;
   tokensIn: number;
   tokensOut: number;
   micro: number;
@@ -114,13 +116,14 @@ export function spendView(groups: readonly SpendGroup[]): SpendView {
     t.micro += g.billing === 'local' ? 0 : g.micro;
   }
   const rows = groups
-    .map(({ feature, engine, model, billing, calls, failed, tokensIn, tokensOut, micro }) => ({
+    .map(({ feature, engine, model, billing, calls, failed, unpriced, tokensIn, tokensOut, micro }) => ({
       feature: featureName(feature),
       engine: AI_PROVIDER_LABELS[engine as AiProviderId] ?? engine,
       model,
       billing,
       calls,
       failed,
+      unpriced,
       tokensIn,
       tokensOut,
       micro: billing === 'local' ? 0 : micro,

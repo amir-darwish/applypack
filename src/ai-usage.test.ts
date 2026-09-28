@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addUsage, billingOf, count, featureName, hasUsage, isLocalUrl, NO_USAGE } from './ai-usage';
+import { addUsage, billingOf, checkOpenAiBaseUrl, count, featureName, hasUsage, isLocalUrl, NO_USAGE } from './ai-usage';
 
 test('a count is what the vendor reported, or null', () => {
   assert.equal(count(1204), 1204);
@@ -49,4 +49,14 @@ test('a local server is this machine or a private network, nothing that merely l
 test('a feature reads as words, and one this version does not know reads as itself', () => {
   assert.equal(featureName('resume-match'), 'Full analysis');
   assert.equal(featureName('something-new'), 'something-new');
+});
+
+test('a server address is http(s) without a key in it, and plain http only on this machine', () => {
+  assert.deepEqual(checkOpenAiBaseUrl('  http://127.0.0.1:11434/v1/  '), { ok: true, url: 'http://127.0.0.1:11434/v1' });
+  assert.deepEqual(checkOpenAiBaseUrl('https://openrouter.ai/api/v1'), { ok: true, url: 'https://openrouter.ai/api/v1' });
+  assert.deepEqual(checkOpenAiBaseUrl('http://host.docker.internal:1234/v1?x=1#y'), { ok: true, url: 'http://host.docker.internal:1234/v1' });
+  assert.deepEqual(checkOpenAiBaseUrl('http://localhost:11434'), { ok: true, url: 'http://localhost:11434' });
+  for (const bad of ['', 'localhost:11434/v1', 'ftp://127.0.0.1/v1', 'javascript:alert(1)', 'http://user:sk-1@127.0.0.1/v1', 'http://api.example.com/v1']) {
+    assert.equal(checkOpenAiBaseUrl(bad).ok, false, bad);
+  }
 });

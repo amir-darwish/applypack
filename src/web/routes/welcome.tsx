@@ -5,7 +5,8 @@ import { onceGuard } from '../once-guard';
 import { isRelocation } from '../../eligibility';
 import { CronRunStatus, JobStatus, type Profile } from '@prisma/client';
 import { prisma } from '../../db';
-import { getAiKeys, setAiKey, setFetchingEnabled, setSetupCompleted } from '../../settings';
+import { config } from '../../config';
+import { getAiKeys, getSettings, setAiEngineConfig, setAiKey, setFetchingEnabled, setOpenAiBaseUrl, setSetupCompleted } from '../../settings';
 import { getActiveProfile, updateProfile, type ProfileInput } from '../../profiles';
 import { flagOf, placeLabel, resolveCountries } from '../../countries';
 import { searchPlaces } from '../../fetchers/fetch-context';
@@ -18,9 +19,14 @@ import { forgetAiProbe, getAiEngineEnv } from '../../ai-runtime';
 import {
   AI_PROVIDER_IDS,
   AI_PROVIDER_LABELS,
+  aiEngineOrder,
   isAiProviderId,
+  parseAiEngineConfig,
   resolveAiEngine,
+  withEngineFirst,
 } from '../../ai-engine';
+import { checkOpenAiBaseUrl, isLocalUrl } from '../../ai-usage';
+import { findLocalServers, listServerModels, preferredModel } from '../../openai-models';
 import { AI_KEY_ENV_VARS, MAX_AI_KEY_LENGTH, providerTakesKey } from '../../ai-keys';
 import { createResume, getResume, listResumes, type ResumeSummary } from '../../resume/store';
 import { scanResume } from '../../resume/scan';
@@ -65,7 +71,7 @@ welcomeRoute.get('/welcome', async (c) => {
   const requested = c.req.query('step');
   const current = isWelcomeStep(requested) ? requested : currentStep(facts);
 
-  const [resumes, lastSearch, aggregators, packs, matchCount, top, waiting] = await Promise.all([
+  const [resumes, lastSearch, aggregators, packs, matchCount, top, waiting, localServers] = await Promise.all([
     listResumes(),
     findLastSearch(),
     countAggregators(),
@@ -82,7 +88,10 @@ welcomeRoute.get('/welcome', async (c) => {
       select: { id: true, title: true, employer: true, fitScore: true, company: { select: { name: true } } },
     }),
     profile && facts.profileReady ? countWaitingUnscored(profile) : 0,
+    // One local request per default address, on step 1 only — no other step asks.
+    current === 'ai' ? findLocalServers() : [],
   ]);
+  const openAiFirst = aiEngineOrder(parseAiEngineConfig(settings.aiEngine), config.AI_PROVIDER)[0] === 'openai_api';
 
   const resumeId = idParam(c.req.query('resume'));
   const asNew = c.req.query('mode') === 'new';
@@ -103,6 +112,10 @@ welcomeRoute.get('/welcome', async (c) => {
           keyEnvVar: providerTakesKey(id) ? AI_KEY_ENV_VARS[id] : null,
           ...statuses[id],
         })),
+        local: {
+          servers: localServers.map((s) => ({ ...s, host: new URL(s.base).host, preferred: preferredModel(s.models) })),
+          inUse: openAiFirst ? settings.openAiBaseUrl : null,
+        },
       }}
       search={{
         jobCount: facts.jobCount,
@@ -185,10 +198,36 @@ welcomeRoute.post('/welcome/ai/key', async (c) => {
   );
 });
 
+/**
+ * Step 1's "Use it" on a model found on this computer (TASKS S1): the address
+ * is stored, the OpenAI-compatible engine goes first with that model in every
+ * slot, and whatever was in the list stays behind it as the fallback.
+ */
+welcomeRoute.post('/welcome/ai/local', async (c) => {
+  const form = await c.req.parseBody();
+  const checked = checkOpenAiBaseUrl(typeof form.base === 'string' ? form.base : '');
+  if (!checked.ok || !isLocalUrl(checked.url)) return flashRedirect(AI_STEP, 'err', 'That is not a server on this machine; nothing changed.');
+  const listed = await listServerModels(checked.url, undefined);
+  if ('reason' in listed) return flashRedirect(AI_STEP, 'err', `Nothing changed — ${listed.reason}.`);
+  const model = typeof form.model === 'string' ? form.model.trim() : '';
+  if (!listed.models.includes(model)) {
+    return flashRedirect(AI_STEP, 'err', `The server does not list "${model}"; nothing changed. Pick one of the models it runs.`);
+  }
+  await setOpenAiBaseUrl(checked.url);
+  const [settings, keys] = await Promise.all([getSettings(), getAiKeys()]);
+  await setAiEngineConfig(withEngineFirst(parseAiEngineConfig(settings.aiEngine), 'openai_api', getAiEngineEnv(keys, checked.url), model));
+  forgetAiProbe();
+  return flashRedirect(
+    AI_STEP,
+    'ok',
+    `The model on this computer comes first now: ${model}, for every task. Send a test message — the first call loads the model and can take a minute.`,
+  );
+});
+
 /** Step 1's optional proof: one tiny live call through the engine that would serve the pipeline. */
 welcomeRoute.post('/welcome/ai/test', async () => {
   const { statuses, settings } = await loadWelcomeContext();
-  const chain = resolveAiEngine(settings.aiEngine, getAiEngineEnv(await getAiKeys())).chain;
+  const chain = resolveAiEngine(settings.aiEngine, getAiEngineEnv(await getAiKeys(), settings.openAiBaseUrl)).chain;
   const provider = chain.find((id) => statuses[id].ok) ?? AI_PROVIDER_IDS.find((id) => statuses[id].ok);
   if (!provider) return flashRedirect('/welcome?step=ai', 'err', 'No usable AI engine detected yet.');
   const result = await testAiEngine(provider);

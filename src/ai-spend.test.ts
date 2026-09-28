@@ -98,6 +98,8 @@ test('the notes say where the money goes, what is not priced and what ended unhe
     group({ feature: 'resume-match', calls: 8, micro: 89_000, failed: 1, noUsage: 1 }),
     group({ feature: 'resume-scan', engine: 'openai_api', model: 'anthropic/claude-sonnet-5', calls: 3, unpriced: 3 }),
   ]);
+  // A row the table could not price carries the count, so its cell never reads "$0".
+  assert.equal(view.rows.find((r) => r.feature === 'Resume scan')?.unpriced, 3);
   assert.deepEqual(view.notes, [
     'Full analysis is 8 % of those calls and 89 % of the billed money.',
     `3 calls on anthropic/claude-sonnet-5 are not priced — the price table is from ${PRICES_AS_OF} and does not know that model.`,

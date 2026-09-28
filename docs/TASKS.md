@@ -2491,8 +2491,16 @@ options and measurements: [docs/local-install-plan.md](./local-install-plan.md).
       verification matrix plan §4.10. **2026-09-24:** the CI matrix is
       Ubuntu on Node 22 and 24, macOS and Windows on Node 24 only
       (`.github/workflows/test.yml`).
-- [ ] **`ai-without-env`** (patch, later) — the OpenAI-compatible engine's
-      base URL on its card and in `/welcome` step 1.
+- [x] **`ai-without-env`** (minor, v2.28.0) — the OpenAI-compatible
+      engine's server on its card (`AppSettings.openAiBaseUrl`, `.env` the
+      fallback), no key for a server on this machine or the user's network,
+      Test lists the server's models and names why a call failed (nothing
+      listening, no `/v1`, a model it does not list), the model fields
+      suggest what it runs, and `/welcome` step 1 finds Ollama or LM Studio
+      at their default addresses with **Use it**. A local-only install binds
+      no vendor's robots.txt tokens (ADR 0036 addendum 2026-09-28). Still by
+      hand: the context length and `AI_CONCURRENCY=1` (docs/ai-engines.md);
+      stage B of the feature-gap analysis makes them the engine's own.
 - [ ] **`local-always-on`** (minor, later) — start at login; a dated
       snapshot of the data folder on start; `npm run db:import` from Docker
       (`pg_dump --inserts`); the Windows CLI engines (`.cmd` shims and

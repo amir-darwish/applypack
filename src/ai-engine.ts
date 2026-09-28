@@ -64,9 +64,13 @@ const PROVIDER_AI_TOKENS: Record<AiProviderId, readonly string[]> = {
   codex_cli: ['gptbot', 'chatgpt-user', 'oai-searchbot'],
 };
 
-/** Every vendor token that binds an install running these engines, once each. */
-export function aiCrawlerTokens(providers: readonly AiProviderId[]): string[] {
-  return [...new Set(providers.flatMap((p) => PROVIDER_AI_TOKENS[p] ?? []))];
+/**
+ * Every vendor token that binds an install running these engines, once each.
+ * An OpenAI-compatible engine pointed at a local server is no vendor's
+ * crawler, so it binds nothing (ADR 0036 addendum 2026-09-28).
+ */
+export function aiCrawlerTokens(providers: readonly AiProviderId[], hosts: Partial<Pick<AiEngineEnv, 'openAiLocal'>> = {}): string[] {
+  return [...new Set(providers.flatMap((p) => (p === 'openai_api' && hosts.openAiLocal ? [] : PROVIDER_AI_TOKENS[p] ?? [])))];
 }
 
 /**
@@ -74,9 +78,17 @@ export function aiCrawlerTokens(providers: readonly AiProviderId[]): string[] {
  * fetch, not only what runs this minute. That is the list with its skipped
  * engines (a login tomorrow puts them back in front), the last resort `chain`
  * holds while nothing in the list can run, and the .env engine an emptied list
- * falls back to.
+ * falls back to — except on a local-only install: every engine in the list a
+ * server on this machine and none of them skipped. Nothing else reads what it
+ * fetches until the list changes, and the list is read again on the next run.
  */
-export function bindingProviders(engine: ResolvedAiEngine, provider: AiProviderId): AiProviderId[] {
+export function bindingProviders(
+  engine: ResolvedAiEngine,
+  provider: AiProviderId,
+  hosts: Partial<Pick<AiEngineEnv, 'openAiLocal'>> = {},
+): AiProviderId[] {
+  const local = (id: AiProviderId) => id === 'openai_api' && hosts.openAiLocal === true;
+  if (engine.lastResort === null && engine.skipped.length === 0 && engine.chain.every(local)) return [];
   return [...new Set([...engine.chain, ...engine.skipped, provider])];
 }
 
@@ -178,10 +190,25 @@ export function toggleAiEngine(
   return order.filter((x) => x !== id);
 }
 
+/**
+ * The list after "Use it" on a local server (TASKS S1): `id` first, the rest
+ * behind it in their order as the fallback, one model in every slot.
+ */
+export function withEngineFirst(config: AiEngineConfig, id: AiProviderId, env: AiEngineEnv, model: string): AiEngineConfig {
+  // The .env engine stands in for a list nobody stored; one that cannot run here is no fallback worth keeping.
+  const behind = config.order.length > 0 ? config.order : [env.provider].filter((p) => !providerUnusable(p, env));
+  return {
+    order: [id, ...behind.filter((x) => x !== id)],
+    models: { ...config.models, [id]: { classifier: model, resume: model, cover: model } },
+  };
+}
+
 export interface AiEngineEnv {
   provider: AiProviderId;
   hasAnthropicKey: boolean;
   hasOpenAiKey: boolean;
+  /** The OpenAI-compatible engine points at a local server, which needs no key (TASKS S1). */
+  openAiLocal: boolean;
   /** CLI auth is file/env detectable — false means calls cannot work yet. */
   geminiUsable: boolean;
   codexUsable: boolean;
@@ -212,7 +239,7 @@ export function providerUnusable(id: AiProviderId, env: AiEngineEnv): boolean {
     case 'anthropic_api':
       return !env.hasAnthropicKey;
     case 'openai_api':
-      return !env.hasOpenAiKey;
+      return !env.hasOpenAiKey && !env.openAiLocal;
     case 'gemini_cli':
       return !env.geminiUsable;
     case 'codex_cli':

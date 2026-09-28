@@ -39,6 +39,11 @@ services:
       NODE_ENV: production
       # The worker touches it every minute; the healthcheck below reads its age.
       HEARTBEAT_FILE: /tmp/applypack-worker.heartbeat
+    # A model server on the host (Ollama, LM Studio) answers at
+    # http://host.docker.internal:<port>/v1 from here. Docker Desktop knows the
+    # name already; this line teaches it to Docker on Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Unhealthy after three missed minutes: the process is stuck or gone. A
     # long fetch tick does not count, the timer fires through it
     # (src/heartbeat.ts). The first check waits for the migrations init runs.
@@ -75,6 +80,8 @@ services:
       # reach it. Safe here, and only here: the port below is loopback-only.
       # .env keeps 127.0.0.1 so a no-Docker run is not exposed by default.
       WEB_HOST: 0.0.0.0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       # Bind to localhost only — never expose dashboard publicly.
       - "127.0.0.1:4747:4747"

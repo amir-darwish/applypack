@@ -34,6 +34,8 @@ export interface AppSettingsView {
   /** The last release the check saw, and when; null until it has looked. */
   latestVersion: string | null;
   latestCheckedAt: Date | null;
+  /** TASKS S1: the OpenAI-compatible engine's server; null = OPENAI_BASE_URL from .env. */
+  openAiBaseUrl: string | null;
   /** ADR 0056: turn postings away at a company applied to in the last N days; null = off. */
   reapplyDays: number | null;
   /** When init.ts gave the older rows their employer keys; null = not yet. */
@@ -124,6 +126,7 @@ export async function getSettings(): Promise<AppSettingsView> {
     updateCheck: row.updateCheck,
     latestVersion: row.latestVersion,
     latestCheckedAt: row.latestCheckedAt,
+    openAiBaseUrl: row.openAiBaseUrl,
     reapplyDays: row.reapplyDays,
     employersFilledAt: row.employersFilledAt,
     coverAngles: row.coverAngles,
@@ -324,6 +327,16 @@ export async function setUpdateCheck(enabled: boolean): Promise<void> {
     update: { updateCheck: enabled },
     create: { id: SETTINGS_ID, updateCheck: enabled },
   });
+}
+
+/** TASKS S1: the OpenAI-compatible engine's server, or null for the .env one. The route checks the address. */
+export async function setOpenAiBaseUrl(url: string | null): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: SETTINGS_ID },
+    update: { openAiBaseUrl: url },
+    create: { id: SETTINGS_ID, openAiBaseUrl: url },
+  });
+  logger.info({ cleared: url === null }, 'settings: openai base url updated');
 }
 
 /** ADR 0056: the re-apply window in days, or null to switch it off. The route checks the choice. */

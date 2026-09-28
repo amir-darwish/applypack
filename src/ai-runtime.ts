@@ -12,7 +12,8 @@ import { SETTINGS_ID } from './settings';
 import { aiKeySource, parseAiKeys, resolveAiKey, type AiKeys, type AiKeySource } from './ai-keys';
 import { createCooldownTracker } from './ai-cooldown';
 import { recordAiCall } from './ai-ledger';
-import { billingOf, type AiFeature, type BillingFacts } from './ai-usage';
+import { listServerModels, LOCAL_LIST_TIMEOUT_MS } from './openai-models';
+import { billingOf, isLocalUrl, type AiFeature, type BillingFacts } from './ai-usage';
 import {
   PROVIDER_WEB_TOOLS,
   resolveAiEngine,
@@ -42,11 +43,12 @@ const cooldowns = createCooldownTracker();
  * (ADR 0027); they win over the matching .env variable, so the usability
  * rules in ai-engine.ts stay the single place that decides.
  */
-export function getAiEngineEnv(keys: AiKeys = {}): AiEngineEnv {
+export function getAiEngineEnv(keys: AiKeys = {}, openAiBaseUrl: string | null = null): AiEngineEnv {
   return {
     provider: config.AI_PROVIDER,
     hasAnthropicKey: Boolean(resolveAiKey('anthropic_api', keys)),
     hasOpenAiKey: Boolean(resolveAiKey('openai_api', keys)),
+    openAiLocal: isLocalUrl(openAiBase(openAiBaseUrl)),
     geminiUsable: Boolean(keys.gemini_cli) || geminiAuthConfigured(),
     codexUsable: codexAuthConfigured(),
     classifierModel: config.CLAUDE_MODEL,
@@ -99,28 +101,36 @@ export interface AiRuntime {
 export async function getAiRuntime(): Promise<AiRuntime> {
   let raw: unknown = null;
   let keys: AiKeys = {};
+  let baseUrl: string | null = null;
   try {
     const row = await prisma.appSettings.findUnique({
       where: { id: SETTINGS_ID },
-      select: { aiEngine: true, aiKeys: true },
+      select: { aiEngine: true, aiKeys: true, openAiBaseUrl: true },
     });
     raw = row?.aiEngine ?? null;
     keys = parseAiKeys(row?.aiKeys ?? null);
+    baseUrl = row?.openAiBaseUrl ?? null;
   } catch (err) {
     logger.warn({ err }, 'ai: settings read failed, using .env engine');
   }
-  const resolved = resolveAiEngine(raw, getAiEngineEnv(keys));
+  const resolved = resolveAiEngine(raw, getAiEngineEnv(keys, baseUrl));
   return {
     chain: resolved.chain,
     skipped: resolved.skipped,
     modelFor: resolved.modelFor,
-    complete: (req) => completeWithFailover(resolved, keys, req),
+    complete: (req) => completeWithFailover(resolved, keys, baseUrl, req),
   };
+}
+
+/** The OpenAI-compatible engine's server: the one set on the AI tab, else OPENAI_BASE_URL (TASKS S1). */
+export function openAiBase(stored: string | null): string {
+  return stored ?? config.OPENAI_BASE_URL;
 }
 
 async function completeWithFailover(
   engine: ResolvedAiEngine,
   keys: AiKeys,
+  baseUrl: string | null,
   req: AiCallRequest,
 ): Promise<AiCallResult | null> {
   // Verification asks for web tools — prefer engines that have them, but a
@@ -139,7 +149,7 @@ async function completeWithFailover(
   }
   const tryList = (hot.length > 0 ? hot : chain).slice(0, MAX_ENGINE_SWITCHES);
   const perAttemptMs = req.timeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
-  const billing = billingFacts(keys);
+  const billing = billingFacts(keys, baseUrl);
   const deadline = Date.now() + perAttemptMs * CHAIN_DEADLINE_FACTOR;
   for (let i = 0; i < tryList.length; i++) {
     const id = tryList[i]!;
@@ -166,6 +176,7 @@ async function completeWithFailover(
       timeoutMs: Math.min(perAttemptMs, remainingMs),
       webTools: req.webTools,
       apiKey: resolveAiKey(id, keys),
+      ...(id === 'openai_api' && { baseUrl: openAiBase(baseUrl) }),
       onError: req.onError,
     });
     const viaFallback = id !== engine.chain[0];
@@ -204,8 +215,8 @@ async function completeWithFailover(
 }
 
 /** What decides whose money an engine spends, from this host's settings (ai-usage.ts:billingOf). */
-export function billingFacts(keys: AiKeys): BillingFacts {
-  return { openAiBaseUrl: config.OPENAI_BASE_URL, geminiKey: Boolean(resolveAiKey('gemini_cli', keys)) };
+export function billingFacts(keys: AiKeys, openAiBaseUrl: string | null = null): BillingFacts {
+  return { openAiBaseUrl: openAiBase(openAiBaseUrl), geminiKey: Boolean(resolveAiKey('gemini_cli', keys)) };
 }
 
 export interface AiProviderStatus {
@@ -228,13 +239,15 @@ export async function probeAiProviders(
   stored?: AiKeys,
 ): Promise<Record<AiProviderId, AiProviderStatus>> {
   if (probeCache && Date.now() - probeCache.at < PROBE_TTL_MS) return probeCache.statuses;
-  const [claude, gemini, codex, keys] = await Promise.all([
+  const [claude, gemini, codex, keys, baseUrl] = await Promise.all([
     probeCliBin(config.CLAUDE_CODE_BIN),
     probeCliBin(config.GEMINI_CLI_BIN),
     probeCliBin(config.CODEX_CLI_BIN),
     stored ?? readAiKeys(),
+    readOpenAiBaseUrl(),
   ]);
   const from = (id: AiProviderId): AiKeySource => aiKeySource(id, keys);
+  const openAi = openAiBase(baseUrl);
   const statuses: Record<AiProviderId, AiProviderStatus> = {
     anthropic_api:
       from('anthropic_api') === 'none'
@@ -242,13 +255,14 @@ export async function probeAiProviders(
         : { ok: true, detail: `API key ${keyOrigin(from('anthropic_api'))}` },
     claude_code: withClaudeAuth(claude, from('claude_code')),
     gemini_cli: withGeminiAuth(gemini, from('gemini_cli')),
-    openai_api:
-      from('openai_api') === 'none'
+    openai_api: isLocalUrl(openAi)
+      ? await localServerStatus(openAi, resolveAiKey('openai_api', keys))
+      : from('openai_api') === 'none'
         ? {
             ok: false,
-            detail: `paste an API key, or set OPENAI_API_KEY in .env (endpoint: ${baseUrlHost()})`,
+            detail: `paste an API key, or set OPENAI_API_KEY in .env (endpoint: ${baseUrlHost(openAi)})`,
           }
-        : { ok: true, detail: `API key ${keyOrigin(from('openai_api'))} · ${baseUrlHost()}` },
+        : { ok: true, detail: `API key ${keyOrigin(from('openai_api'))} · ${baseUrlHost(openAi)}` },
     codex_cli: withCodexAuth(codex),
   };
   probeCache = { at: Date.now(), statuses };
@@ -278,11 +292,34 @@ async function readAiKeys(): Promise<AiKeys> {
   }
 }
 
-function baseUrlHost(): string {
+/**
+ * A server on this machine is asked what it runs (TASKS S3): a refused
+ * connection answers at once, and the answer fills the model suggestions.
+ * A server on the internet is not — that would be a request the user pays for.
+ */
+async function localServerStatus(base: string, apiKey: string | undefined): Promise<AiProviderStatus> {
+  const host = baseUrlHost(base);
+  const listed = await listServerModels(base, apiKey, LOCAL_LIST_TIMEOUT_MS);
+  if ('reason' in listed) return { ok: false, detail: `local server · ${listed.reason}` };
+  if (listed.models.length === 0) return { ok: false, detail: `local server · ${host} answers, but lists no models — pull one first` };
+  const count = listed.models.length === 1 ? '1 model' : `${listed.models.length} models`;
+  return { ok: true, detail: `local server · ${host} · ${count} — no key needed` };
+}
+
+async function readOpenAiBaseUrl(): Promise<string | null> {
   try {
-    return new URL(config.OPENAI_BASE_URL).host;
+    const row = await prisma.appSettings.findUnique({ where: { id: SETTINGS_ID }, select: { openAiBaseUrl: true } });
+    return row?.openAiBaseUrl ?? null;
   } catch {
-    return config.OPENAI_BASE_URL;
+    return null;
+  }
+}
+
+function baseUrlHost(base: string): string {
+  try {
+    return new URL(base).host;
+  } catch {
+    return base;
   }
 }
 

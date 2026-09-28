@@ -276,7 +276,10 @@ src/
                                  CliProvider (claude_code, gemini_cli, codex_cli)
   ai-provider-parse.ts         ← pure: CLI arguments, the child env allowlist, reply parsers, anthropicMaxTokens
   ai-json.ts                   ← askForJson: a call parsed by a schema, one retry unless the reply was cut off
-  ai-usage.ts                  ← pure: what an attempt spent (AiUsage, NULL = not reported), the closed feature set, billingOf (ADR 0055)
+  ai-usage.ts                  ← pure: what an attempt spent (AiUsage, NULL = not reported), the closed feature set, billingOf (ADR 0055),
+                                 isLocalUrl + checkOpenAiBaseUrl (a server on this machine takes no key)
+  openai-models.ts             ← GET {base}/models: the OpenAI-compatible server's models, remembered for the fields'
+                                 suggestions; findLocalServers asks Ollama's and LM Studio's default addresses
   ai-prices.ts                 ← pure: the dated price table (PRICES_AS_OF), costMicroUsd; an unknown model is not priced
   ai-spend.ts                  ← pure: ledgerRow, the Usage & cost view, periods, the budget warning, billingNotes, the estimates
   ai-ledger.ts                 ← recordAiCall into ai_call (+ the budget warning), the sums the pages read
@@ -738,6 +741,7 @@ erDiagram
     Boolean fetchingEnabled "the master pause"
     Json aiEngine "engine order + models per role (ADR 0013/0014)"
     Json aiKeys "per-engine API keys, DB first (ADR 0027)"
+    String openAiBaseUrl "the OpenAI-compatible engine's server, NULL = OPENAI_BASE_URL"
     Json sourceKeys "Adzuna and France Travail keys (ADR 0034)"
     Json aiUsage "retired in 2.21.0; the ai_call ledger replaced it"
     Boolean updateCheck "look for a newer release weekly, off by default"

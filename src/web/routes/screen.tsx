@@ -245,7 +245,8 @@ async function engineNote(): Promise<{ label: string; warn: string | null }> {
   if (!first) return { label: 'no engine', warn: 'No AI engine is usable — set one up on Settings → AI engine before scoring.' };
   const label = AI_PROVIDER_LABELS[first];
   // A key (under a vendor's API terms) or a local model is fine; a personal plan is the warning.
-  if (billingOf(first, billingFacts(await getAiKeys())) !== 'plan') return { label, warn: null };
+  const [keys, { openAiBaseUrl }] = await Promise.all([getAiKeys(), getSettings()]);
+  if (billingOf(first, billingFacts(keys, openAiBaseUrl)) !== 'plan') return { label, warn: null };
   return {
     label,
     warn: `Scoring runs on ${label}, a personal subscription. Other people's resumes go through it under terms you do not control — for applicants' data the defensible path is an API engine under a data-processing agreement, or a local model through the OpenAI-compatible engine. Change the order on Settings → AI engine.`,

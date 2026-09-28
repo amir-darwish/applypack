@@ -15,6 +15,6 @@ export async function spendHint(feature: AiFeature): Promise<string> {
   const typical = costHintText(await typicalCost(feature));
   if (typical) return typical;
   const [settings, keys] = await Promise.all([getSettings(), getAiKeys()]);
-  const first = resolveAiEngine(settings.aiEngine, getAiEngineEnv(keys)).chain[0];
-  return first ? billingHint(billingOf(first, billingFacts(keys))) : '';
+  const first = resolveAiEngine(settings.aiEngine, getAiEngineEnv(keys, settings.openAiBaseUrl)).chain[0];
+  return first ? billingHint(billingOf(first, billingFacts(keys, settings.openAiBaseUrl))) : '';
 }
