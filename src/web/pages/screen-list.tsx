@@ -52,9 +52,9 @@ export const ScreenListPage: FC<{ screenings: ScreeningSummary[]; flash?: FlashM
               <Td class="tabular-nums">
                 {s.applicants}
                 {s.unread > 0 && (
-                  <span class="text-ink-faint" title="Could not be read, or a copy of another applicant">
+                  <span class="text-ink-faint" title="Could not be read, or held for a look because the redaction may have missed something identifying">
                     {' '}
-                    ({s.unread} unread)
+                    ({s.unread} not scored)
                   </span>
                 )}
               </Td>

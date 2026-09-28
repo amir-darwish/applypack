@@ -103,6 +103,7 @@ test('rowView reads the stored verdict; groupRows orders by the adjusted score a
     applicant({ id: 4, number: 4, verdict: verdict(60, 'pass', 1), stale: true }),
     applicant({ id: 5, number: 5, parseStatus: 'unreadable', parseNote: 'scan' }),
     applicant({ id: 6, number: 6 }),
+    applicant({ id: 7, number: 7, parseStatus: 'held', parseNote: 'Held for a look: after redaction the leak check still found email.' }),
   ].map((a) => rowView(a, new Date('2026-09-09T00:00:00Z')));
   assert.equal(rows[0]!.verdict?.level, 'senior');
   assert.deepEqual(rows[0]!.verdict?.standout, [{ fact: 'Speaks Polish', quote: 'Polish C1' }]);
@@ -114,6 +115,7 @@ test('rowView reads the stored verdict; groupRows orders by the adjusted score a
   assert.equal(adjustedScore(95, 30), 100, 'held to 100');
   assert.equal(adjustedScore(10, -30), 0);
   assert.deepEqual(g.pending.map((r) => r.number), [4, 6], 'stale and never-scored wait together');
+  assert.deepEqual(g.held.map((r) => r.number), [7], 'held for a look is neither pending nor unreadable (TASKS E4)');
   assert.deepEqual(g.unread.map((r) => r.number), [5]);
   const ex = exportRows(rows);
   assert.deepEqual(ex.map((r) => [r.number, r.score, r.note]), [
@@ -122,6 +124,7 @@ test('rowView reads the stored verdict; groupRows orders by the adjusted score a
     [2, 90, null],
     [4, null, 'scored under an earlier rubric'],
     [6, null, 'not scored yet'],
+    [7, null, 'Held for a look: after redaction the leak check still found email.'],
     [5, null, 'scan'],
   ]);
   assert.deepEqual(ex[0]!.standout, ['Speaks Polish']);

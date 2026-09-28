@@ -335,7 +335,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
           </li>
           <li>
             Before any model reads a file, the name, contacts, links, date of birth, age, family, gender, citizenship,
-            street and graduation years are removed.
+            religion, health, street and graduation years are removed.
           </li>
           <li>
             A second document of someone already listed is scored and labelled; the same file twice is skipped; a
@@ -450,6 +450,14 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
               <>
                 <GroupRow tone="neutral" label={running ? 'Being scored' : 'Not scored yet'} count={groups.pending.length} />
                 {groups.pending.map((r) => (
+                  <ApplicantRow r={r} screeningId={screening.id} gates={gateLabels} run={run} />
+                ))}
+              </>
+            )}
+            {groups.held.length > 0 && (
+              <>
+                <GroupRow tone="warn" label="Held for a look" count={groups.held.length} />
+                {groups.held.map((r) => (
                   <ApplicantRow r={r} screeningId={screening.id} gates={gateLabels} run={run} />
                 ))}
               </>
@@ -854,6 +862,10 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
               </Button>
             </noscript>
           </span>
+        ) : r.status === 'held' ? (
+          <a href={`/screen/${screeningId}/applicants/${r.id}`} class="text-[13px] text-ink hover:underline">
+            read it first
+          </a>
         ) : (
           <span class="text-[13px] text-ink-faint">tick and Delete</span>
         )}

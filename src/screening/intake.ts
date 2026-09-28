@@ -149,3 +149,50 @@ export function findDuplicate(
   }
   return null;
 }
+
+/** One uploaded file after reading: what the intake decides from, before anything is written. */
+export interface ReadFile {
+  /** Null when no text came out of the file. */
+  text: string | null;
+  email: string | null;
+  phone: string | null;
+  print: TextFingerprint;
+}
+
+/** Another document of a person already in the list (`id`), or of one added earlier in this same upload (`add`). */
+export type SameAs = { id: number } | { add: number } | null;
+
+export interface IntakePlan {
+  /** The files to add, in upload order: `file` indexes the input, `add` in `sameAs` indexes this list. */
+  adds: { file: number; sameAs: SameAs }[];
+  /** Files whose text is already here, or earlier in this upload — nothing new to read. */
+  repeats: number[];
+}
+
+/**
+ * Each file's fate, decided before anything is written (TASKS H23/H25): the
+ * dedupe the upload used to make one insert at a time, so one transaction
+ * can write the lot. A later file is compared with the earlier ones of the
+ * same upload as with the rows already stored; a file with no text is added
+ * as unreadable and compared with nothing.
+ */
+export function planIntake(files: ReadFile[], known: KnownApplicant[]): IntakePlan {
+  // An earlier file of this upload stands in the pool with a negative id: -1 - its place in `adds`.
+  const pool = [...known];
+  const plan: IntakePlan = { adds: [], repeats: [] };
+  files.forEach((f, i) => {
+    if (f.text === null) {
+      plan.adds.push({ file: i, sameAs: null });
+      return;
+    }
+    const dup = findDuplicate({ email: f.email, phone: f.phone, ...f.print }, pool);
+    if (dup?.kind === 'same-text') {
+      plan.repeats.push(i);
+      return;
+    }
+    const sameAs: SameAs = dup === null ? null : dup.match.id < 0 ? { add: -1 - dup.match.id } : { id: dup.match.id };
+    pool.push({ id: -1 - plan.adds.length, number: 0, email: f.email, phone: f.phone, ...f.print });
+    plan.adds.push({ file: i, sameAs });
+  });
+  return plan;
+}

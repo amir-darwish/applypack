@@ -25,7 +25,7 @@ import { scoreMatch } from '../resume/score';
 import { setAiBudgetCents, setEmployerMode } from '../settings';
 import { recordAiCall } from '../ai-ledger';
 import { NO_USAGE } from '../ai-usage';
-import { createApplicant, createScreening } from '../screening/store';
+import { createApplicants, createScreening } from '../screening/store';
 import { draftRubric } from '../screening/rubric';
 import { fingerprintText } from '../screening/intake';
 import { tryFetchLock } from '../jobs/fetch-lock';
@@ -102,23 +102,27 @@ async function fixtures(): Promise<Fixtures> {
     retainUntil: new Date(Date.now() + 7 * 86_400_000),
   });
   const print = fingerprintText(RESUME);
-  const applicant = await createApplicant({
-    screeningId: screening.id,
-    name: null,
-    email: null,
-    phone: null,
-    sourceFilename: 'smoke.txt',
-    mimeType: 'text/plain',
-    original: Buffer.from(RESUME),
-    text: RESUME,
-    redactedTextFor: (n) => RESUME.replace('Jane Example', `Applicant №${n}`),
-    redactions: [],
-    parseStatus: 'ok',
-    parseNote: null,
-    sameAsId: null,
-    textHash: print.hash,
-    simhash: print.simhash,
-  });
+  const {
+    created: [applicant],
+  } = await createApplicants(screening.id, [
+    {
+      name: null,
+      email: null,
+      phone: null,
+      sourceFilename: 'smoke.txt',
+      mimeType: 'text/plain',
+      original: Buffer.from(RESUME),
+      text: RESUME,
+      redactedTextFor: (n) => RESUME.replace('Jane Example', `Applicant №${n}`),
+      redactions: [],
+      parseStatus: 'ok',
+      parseNote: null,
+      sameAs: null,
+      textHash: print.hash,
+      simhash: print.simhash,
+    },
+  ]);
+  if (!applicant) throw new Error('smoke fixture: the applicant was not written');
   // The ledger through its own write path: each kind of money, a timeout with
   // no usage, a model the price table does not know — and a one-cent budget,
   // so the billed row crosses it and the warning path runs (no chat here, so
@@ -257,6 +261,26 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 200 && (res.headers.get('content-type') ?? '').includes('text/html'),
     },
     {
+      // TASKS H23/H25 + E4: one upload decided whole and written in one transaction — a repeat
+      // of the fixture skipped, a new resume added, and one whose phone digits survive the
+      // redaction held for a look before any model reads it.
+      name: 'POST /screen/:id/applicants (a repeat, a new file, a leak held)',
+      init: (() => {
+        const body = new FormData();
+        body.append('files', new File([RESUME], 'again.txt', { type: 'text/plain' }));
+        body.append('files', new File([`${RESUME.replace('Jane Example', 'Mark Sample')}\nAlso built the invoicing API.`], 'mark.txt', { type: 'text/plain' }));
+        body.append(
+          'files',
+          new File([`Olena Test — QA Engineer. Phone +380 67 123 45 67.\n${RESUME.replace('Jane Example', 'Olena Test')}\nOrder ref 38067x1234567.`], 'olena.txt', { type: 'text/plain' }),
+        );
+        return { method: 'POST', headers: ORIGIN, body } satisfies RequestInit;
+      })(),
+      expect: (res) => {
+        const flash = decodeURIComponent(res.headers.get('set-cookie') ?? '');
+        return res.status === 303 && flash.includes('2 applicants added') && flash.includes('1 file already added') && flash.includes('1 held for a look');
+      },
+    },
+    {
       name: 'POST /settings/fetching-toggle',
       init: form({}),
       expect: (res) => res.status === 303,
@@ -369,6 +393,7 @@ async function main(): Promise<void> {
     '/resumes',
     '/resumes',
     `/resumes/${f.resumeId}/compare-format`,
+    `/screen/${f.screeningId}/applicants`,
     '/settings/fetching-toggle',
     `/jobs/${f.jobId}/status`,
     `/jobs/${f.jobId}/status`,

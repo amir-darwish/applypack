@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { describeRedactions, detectName, findLeaks, redactApplicant } from './redact';
+import { describeRedactions, detectName, findLeaks, heldNote, leakKinds, redactApplicant } from './redact';
 
 const UA_CV = `Олена Петренко
 Senior QA Engineer
@@ -93,6 +93,33 @@ Kyiv
   assert.ok(!/Koval/.test(r.text));
 });
 
+test('religion and health go when a personal-data field states them (TASKS E5)', () => {
+  const text = `Anna Schmidt
+QA Engineer | Berlin
+Geburtsdatum: 01.01.1990 · Familienstand: ledig · Konfession: römisch-katholisch
+Schwerbehinderung: GdB 50 · Religion:Catholic
+Stan zdrowia: dobry · Disability: none · Віросповідання: православна
+Born 1988 · Married · Catholic
+
+EXPERIENCE
+- Built the patient-health dashboard for Christian Dior's clinics
+- Health tech startup: led the mobile team
+Healthcare: HL7, FHIR
+Catholic University of Leuven, MSc
+`;
+  const r = redactApplicant(text, 3);
+  for (const gone of ['katholisch', 'GdB 50', 'Religion', 'dobry', 'Disability', 'православна', 'Married · Catholic']) {
+    assert.ok(!r.text.includes(gone), `${gone} should be gone`);
+  }
+  assert.ok(!/\n\s*Catholic\s*\n/.test(r.text), 'a bare faith on the birth line is the religion line');
+  for (const kept of ["patient-health dashboard for Christian Dior's clinics", 'Health tech startup: led the mobile team', 'Healthcare: HL7, FHIR', 'Catholic University of Leuven']) {
+    assert.ok(r.text.includes(kept), `${kept} is work, not a personal field`);
+  }
+  const kinds = r.redactions.map((x) => x.kind);
+  assert.ok(kinds.includes('religion') && kinds.includes('health'), kinds.join(', '));
+  assert.match(describeRedactions(r.redactions), /religion.*health \/ disability/);
+});
+
 test('redactApplicant removes street lines in the shapes headers write them', () => {
   const text = `Jane Doe
 Engineer
@@ -131,4 +158,11 @@ test('describeRedactions reads like an audit line', () => {
     'name, 1 email, 2 links, date of birth',
   );
   assert.equal(describeRedactions([]), 'nothing to remove');
+});
+
+test('a held row says what kind of thing leaked, never the thing itself (TASKS E4)', () => {
+  const kinds = leakKinds(['name:Petrenko', 'email', 'name:Olena', 'phone']);
+  assert.deepEqual(kinds, ['name', 'email', 'phone']);
+  assert.equal(heldNote(kinds), 'Held for a look: after redaction the leak check still found name, email, phone.');
+  assert.doesNotMatch(heldNote(kinds), /Petrenko|Olena/);
 });

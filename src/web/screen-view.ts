@@ -66,7 +66,8 @@ export interface ApplicantRowView {
   number: number;
   name: string | null;
   file: string;
-  status: 'ok' | 'unreadable';
+  /** `held`: the leak check found something after redaction; no model reads it until a person releases it (TASKS E4). */
+  status: ApplicantStatus;
   note: string | null;
   decision: string | null;
   /** Another document of an applicant already in the list — that one's №. */
@@ -86,8 +87,15 @@ export function adjustedScore(score: number, adjustment: number): number {
   return Math.max(0, Math.min(100, score + adjustment));
 }
 
+export type ApplicantStatus = 'ok' | 'unreadable' | 'held';
+
+/** The stored `parseStatus`, read: anything unknown is a file that could not be read. */
+export function applicantStatus(parseStatus: string): ApplicantStatus {
+  return parseStatus === 'ok' || parseStatus === 'held' ? parseStatus : 'unreadable';
+}
+
 export function rowView(a: ApplicantRow & { sameAsNumber?: number | null }, now = new Date()): ApplicantRowView {
-  const status = a.parseStatus === 'unreadable' ? 'unreadable' : 'ok';
+  const status = applicantStatus(a.parseStatus);
   const reply = a.verdict ? readScreenReply(a.verdict.facts) : null;
   const bd = a.verdict ? readScreenBreakdown(a.verdict.breakdown) : null;
   const career = reply ? trajectoryOf(reply.roles, now) : null;
@@ -135,6 +143,8 @@ export interface RowGroups {
   scored: ApplicantRowView[];
   /** Readable, no current verdict (never scored, or scored under an older rubric). */
   pending: ApplicantRowView[];
+  /** Held back for a person's look before any model reads them (TASKS E4). */
+  held: ApplicantRowView[];
   /** Unreadable files and copies. */
   unread: ApplicantRowView[];
 }
@@ -153,7 +163,8 @@ export function groupRows(rows: ApplicantRowView[]): RowGroups {
   return {
     scored: ordered,
     pending: rows.filter((r) => r.status === 'ok' && (r.verdict === null || r.stale)),
-    unread: rows.filter((r) => r.status !== 'ok'),
+    held: rows.filter((r) => r.status === 'held'),
+    unread: rows.filter((r) => r.status === 'unreadable'),
   };
 }
 
@@ -184,7 +195,7 @@ export function exportRows(rows: ApplicantRowView[]): ExportRow[] {
     career: r.verdict && !r.stale && r.verdict.career.roles > 0 ? r.verdict.careerLine : null,
     decision: r.decision,
   });
-  return [...groups.scored, ...groups.pending, ...groups.unread].map(toRow);
+  return [...groups.scored, ...groups.pending, ...groups.held, ...groups.unread].map(toRow);
 }
 
 /**
