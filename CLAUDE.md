@@ -209,7 +209,14 @@
   `decideStageStrategy`, `mapXFeed` mappers). The unit-test file lives
   next to the source as `*.test.ts`.
 - CI runs `npm run lint:types` (`tsc --noEmit`) + `npm test` on every
-  push and PR, then migrates a Postgres service and runs the **route
+  push and PR, around three gates: `npm audit --omit=dev
+  --audit-level=high` (a fix the parent package has not shipped goes in
+  `overrides` — deepmerge-ts 8 under prisma 6 today, GHSA-ggr8-5vv4-36mx;
+  drop it once prisma releases the fix), `npm run exports:audit` (a dead or
+  over-exported export fails) and `src/env-example.test.ts` (`.env.example`
+  against `config.ts` and every `process.env` read). It then migrates a
+  Postgres service, fails when `prisma migrate diff` finds the schema and
+  the migrations apart, and runs the **route
   smoke** (`npm run smoke:routes` after `npm run build` —
   `src/scripts/route-smoke.ts`): fixtures in, every GET route one
   in-process request through `app.request()`, the first run's POSTs, a
@@ -219,6 +226,9 @@
 - The `local-start` job runs the default install on Linux (Node 22 and 24),
   macOS and Windows: `npm start` with a temporary `APPLYPACK_DATA_DIR`, the
   route smoke against the built-in database, `npm run stop`, nothing left.
+  The `docker` job builds the image (never pushed), so the server option
+  cannot rot between releases. `.github/dependabot.yml` opens the weekly
+  update PRs: minor and patch together, each major on its own.
 
 ## Running
 - `npm start` is the default install (ADR 0054): `npm run build` (tsc + the
