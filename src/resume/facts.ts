@@ -12,7 +12,7 @@ import type { MatchKeyword } from './prompts';
 
 export interface FactLike {
   term: string;
-  status: string; // confirmed | denied
+  status: string; // confirmed | denied | unknown (FACT_ANSWERS)
   note: string | null;
 }
 
@@ -42,10 +42,11 @@ export type FactAnswer = (typeof FACT_ANSWERS)[number];
 
 /**
  * Flip keyword statuses from stored facts. Confirmed → "add" (the user's
- * context lands in the note); denied → "cannot_claim"; not sure →
- * "cannot_claim" with its own note, so nothing is claimed and nothing is
- * asked again. Text evidence outranks every answer: "present"/"add" keywords
- * never get downgraded by a stale fact.
+ * context lands in the note); denied and not sure → "cannot_claim" with the
+ * answer's own note, on an ask and on a term the model could not back alike —
+ * the confirm card offers both, and `confirmable` reads the note, so neither
+ * is asked again. Text evidence outranks every answer: "present"/"add"
+ * keywords never get downgraded by a stale fact.
  */
 export function applyFacts(
   keywords: MatchKeyword[],
@@ -65,13 +66,10 @@ export function applyFacts(
       changed++;
       return { ...k, status: 'add' as const, note: fact.note ? `user-confirmed: ${fact.note}` : 'user-confirmed' };
     }
-    if (fact.status === 'denied' && k.status === 'ask_user') {
+    const answered = fact.status === 'denied' ? DENIED_NOTE : fact.status === 'unknown' ? UNSURE_NOTE : null;
+    if (answered !== null && k.note !== answered) {
       changed++;
-      return { ...k, status: 'cannot_claim' as const, note: DENIED_NOTE };
-    }
-    if (fact.status === 'unknown' && k.note !== UNSURE_NOTE) {
-      changed++;
-      return { ...k, status: 'cannot_claim' as const, note: UNSURE_NOTE };
+      return { ...k, status: 'cannot_claim' as const, note: answered };
     }
     return k;
   });

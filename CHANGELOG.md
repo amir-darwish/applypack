@@ -12,6 +12,10 @@ All notable changes to this project are documented here. The format follows
   as new and asked again, for as long as it stayed on its feed. It is now
   stored as dismissed, unscored, with the prefilter's reason, and counted as
   a duplicate from then on. "Save & re-classify" still reads it. (#290)
+- **"I don't" on a term the AI found no evidence for did nothing.** The
+  answer was saved, but the question stayed on the card and came back on
+  every visit. It is recorded on the term now. The flash also says "the
+  score stays 37" instead of "score 37 → 37".
 
 ### Added
 - **"Not sure"** beside "I have it" and "I don't" on a comparison's

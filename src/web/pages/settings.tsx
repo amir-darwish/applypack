@@ -209,12 +209,6 @@ const Section: FC<PropsWithChildren<{ title: string; desc?: string | Child; more
 );
 
 
-/**
- * The Schedule form (TASKS §16.3). Whole hours only, one time zone for
- * everything the user sees, and every control saves with the form — no
- * JavaScript, so the day pills are plain checkboxes and the route reads them
- * with `parseBody({ all: true })` (gotcha 1).
- */
 /** What the last update check saw, in one sentence. */
 const UpdateLine: FC<{ current: string; latest: string | null; checkedAt: Date }> = ({ current, latest, checkedAt }) => (
   <Hint>
@@ -226,6 +220,12 @@ const UpdateLine: FC<{ current: string; latest: string | null; checkedAt: Date }
   </Hint>
 );
 
+/**
+ * The Schedule form (TASKS §16.3). Whole hours only, one time zone for
+ * everything the user sees, and every control saves with the form — no
+ * JavaScript, so the day pills are plain checkboxes and the route reads them
+ * with `parseBody({ all: true })` (gotcha 1).
+ */
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
 const HourSelect: FC<{ name: string; value: number; label: string; hint?: string }> = ({ name, value, label, hint }) => (

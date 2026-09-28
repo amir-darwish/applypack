@@ -43,11 +43,10 @@ factsRoute.post('/facts', async (c) => {
     });
     if (outcome && outcome.detail.changed > 0 && !unsure) {
       if (outcome.scored) {
-        return flashRedirect(
-          back,
-          'ok',
-          `Saved "${fact.term}" — score ${outcome.before} → ${outcome.after}, no AI call needed.`,
-        );
+        // A "no" moves nothing (an ask and a term without evidence both earn 0): say so, not "37 → 37".
+        const score =
+          outcome.before === outcome.after ? `the score stays ${outcome.after}` : `score ${outcome.before} → ${outcome.after}`;
+        return flashRedirect(back, 'ok', `Saved "${fact.term}" — ${score}, no AI call needed.`);
       }
       return flashRedirect(back, 'ok', `Saved "${fact.term}". Re-check to refresh this comparison.`);
     }
