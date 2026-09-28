@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env-load';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import { z } from 'zod';
