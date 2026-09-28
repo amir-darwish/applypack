@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.38.0] — 2026-09-28
+
+### Changed
+- **Deleting asks once more, and no longer needs JavaScript.** Delete,
+  Remove and Forget open a small box in the middle of the screen: it says
+  what will happen, with Cancel and the real button. It works with scripts
+  off, and a table can no longer hide it. Forgetting a confirmed fact now
+  asks too.
+- **A refused field says so itself.** When a form is refused, the field it
+  is about gets a red outline and the focus, and a screen reader reads the
+  message with it.
+- **Jobs, Companies and Runs fit a phone.** Each table keeps the columns
+  that name a row and say its state; the rest appear as the screen widens.
+- **Nothing cuts its own words at 1024 px:** the screening criteria editor,
+  the AI engine's model pickers and the add-company form.
+
 ## [2.37.0] — 2026-09-28
 
 ### Changed

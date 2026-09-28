@@ -2408,7 +2408,7 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
-- [x] **`ui-finish`** (minor, parts 1–2 v2.36.0 … v2.37.0) — the 2026-09 plan's W9.
+- [x] **`ui-finish`** (minor, parts 1–3 v2.36.0 … v2.38.0) — the 2026-09 plan's W9.
       U4 `ui.tsx:Notice` replaces ten hand-rolled tone banners; U5 the jobs
       list, the Comparisons card and the board use `Empty`; U6 a failed run
       reads as a sentence (`runs-summary.ts:failedRunLine` over
@@ -2429,6 +2429,24 @@ release-discipline skill, a docs/site block does not.
       number is **fit**, Settings → **Searches**; the glossary is DESIGN.md
       → Words. U19's long hints carry costs and gates, so their trimming goes
       with U1's Hint + More pass.
+
+      **v2.38.0 (part 3):**
+      - U8: `ui.tsx:ConfirmAction` — a delete, a removal or a spend asks in a
+        native popover (`popovertarget`): no JavaScript, and the top layer,
+        so a table's scroll box cannot clip it. `confirm()` in an onsubmit
+        asked nothing without a script. "Forget" a fact asks too.
+      - U15: the field a schema refused is marked — `flash.ts:refusedField`
+        carries the form's path and the field's name, `ui.tsx:Flash` marks
+        that field `aria-invalid`, describes it by the message and focuses
+        it, after the jump to a redirect's `#fragment`.
+      - U7: the Jobs, Companies and Runs tables keep two or three columns
+        on a phone (`hideBelow`).
+      - U16: no page scrolls sideways at 1024 px or at 375 px; three selects
+        that cut their own words at 1024 px were fixed (the screening
+        criteria editor, the engine card's model pickers, the add-company
+        ATS column). The screen-reader pass stays with the owner (O7).
+      - Left for part 4: U1–U3 (the Hint + More and one-surface passes, the
+        type ladder) and U19's long hints with them.
 
 - [x] **`screening-fixes`** (minor, parts 1–2 v2.34.0 … v2.35.0) — the 2026-09 plan's
       W8. E1 had shipped in v2.19.0 (a skill's "within N months" in its
