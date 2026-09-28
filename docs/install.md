@@ -65,13 +65,37 @@ the list of migrations it applies. Later starts take a few seconds.
 | Start | `npm start` in the ApplyPack folder, then open http://127.0.0.1:4747 |
 | Stop | **Ctrl+C** in that terminal, or `npm run stop` in another one |
 | Update | `git pull` (or download the new ZIP), then `npm install` and `npm start` — your data stays, it lives outside the folder |
-| Back up | stop ApplyPack and copy the data folder (the table above) somewhere safe |
-| Restore | stop ApplyPack and put the copied folder back in place |
+| Back up | automatic: each day's first start copies the database to `snapshots/<date>` in the data folder, three days kept (`APPLYPACK_SNAPSHOTS` in `.env` changes the count, `0` turns it off). For a copy elsewhere: stop ApplyPack and copy the data folder |
+| Restore | stop ApplyPack, move the data folder's `postgres` aside, copy `snapshots/<date>/postgres` in its place, start |
+| Start at login | Settings → General → **Start with this computer**: one button writes the system's own login entry (a launchd agent, a systemd user service, a Startup script), the same button takes it away |
+| Move a Docker install here | see below |
 | Uninstall | delete the ApplyPack folder; delete the data folder too if you want the data gone |
 
 ApplyPack searches while it runs. If the computer sleeps or the terminal is
 closed, the hourly search waits until the next `npm start`; nothing is
-lost but the time.
+lost but the time. **Start with this computer** on Settings → General
+starts it when you log in.
+
+### Moving a Docker install here
+
+On the Docker install, dump the rows (not the tables — ApplyPack creates
+its own):
+
+```bash
+docker compose exec -T postgres pg_dump -U jobhunter --data-only --inserts --column-inserts jobhunter > applypack-data.sql
+```
+
+Here, with ApplyPack stopped and only its database running (`npm run db`
+in one terminal), in another:
+
+```bash
+npm run db:import -- applypack-data.sql --yes
+```
+
+It replaces everything in this install's database, in one transaction —
+a dump that fails half-way leaves the database as it was. Update the
+Docker install first if it is older than this one; a dump from a newer
+ApplyPack stops at the first column this one does not have.
 
 ## Settings you may want
 
@@ -92,8 +116,10 @@ Pasting an API key in the setup wizard needs nothing installed. To use a
 subscription you already pay for through its command-line tool (Claude
 Code, Gemini CLI, Codex), install that tool and log in once; the dashboard
 detects it. Every engine, step by step: [ai-engines.md](./ai-engines.md).
-On Windows the command-line engines are not tested yet — use an API key
-there.
+On Windows npm installs the command-line tools as `.cmd` files; ApplyPack
+runs the script inside one with Node directly, never through `cmd.exe`,
+which would read a posting's text as commands. That path is not tested on
+Windows by a person yet — an API key is the sure one there.
 
 ## When something goes wrong
 

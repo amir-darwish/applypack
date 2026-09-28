@@ -5,6 +5,11 @@ import { isLauncherMessage, type LauncherMessage } from './supervise';
  * Docker, CI, `npm run dev` — there is no IPC channel and both are no-ops.
  */
 
+/** Whether `npm start`'s launcher started this process: it talks to it over IPC. */
+export function underLauncher(): boolean {
+  return typeof process.send === 'function';
+}
+
 export function announceReady(): void {
   const ready: LauncherMessage = { type: 'ready' };
   process.send?.(ready);

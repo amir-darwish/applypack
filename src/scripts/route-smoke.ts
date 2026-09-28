@@ -278,6 +278,12 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 303 && res.headers.get('location') === '/welcome?step=ai',
     },
     {
+      // TASKS S5: no launcher here, so the login entry is refused and nothing is written.
+      name: 'POST /settings/login-item without the launcher (refused)',
+      init: form({ on: '1' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=general#login',
+    },
+    {
       // ADR 0057: the local engine's Ollama root and its context window.
       name: 'POST /settings/ai/local (an address)',
       init: form({ baseUrl: 'http://127.0.0.1:9/v1' }),
@@ -322,6 +328,7 @@ async function main(): Promise<void> {
     '/settings/ai/openai-base',
     '/settings?tab=ai',
     '/welcome/ai/local',
+    '/settings/login-item',
     '/settings/ai/local',
     '/settings/ai/local',
     '/settings/ai/local',

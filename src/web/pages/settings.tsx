@@ -7,6 +7,7 @@ import { formatDate, formatRelative } from '../format';
 import { isNewer } from '../../versions';
 import { REAPPLY_CHOICES } from '../../employer';
 import type { FlashMessage } from '../flash';
+import type { LoginItemState } from '../login-item-io';
 import { describeCount, type SourceGroup } from '../source-groups';
 import { dotClassFor, MAX_WORK_STAGES } from '../stage-config';
 import { formatPriorityRulesText, parsePriorityRules } from '../../priority-rules';
@@ -166,6 +167,8 @@ export interface SettingsProps {
   reapplyDays: number | null;
   /** TASKS N9: the optional weekly look at GitHub's releases, and what it last saw. */
   updates: { enabled: boolean; current: string; latest: string | null; checkedAt: Date | null };
+  /** TASKS S5: the system's login entry for `npm start`; unavailable in Docker and dev. */
+  loginItem: LoginItemState;
   sourceHealthAlerts: boolean;
   disabledSources: string[];
   /** Off on /discovery stops the HN thread as surely as unticking its pill here. */
@@ -387,6 +390,7 @@ export const SettingsPage: FC<SettingsProps> = ({
   staleApplicationsDigestEnabled,
   reapplyDays,
   updates,
+  loginItem,
   sourceHealthAlerts,
   disabledSources,
   hnParserEnabled,
@@ -1068,6 +1072,30 @@ export const SettingsPage: FC<SettingsProps> = ({
       </Section>
       <SourceKeysSection rows={sourceKeyRows} />
       </>
+      )}
+
+      {activeTab === 'general' && loginItem.available && (
+      <Section
+        id="login"
+        title="Start with this computer"
+        desc="ApplyPack searches only while it runs. Started at login, the hourly search does not wait for you to open a terminal."
+      >
+        <div class="flex flex-wrap items-center gap-3">
+          <Badge tone={loginItem.on ? 'ok' : 'neutral'}>{loginItem.on ? 'Starts at login' : 'Off'}</Badge>
+          <ActionForm action="/settings/login-item" hidden={{ on: loginItem.on ? '0' : '1' }}>
+            <Button size="sm" variant={loginItem.on ? 'secondary' : 'primary'}>
+              {loginItem.on ? 'Stop starting at login' : 'Start ApplyPack when I log in'}
+            </Button>
+          </ActionForm>
+        </div>
+        <Hint>
+          {loginItem.on ? `On: ${loginItem.kind} at ` : `This writes ${loginItem.kind} at `}
+          <span class="break-all font-mono text-xs">{loginItem.file}</span>
+          {loginItem.on
+            ? '. It takes effect at your next login; npm run stop still stops it.'
+            : ', which runs npm start from this folder when you log in. The button above takes it away again.'}
+        </Hint>
+      </Section>
       )}
 
       {activeTab === 'general' && (

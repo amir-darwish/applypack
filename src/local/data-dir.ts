@@ -27,5 +27,6 @@ export function localPaths(dataDir: string) {
     stopRequest: path.join(dataDir, 'stop-requested'),
     postgresLog: path.join(dataDir, 'logs', 'postgres.log'),
     initdbPassword: path.join(dataDir, 'initdb-password'),
+    snapshots: path.join(dataDir, 'snapshots'),
   };
 }

@@ -59,3 +59,33 @@ support issues the launcher cannot fix — then SQLite is the fallback worth
 the rewrite. Before PostgreSQL 16 leaves support (November 2028): a major
 upgrade path for existing data folders. A desktop app would replace the
 terminal, not this database.
+
+## Addendum (2026-09-28): always on, backed up, moved in, and Windows' CLIs
+
+The stage this ADR left for later (`local-always-on`, TASKS S5–S8):
+
+- **Start at login is opt-in** (the 2026-09 plan's Q29): Settings →
+  General → **Start with this computer** writes the system's own entry — a
+  launchd agent on macOS, a `systemctl --user` service on Linux, a script in
+  the Windows Startup folder — for `npm start` in this checkout, under the
+  Node that runs it now (by its PATH name, which outlives an upgrade), with
+  the PATH the user has now so the CLI engines are found. The same button
+  removes it. Only a dashboard the launcher started offers it
+  (`child.ts:underLauncher`); `src/login-item.ts` is pure, the dashboard's
+  `web/login-item-io.ts` writes.
+- **A dated snapshot on start**: the launcher copies the database folder to
+  `snapshots/<date>` before Postgres starts, once a day, the newest three kept
+  (`APPLYPACK_SNAPSHOTS`, 0 = none; `local/snapshots.ts` plans it). A copy
+  taken before the server runs is whole. It replaces "stop and copy the
+  folder" as the everyday backup; restoring is putting it back.
+- **`npm run db:import`** moves a Docker install in: `pg_dump --data-only
+  --inserts --column-inserts`, split into statements by `src/sql-dump.ts`
+  (the bundle has no psql), everything replaced in one transaction with
+  foreign keys checked at the end (`session_replication_role = replica` —
+  the built-in user is its superuser), the migration history never copied.
+  It refuses while a worker runs beside the database.
+- **Windows' CLI engines**: an npm `.cmd` shim is read for the script it
+  runs, and Node runs that script (`src/cli-command.ts`). Never
+  `shell: true` — cmd.exe would read the prompt, which carries a posting,
+  as commands.
+

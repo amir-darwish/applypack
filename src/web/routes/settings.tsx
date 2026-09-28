@@ -75,6 +75,7 @@ import {
 import { billingFacts, forgetAiProbe, getAiEngineEnv, localAiBase, openAiBase, probeAiProviders } from '../../ai-runtime';
 import { DEFAULT_LOCAL_CONTEXT_TOKENS, LOCAL_CONTEXT_CHOICES } from '../../ai-provider-parse';
 import { knownModels } from '../../server-models';
+import { loginItemState, setLoginItem } from '../login-item-io';
 import { APP_VERSION } from '../../app-version';
 import { checkForUpdate } from '../../update-check';
 import { isNewer } from '../../versions';
@@ -346,6 +347,7 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
     })),
     staleApplicationsDigestEnabled: settings.staleApplicationsDigestEnabled,
     reapplyDays: settings.reapplyDays,
+    loginItem: loginItemState(),
     updates: {
       enabled: settings.updateCheck,
       current: APP_VERSION,
@@ -647,6 +649,19 @@ settingsRoute.post('/settings/ai/models', async (c) => {
   return wantsJson
     ? c.json({ ok: true })
     : flashRedirect('/settings?tab=ai', 'ok', `${label} models saved.`);
+});
+
+/** TASKS S5 (Q29): start `npm start` at login, or stop — the one button is also the undo. */
+settingsRoute.post('/settings/login-item', async (c) => {
+  const form = await c.req.parseBody();
+  const on = form.on === '1';
+  const result = await setLoginItem(on);
+  if (!result.ok) return flashRedirect('/settings?tab=general#login', 'err', `Login start not changed: ${result.reason}.`);
+  return flashRedirect(
+    '/settings?tab=general#login',
+    'ok',
+    on ? 'ApplyPack will start when you log in. The same button stops it.' : 'ApplyPack will no longer start at login.',
+  );
 });
 
 /** ADR 0057: the local engine's Ollama address and its context window. */

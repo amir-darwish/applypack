@@ -9,6 +9,7 @@ import { logger } from './logger';
 import { prisma } from './db';
 import { getAiProviderById } from './ai-provider';
 import { runChain } from './ai-failover';
+import { cliCommand } from './cli-command';
 import { SETTINGS_ID } from './settings';
 import { aiKeySource, parseAiKeys, resolveAiKey, type AiKeys, type AiKeySource } from './ai-keys';
 import { createCooldownTracker } from './ai-cooldown';
@@ -281,7 +282,8 @@ function baseUrlHost(base: string): string {
 
 async function probeCliBin(bin: string): Promise<AiProviderStatus> {
   try {
-    const { stdout } = await execFileAsync(bin, ['--version'], { timeout: PROBE_TIMEOUT_MS });
+    const command = cliCommand(bin);
+    const { stdout } = await execFileAsync(command.file, [...command.prefix, '--version'], { timeout: PROBE_TIMEOUT_MS });
     return { ok: true, detail: stdout.trim().split('\n')[0] ?? '' };
   } catch (err) {
     // "not found" was the only sentence this had, whatever happened — a
