@@ -4,6 +4,7 @@ import { conditionalHeaders, rememberResponse } from './conditional';
 import { logger } from '../logger';
 import type { LocationHints } from '../location';
 import type { NormalizedJob } from '../types';
+import { listedInFull } from './listing';
 
 const LIST_LIMIT = 100;
 const DETAIL_DELAY_MS = 250; // SmartRecruiters tolerates ~5 req/s
@@ -103,6 +104,8 @@ export async function fetchSmartRecruiters(
   const { totalFound } = list.data;
   if (totalFound !== undefined && totalFound > list.data.content.length) {
     logger.info({ atsToken: company.atsToken, totalFound, read: list.data.content.length }, 'smartrecruiters: first page of a longer board');
+  } else if (totalFound !== undefined) {
+    listedInFull(company.id);
   }
   // Normalise list rows
   const postings: z.infer<typeof SrPostingSchema>[] = [];

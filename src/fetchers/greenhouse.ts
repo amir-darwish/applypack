@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { fetchWithRetry, stripHtml } from '../http';
 import { conditionalHeaders, rememberResponse } from './conditional';
 import type { NormalizedJob } from '../types';
+import { listedInFull } from './listing';
 
 const GreenhouseLocationSchema = z
   .object({ name: z.string().nullable().optional() })
@@ -31,6 +32,7 @@ export type GreenhouseJob = z.infer<typeof GreenhouseJobSchema>;
 
 const GreenhouseResponseSchema = z.object({
   jobs: z.array(GreenhouseJobSchema),
+  meta: z.object({ total: z.number() }).optional(),
 });
 
 export interface GreenhouseCompany {
@@ -51,6 +53,8 @@ export async function fetchGreenhouse(
     );
   }
   const jobs = parsed.data.jobs.map((j) => mapGreenhouseJob(j, company.id));
+  // One answer carries the whole board; its own total says so (TASKS S13).
+  if (parsed.data.meta === undefined || parsed.data.meta.total === jobs.length) listedInFull(company.id);
   rememberResponse(company.id, url, resp, jobs.length);
   return jobs;
 }

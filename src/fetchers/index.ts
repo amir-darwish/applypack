@@ -53,6 +53,8 @@ import { getSourceKeys } from '../settings';
 import { politeDelayMs, shuffleSources, tickSeed } from './source-order';
 import { dueCutoff, nextCheckAfter, watchRules, type WatchRules } from '../watchlist/interval';
 import type { NormalizedJob } from '../types';
+import { forgetListing, wasListedInFull } from './listing';
+import { DELISTED_CODE, delistPlan, RELISTED_CODE } from './delisted';
 
 export interface FetcherResult {
   job: NormalizedJob;
@@ -79,9 +81,10 @@ export interface FetchWalkOptions {
   /**
    * Walk only the sources this keeps. The wizard's test search asks the
    * aggregators alone — they need no company row and answer with hundreds of
-   * postings each (docs/onboarding-sources.md, Decision B).
+   * postings each (docs/onboarding-sources.md, Decision B); the watchlist's
+   * Check now asks one company by its id (TASKS S23).
    */
-  only?: (company: Pick<Company, 'atsType'>) => boolean;
+  only?: (company: Pick<Company, 'id' | 'atsType'>) => boolean;
   /**
    * Where this walk hunts, in place of the running searches' places — the
    * wizard's "Where do you work?", asked before a search exists.
@@ -179,11 +182,16 @@ export async function runAllFetchers(
       if (adzunaOverflow.has(company.id)) {
         throw new HttpError(`Adzuna: more than ${MAX_ADZUNA_ROWS} rows would exceed the monthly limit — this one is not fetched`, 429, '');
       }
+      forgetListing(company.id);
       const jobs = await fetchOne(company, context);
       count = jobs.length;
       // Status comes from the RAW count, before passesBaseFilter — a profile
       // that matches nothing is not a broken board (ADR 0019).
       status = classifyFetchCount(count);
+      // A whole listing that came back `ok` says what the board took down
+      // (TASKS S13). Never on `empty`: SmartRecruiters answers every slug with
+      // zero rows, and a board that emptied would take every row with it.
+      if (status === 'ok' && wasListedInFull(company.id)) await reconcileListing(company, jobs, now);
       logger.info(
         { company: company.name, count, ats: company.atsType, status, ms: Date.now() - startedAt },
         'fetcher: ok',
@@ -217,6 +225,38 @@ export async function runAllFetchers(
   }
 
   return out;
+}
+
+/**
+ * TASKS S13: rows of this board a whole listing no longer carries are
+ * marked delisted, and the ones this rule marked are marked back when they
+ * return. Never allowed to break the tick, like the health write below.
+ */
+async function reconcileListing(company: { id: number; name: string }, jobs: readonly NormalizedJob[], now: Date): Promise<void> {
+  try {
+    const stored = await prisma.job.findMany({
+      where: { companyId: company.id },
+      select: { id: true, externalId: true, liveness: true, livenessCode: true },
+    });
+    const { delisted, relisted } = delistPlan(stored, new Set(jobs.map((j) => j.externalId)));
+    if (delisted.length > 0) {
+      await prisma.job.updateMany({
+        where: { id: { in: delisted } },
+        data: { liveness: 'expired', livenessCode: DELISTED_CODE, livenessCheckedAt: now },
+      });
+    }
+    if (relisted.length > 0) {
+      await prisma.job.updateMany({
+        where: { id: { in: relisted } },
+        data: { liveness: 'active', livenessCode: RELISTED_CODE, livenessCheckedAt: now },
+      });
+    }
+    if (delisted.length + relisted.length > 0) {
+      logger.info({ company: company.name, delisted: delisted.length, relisted: relisted.length }, 'fetcher: listing compared with the stored rows');
+    }
+  } catch (err) {
+    logger.warn({ err, company: company.name }, 'fetcher: listing not compared with the stored rows');
+  }
 }
 
 /**

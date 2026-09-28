@@ -3,6 +3,7 @@ import { fetchWithRetry, sleep } from '../http';
 import { logger } from '../logger';
 import { workplaceFromText } from '../location';
 import type { NormalizedJob } from '../types';
+import { listedInFull } from './listing';
 
 const ENDPOINT_TEMPLATE = (slug: string) =>
   `https://apply.workable.com/api/v3/accounts/${encodeURIComponent(slug)}/jobs`;
@@ -69,6 +70,8 @@ export async function fetchWorkable(
   let token: string | null = null;
   let read = 0;
   let total: number | null = null;
+  // True once the pages ran out on their own — not at the cap, not on a failure.
+  let whole = false;
   for (let page = 0; page < MAX_PAGES; page++) {
     if (page > 0) await sleep(PAGE_DELAY_MS);
     let data: unknown;
@@ -92,12 +95,16 @@ export async function fetchWorkable(
     const paging = workablePage(data);
     read += paging.rows;
     total = paging.total ?? total;
-    if (paging.nextPage === null || (total !== null && read >= total)) break;
+    if (paging.nextPage === null || (total !== null && read >= total)) {
+      whole = total === null || read >= total;
+      break;
+    }
     token = paging.nextPage;
   }
   if (total !== null && read < total) {
     logger.warn({ atsToken: company.atsToken, total, read }, 'workable: board has more postings than the pages read');
   }
+  if (whole) listedInFull(company.id);
   return out;
 }
 
