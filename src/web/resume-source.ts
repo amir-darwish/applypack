@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { getResume, listResumes, upsertScratchResume } from '../resume/store';
+import { findResumeWithText, getResume, listResumes, upsertScratchResume } from '../resume/store';
 import { resumeOptionLabel } from './resume-label';
+import type { MatchEvidence } from '../resume/match-mode';
 import { MAX_RESUME_NAME_CHARS, nameFromFilename, readResumeUpload } from './upload';
 
 /*
@@ -18,6 +19,8 @@ export const ResumeSourceFields = {
   resumeText: z.string().optional().default(''),
   uploadName: z.string().optional().default(''),
   pasteName: z.string().optional().default(''),
+  /** R1: "This is my own resume" — a file or a paste then gets the owner's facts and other resumes. */
+  mine: z.unknown().transform((v) => v === '1' || v === 'on'),
 };
 
 const ResumeSourceSchema = z.object(ResumeSourceFields);
@@ -39,6 +42,8 @@ export interface ResolvedResume {
   name: string;
   version: number;
   text: string;
+  /** One of the user's resumes, or a file they said is theirs: judged with their facts and other resumes (R1). */
+  evidence: MatchEvidence;
 }
 
 /** Resolves the picked source to a resume row, or a user-facing error. Bad files fail here, before any run starts. */
@@ -50,24 +55,27 @@ export async function resolveResumeSource(
     if (!f.resumeId) return { error: 'Pick a resume from the list.' };
     const row = await getResume(f.resumeId);
     if (!row || row.hidden) return { error: 'That resume no longer exists.' };
-    return row;
+    return { ...row, evidence: 'own' };
   }
+  // A file that reads exactly like one of the user's own resumes is theirs, checked or not (R16 helps R1).
+  const theirs = async (text: string): Promise<MatchEvidence> => (f.mine || (await findResumeWithText(text)) ? 'own' : 'text');
   if (f.resumeMode === 'upload') {
     const upload = await readResumeUpload(form);
     if ('error' in upload) return upload;
     const name = f.uploadName.trim().slice(0, MAX_RESUME_NAME_CHARS) || nameFromFilename(upload.sourceFilename);
-    return upsertScratchResume({ name, ...upload });
+    return { ...(await upsertScratchResume({ name, ...upload })), evidence: await theirs(upload.text) };
   }
   const text = f.resumeText.replace(/\r\n/g, '\n').trim();
   if (text.length < MIN_RESUME_CHARS) {
     return { error: `The pasted resume is too short — at least ${MIN_RESUME_CHARS} characters.` };
   }
   const name = f.pasteName.trim().slice(0, MAX_RESUME_NAME_CHARS) || 'Pasted resume';
-  return upsertScratchResume({
+  const scratch = await upsertScratchResume({
     name,
     sourceFilename: 'pasted.txt',
     mimeType: 'text/plain',
     original: Buffer.from(text, 'utf8'),
     text,
   });
+  return { ...scratch, evidence: await theirs(text) };
 }

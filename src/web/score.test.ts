@@ -119,6 +119,24 @@ test('live entries equal server entries when the text matches the analysed snaps
   );
 });
 
+test('a skill only another resume backs: half credit, no cover for the primary stack, on both sides (R2)', async () => {
+  const { entriesFromLive, computeScore } = await browser;
+  const keywords = [
+    { requirement: 'must', primary: true, status: 'present' },
+    { requirement: 'must', primary: true, status: 'add', elsewhere: 'Backend CV' },
+  ] as const;
+  const alignment: MatchAlignment = { title: 'strong', summary: 'strong', recent_role: 'strong' };
+  const server = computeScoreTs(entriesFromKeywords(keywords.map((k) => ({ ...k }))), alignment, 0);
+  const live = computeScore(entriesFromLive(keywords.map((k) => ({ ...k, found: k.status === 'present' }))), alignment, 0);
+  assert.deepEqual(live, server);
+  assert.equal(server.primaryPresent, 1, 'the borrowed one does not cover');
+  assert.equal(server.cap, 70, 'half the primary stack caps the score');
+  assert.equal(server.keywordEarned, 4.5, 'its half credit stays');
+  // Typed into this resume it is this resume's: the cap lifts.
+  const typed = computeScore(entriesFromLive(keywords.map((k) => ({ ...k, found: true }))), alignment, 0);
+  assert.equal(typed.cap, null);
+});
+
 test('live credit: a written word earns in full whatever the analysis called it (ADR 0045)', async () => {
   const { entriesFromLive } = await browser;
   const rows = [

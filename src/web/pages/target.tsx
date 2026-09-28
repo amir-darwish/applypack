@@ -10,7 +10,8 @@ import type { VerificationForHint } from '../../resume/verification-hint';
 import { effectiveKeywords, confirmable } from '../../resume/keyword-overrides';
 import { DENIED_NOTE, UNSURE_NOTE } from '../../resume/facts';
 import { readActions, readHardRequirements, readRemovals } from '../../resume/prompts';
-import { readMatchMode } from '../../resume/match-mode';
+import { readMatchEvidence, readMatchMode } from '../../resume/match-mode';
+import { notEnglishNotice } from '../../text-language';
 import { readBreakdown } from '../../resume/score';
 import { mainAdvice, readyToApply } from '../score-lines';
 import type { OrientationRow } from '../../resume/posting-orientation';
@@ -134,7 +135,8 @@ export const TargetPage: FC<TargetPageProps> = ({
   const actions = readActions(match.actions);
   const removals = readRemovals(match.removals);
   const hard = readHardRequirements(match.hardRequirements);
-  const { asks, unproven } = confirmable(scored);
+  // A file judged on its own text may not be the user's: its questions are not theirs to answer (TASKS R1).
+  const { asks, unproven } = readMatchEvidence(match.breakdown) === 'text' ? { asks: [], unproven: [] } : confirmable(scored);
   const highActions = actions.filter((a) => a.priority === 'high').length;
   // A quick check has no suggestions yet — the tab offers the second call instead (ADR 0029).
   const fast = readMatchMode(match.breakdown) === 'fast';
@@ -616,7 +618,10 @@ export const TargetPage: FC<TargetPageProps> = ({
             {resume.ephemeral
               ? 'Plain text — what an ATS parser sees. Edits stay in this browser tab until you re-check.'
               : 'Plain text — what an ATS parser sees. Edits stay in this browser tab until you re-check or Save.'}
+            {readMatchEvidence(match.breakdown) === 'text' &&
+              ' Judged on its own text: your confirmed facts and other resumes were left out, since it may not be yours.'}
           </Hint>
+          {notEnglishNotice(job.description) && <Hint class="mt-1">{notEnglishNotice(job.description)}</Hint>}
         </Card>
 
         <div class="pane-changes">

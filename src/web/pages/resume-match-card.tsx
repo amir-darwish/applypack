@@ -33,7 +33,7 @@ import {
 import { freshFrame, freshFrameNotice } from '../../resume/keyword-frame';
 import { proposalOf, suggestionSheet, type Proposal } from '../../resume/change-sheet';
 import { hashShortId } from '../../text-utils';
-import { readMatchMode, type MatchMode } from '../../resume/match-mode';
+import { readMatchEvidence, readMatchMode, type MatchMode } from '../../resume/match-mode';
 import { verificationCautions, verificationHint, type VerificationForHint, type VerificationHint } from '../../resume/verification-hint';
 import type { CountedKeyword } from '../../resume/keyword-matcher';
 import { effectiveRequirement, isIgnored, confirmable } from '../../resume/keyword-overrides';
@@ -469,6 +469,9 @@ const MatchReport: FC<{
         </Button>
       </div>
       <p class="text-sm leading-6 text-ink">{match.summary}</p>
+      {readMatchEvidence(match.breakdown) === 'text' && (
+        <Hint>Judged on this file's text alone: your confirmed facts and your other resumes were left out, since it may not be yours.</Hint>
+      )}
       {/* The advice line is the tailoring page's, not this card's: the five
           lines below already carry the facts it would rank, and saying the
           same thing twice two lines apart is what the copy pass just cut. */}
@@ -479,7 +482,8 @@ const MatchReport: FC<{
       <DeltaBox match={match} previous={previous} />
       <HardRequirementsBlock hard={readHardRequirements(match.hardRequirements)} />
       <MatchSignals match={match} verification={verification} />
-      <ConfirmFacts {...confirmable(keywords)} matchId={match.id} back={factsBack} />
+      {/* A file judged on its own text may not be the user's: its questions are not theirs to answer (R1). */}
+      {readMatchEvidence(match.breakdown) === 'own' && <ConfirmFacts {...confirmable(keywords)} matchId={match.id} back={factsBack} />}
 
       {readMatchMode(match.breakdown) === 'fast' ? (
         <SuggestionsPrompt matchId={match.id} jobId={match.jobId} />

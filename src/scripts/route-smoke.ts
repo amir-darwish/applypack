@@ -198,10 +198,20 @@ async function main(): Promise<void> {
       init: (() => {
         const body = new FormData();
         body.set('name', 'Smoke upload');
-        body.set('file', new File([RESUME], 'smoke.txt', { type: 'text/plain' }));
+        body.set('file', new File([`${RESUME}\nLanguages: English, Ukrainian.`], 'smoke.txt', { type: 'text/plain' }));
         return { method: 'POST', headers: ORIGIN, body } satisfies RequestInit;
       })(),
       expect: (res) => res.status === 303 && (res.headers.get('location') ?? '').startsWith('/target/runs/'),
+    },
+    {
+      // TASKS R16: the fixture's own text again is the resume already there — no second row, no scan.
+      name: 'POST /resumes with the text of a saved resume (sent to it)',
+      init: (() => {
+        const body = new FormData();
+        body.set('file', new File([RESUME], 'again.txt', { type: 'text/plain' }));
+        return { method: 'POST', headers: ORIGIN, body } satisfies RequestInit;
+      })(),
+      expect: (res) => res.status === 303 && res.headers.get('location') === `/resumes/${f.resumeId}`,
     },
     {
       name: 'POST /settings/fetching-toggle',
@@ -313,6 +323,7 @@ async function main(): Promise<void> {
   ];
   const postPaths = [
     '/jobs/new',
+    '/resumes',
     '/resumes',
     '/settings/fetching-toggle',
     `/jobs/${f.jobId}/status`,

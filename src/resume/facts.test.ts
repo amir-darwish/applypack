@@ -108,3 +108,17 @@ test('annotateElsewhere marks only unclaimable keywords, via term or alias', () 
   assert.equal(out[1]?.elsewhere, null);
   assert.equal(out[2]?.elsewhere, null);
 });
+
+test('an add another resume backs is pointed at it; a confirmed fact is the candidate\'s own (R2)', () => {
+  const kws = [
+    { term: 'React', aliases: [], status: 'add', note: 'in "Frontend CV"' },
+    { term: 'Node.js', aliases: [], status: 'add', note: 'user-confirmed: two years of it' },
+    { term: 'Go', aliases: [], status: 'present' },
+  ] as unknown as Parameters<typeof annotateElsewhere>[0];
+  const out = annotateElsewhere(kws, [
+    { skill: 'React', resumeName: 'Frontend CV' },
+    { skill: 'Node.js', resumeName: 'Frontend CV' },
+    { skill: 'Go', resumeName: 'Frontend CV' },
+  ]);
+  assert.deepEqual(out.map((k) => k.elsewhere ?? null), ['Frontend CV', null, null]);
+});

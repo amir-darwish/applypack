@@ -176,6 +176,7 @@ export const TargetStartPage: FC<TargetStartProps> = ({ jobs, selectedJobId, res
                 </div>
               </ModeCard>
             </div>
+            <MineCheckbox />
           </Card>
         </div>
 
@@ -199,6 +200,25 @@ export const TargetStartPage: FC<TargetStartProps> = ({ jobs, selectedJobId, res
     </Layout>
   );
 };
+
+/**
+ * R1 (the 2026-09 plan's Q4): a file or a paste is judged on its own text —
+ * it may be a friend's resume or an old one — unless the person says it is
+ * theirs; then it gets their confirmed facts and other resumes, as their saved
+ * resumes do. Ignored for "One of your resumes". Shared with /letter.
+ */
+export const MineCheckbox: FC = () => (
+  <div class="mt-3 border-t border-line pt-3">
+    <label class="flex cursor-pointer items-center gap-2 text-sm text-ink">
+      <input type="checkbox" name="mine" value="1" class="h-4 w-4 accent-accent" />
+      A file or pasted text here is my own resume
+    </label>
+    <Hint class="mt-1">
+      Checked, it is judged with the facts you confirmed and your other resumes. Unchecked, on its own text only —
+      right for a friend's resume or an old one.
+    </Hint>
+  </div>
+);
 
 /** Radio-headed option card — shared with the /letter launcher. */
 export const ModeCard: FC<

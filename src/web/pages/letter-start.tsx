@@ -6,7 +6,7 @@ import type { FlashMessage } from '../flash';
 import type { ResumeOption } from '../resume-source';
 import type { JobPickOption } from '../job-pick';
 import { JobPicker } from './job-picker';
-import { ModeCard } from './target-start';
+import { MineCheckbox, ModeCard } from './target-start';
 import { ACCEPTED_EXTENSIONS } from '../../resume/resume-text';
 import { MAX_UPLOAD_MB } from '../upload';
 import { COVER_TONES, type CoverAngles } from '../../resume/prompts';
@@ -142,6 +142,7 @@ export const LetterStartPage: FC<LetterStartProps> = ({
                 </div>
               </ModeCard>
             </div>
+            <MineCheckbox />
           </Card>
         </div>
 

@@ -213,7 +213,7 @@ letterRoute.post('/letter', resumeUploadLimit('/letter'), async (c) => {
       const row = await matchResumeToJob(
         { id: resume.id, name: resume.name, version: resume.version, text: resume.text },
         { id: job.id, title: job.title, companyName: job.companyName, location: job.location, description: job.description },
-        { mode: 'full' },
+        { mode: 'full', evidence: resume.evidence },
       );
       if (!row) warnings.push('The resume match failed, so the letter works from the resume and posting alone.');
     }
@@ -240,7 +240,7 @@ letterRoute.post('/letter', resumeUploadLimit('/letter'), async (c) => {
     const outcome = await generateCoverLetter(
       { id: resume.id, text: resume.text, version: resume.version },
       { id: job.id, title: job.title, companyName: job.companyName, location: job.location, description: job.description },
-      { tone, angles },
+      { tone, angles, evidence: resume.evidence },
     );
     if (outcome.kind === 'ok') {
       updateRun(run.id, {

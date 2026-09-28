@@ -67,7 +67,7 @@ import { postingDepth } from '../../resume/brief-depth';
 import { domainMismatch, domainNotice } from '../../resume/domain';
 import { postingOrientation } from '../../resume/posting-orientation';
 import { rewriteAction } from '../../resume/rewrite';
-import { parseMatchMode, readMatchMode } from '../../resume/match-mode';
+import { readMatchEvidence, parseMatchMode, readMatchMode } from '../../resume/match-mode';
 import { generateCoverLetter } from '../../resume/cover-letter';
 import {
   countWords,
@@ -783,6 +783,8 @@ jobsRoute.post('/jobs/:id/match', async (c) => {
     text,
     // The quick check unless the form asked for the full report (ADR 0029).
     mode: parseMatchMode(form.mode),
+    // A one-off's re-run judges as its first run did; one of the user's own resumes always has their evidence (R1).
+    evidence: row.hidden ? (oneOff ? readMatchEvidence(oneOff.breakdown) : 'text') : 'own',
     // "Rebuild keywords": read the terms out of the posting again instead of
     // inheriting the frame this posting has been carrying (issue #79).
     rebuild: form.rebuild === '1',
@@ -915,7 +917,7 @@ jobsRoute.post('/jobs/:id/cover', async (c) => {
   if (joined) return c.redirect(`/target/runs/${run.id}`, 303);
   startRun(run.id, async () => {
     const outcome = await generateCoverLetter(
-      { id: resume.id, text: resume.text, version: resume.version },
+      { id: resume.id, text: resume.text, version: resume.version, hidden: resume.hidden },
       { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description },
       { tone, angles, addressee },
     );
@@ -1078,9 +1080,11 @@ jobsRoute.post('/jobs/:id/target/reupload', async (c, next) => resumeUploadLimit
   const form = await c.req.parseBody();
   const resumeId = idParam(form.resumeId);
   if (!Number.isFinite(resumeId)) return c.text('Bad resume id', 400);
-  const [job, resume] = await Promise.all([
+  const baseId = idParam(form.matchId);
+  const [job, resume, base] = await Promise.all([
     prisma.job.findUnique({ where: { id }, include: { company: { select: { name: true } } } }),
     getResume(resumeId),
+    Number.isFinite(baseId) ? getMatch(baseId) : null,
   ]);
   if (!job || !resume) return c.text('Not found', 404);
   const upload = await readResumeUpload(form);
@@ -1105,6 +1109,8 @@ jobsRoute.post('/jobs/:id/target/reupload', async (c, next) => resumeUploadLimit
     // for "the same check without the advice" only ever raised the question of
     // which one to press.
     mode: 'full',
+    // Another file in a one-off's place is judged as that one-off was (R1).
+    evidence: resume.hidden ? (base ? readMatchEvidence(base.breakdown) : 'text') : 'own',
     rebuild: false,
     force: false,
     resultUrl: (matchId) => `/jobs/${id}/target?match=${matchId}`,

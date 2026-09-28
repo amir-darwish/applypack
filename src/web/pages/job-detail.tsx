@@ -33,6 +33,7 @@ import type { FlashMessage } from '../flash';
 import type { JobTab } from '../job-tabs';
 import { jobHref } from '../job-tabs';
 import { CoverLetterCard, type CoverLetterCardProps } from './cover-letter-card';
+import { notEnglishNotice } from '../../text-language';
 import { ResumeMatchCard, type ResumeMatchCardProps } from './resume-match-card';
 import { VerificationCard, type VerificationCardProps } from './verification-card';
 import { LIVENESS_CODE_LABEL, type LivenessCode } from '../../verification/liveness';
@@ -327,6 +328,10 @@ export const JobDetailPage: FC<JobDetailProps> = ({
         />
         )}
 
+        {/* S20: the comparison and the letter are written for English; a posting that is not says so first. */}
+        {(tab === 'match' || tab === 'letter') && notEnglishNotice(job.description) && (
+          <Hint class="mb-3">{notEnglishNotice(job.description)}</Hint>
+        )}
         {tab === 'match' && <ResumeMatchCard {...resumeMatch} />}
 
         {tab === 'letter' && <CoverLetterCard {...coverLetters} />}
