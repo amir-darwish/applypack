@@ -8,10 +8,13 @@ import { getResume } from '../../resume/store';
 import { appliedResumeColumns, readAppliedResumeChoice } from '../applied-resume';
 import { flashRedirect, parseFlashCookie } from '../flash';
 import { jobHref, resolveJobTab } from '../job-tabs';
-import { ApplicationsPage } from '../pages/applications';
+import { ApplicationsPage, type ApplicationCard } from '../pages/applications';
 import { allStages, labelFor, parseStageConfig, strandedStages, UNFILED_STAGE } from '../stage-config';
 import { appliedDateCorrection, stageChangeEvent } from '../stage-events';
 import { groupEventsByJob, stageTimeLine, type StageTimeLine } from '../stage-time';
+import { applicationsCsv, applicationsMarkdown, dayIn, type ApplicationExportRow } from '../applications-export';
+import { appliedWithLabel } from '../../jobs/applied-with';
+import { displayZone } from '../display-zone';
 
 // Stage keys are validated at runtime against the configured list
 // (ADR 0025) — an enum would freeze what is now user data.
@@ -27,22 +30,29 @@ const ApplicationFormSchema = z.object({
 
 export const applicationsRoute = new Hono();
 
-applicationsRoute.get('/applications', async (c) => {
+/**
+ * Every job that holds a stage, not only the ones a column covers: a column
+ * the user removed used to strand its jobs, invisible and with nothing to
+ * drag them out of. They land in "Unfiled" instead. The page and the two
+ * exports read the board from here.
+ */
+async function loadBoard() {
   const settings = await getSettings();
   const work = parseStageConfig(settings.pipelineStages);
-  // Every job that holds a stage, not only the ones a column covers: a column
-  // the user removed used to strand its jobs, invisible and with nothing to
-  // drag them out of. They land in "Unfiled" instead.
   const rows = await prisma.job.findMany({
     where: { pipelineStage: { not: null } },
     select: {
       id: true,
       title: true,
+      url: true,
       employer: true,
       fitScore: true,
       recruiterContact: true,
+      applicationNotes: true,
       pipelineStage: true,
       appliedAt: true,
+      appliedResumeVersion: true,
+      appliedResume: { select: { name: true } },
       company: { select: { name: true } },
     },
     orderBy: [{ appliedAt: 'desc' }, { id: 'desc' }],
@@ -60,38 +70,31 @@ applicationsRoute.get('/applications', async (c) => {
           orderBy: { recordedAt: 'asc' },
         })
       : [];
-  const eventsByJob = groupEventsByJob(events, boardIds);
-
-  const now = new Date();
   const stranded = strandedStages(work, rows.map((r) => r.pipelineStage));
   const columns = [...allStages(work), ...(stranded.length > 0 ? [UNFILED_STAGE] : [])];
-  const byStage = Object.fromEntries(columns.map((s) => [s.key, []])) as Record<
-    string,
-    Array<{
-      id: number;
-      title: string;
-      companyName: string;
-      fitScore: number | null;
-      recruiterContact: string | null;
-      stageLine: StageTimeLine | null;
-    }>
-  >;
-  for (const j of rows) {
-    if (!j.pipelineStage) continue;
-    const stage = byStage[j.pipelineStage] ? j.pipelineStage : UNFILED_STAGE.key;
+  const eventsByJob = groupEventsByJob(events, boardIds);
+  const now = new Date();
+  // A stage key no column covers any more files under "Unfiled", as the board draws it.
+  const cards = rows.flatMap((j) => {
+    if (!j.pipelineStage) return [];
+    const stage = columns.some((col) => col.key === j.pipelineStage) ? j.pipelineStage : UNFILED_STAGE.key;
+    const line = stageTimeLine(stage, j.appliedAt, eventsByJob.get(j.id) ?? [], now, labelFor(work, stage));
+    return [{ job: j, stage, line }];
+  });
+  return { settings, work, columns, stranded: stranded.length > 0, cards, now };
+}
+
+applicationsRoute.get('/applications', async (c) => {
+  const { settings, work, columns, stranded, cards } = await loadBoard();
+  const byStage: Record<string, ApplicationCard[]> = Object.fromEntries(columns.map((s) => [s.key, []]));
+  for (const { job: j, stage, line } of cards) {
     byStage[stage]!.push({
       id: j.id,
       title: j.title,
       companyName: j.employer ?? j.company.name,
       fitScore: j.fitScore,
       recruiterContact: j.recruiterContact,
-      stageLine: stageTimeLine(
-        stage,
-        j.appliedAt,
-        eventsByJob.get(j.id) ?? [],
-        now,
-        labelFor(work, stage),
-      ),
+      stageLine: line,
     });
   }
 
@@ -99,11 +102,54 @@ applicationsRoute.get('/applications', async (c) => {
     <ApplicationsPage
       byStage={byStage}
       work={work}
-      stranded={stranded.length > 0}
+      stranded={stranded}
       applicationTrackingEnabled={settings.applicationTrackingEnabled}
       flash={parseFlashCookie(c.req.header('cookie'))}
     />,
   );
+});
+
+/** The board as rows for a file, in column order, newest application first within a column. */
+async function exportRows(): Promise<{ rows: ApplicationExportRow[]; columns: { key: string; label: string }[]; now: Date }> {
+  const { work, columns, cards, now } = await loadBoard();
+  const order = new Map(columns.map((col, i) => [col.key, i]));
+  const rows = cards
+    .map(({ job: j, stage, line }) => ({
+      stageKey: stage,
+      stage: stage === UNFILED_STAGE.key ? UNFILED_STAGE.label : labelFor(work, stage),
+      company: j.employer ?? j.company.name,
+      title: j.title,
+      appliedAt: j.appliedAt,
+      stageSince: line?.since ?? null,
+      fitScore: j.fitScore,
+      resume: appliedWithLabel(
+        j.appliedResumeVersion === null && j.appliedResume === null
+          ? null
+          : { name: j.appliedResume?.name ?? null, version: j.appliedResumeVersion },
+      ),
+      recruiterContact: j.recruiterContact,
+      notes: j.applicationNotes,
+      url: j.url,
+    }))
+    .sort((a, b) => (order.get(a.stageKey) ?? 0) - (order.get(b.stageKey) ?? 0));
+  return { rows, columns, now };
+}
+
+/** TASKS N7: the board as a file — CSV for a spreadsheet, Markdown to read. Dates are days in the dashboard's time zone. */
+applicationsRoute.get('/applications/export.csv', async (c) => {
+  const { rows, now } = await exportRows();
+  return c.body(applicationsCsv(rows, displayZone()), 200, {
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="applications-${dayIn(now, displayZone())}.csv"`,
+  });
+});
+
+applicationsRoute.get('/applications/export.md', async (c) => {
+  const { rows, columns, now } = await exportRows();
+  return c.body(applicationsMarkdown(rows, columns, displayZone(), now), 200, {
+    'Content-Type': 'text/markdown; charset=utf-8',
+    'Content-Disposition': `attachment; filename="applications-${dayIn(now, displayZone())}.md"`,
+  });
 });
 
 const StageMoveSchema = z.object({ toStage: z.string().min(1).max(40) });
