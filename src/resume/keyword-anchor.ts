@@ -83,6 +83,24 @@ export function anchorStatuses(
   return { keywords: next, downgraded, upgraded };
 }
 
+/**
+ * A present keyword the text spells only another way (TASKS R4): an ATS that
+ * searches for the posting's own word — "PostgreSQL" — does not find
+ * "Postgres". The row stays `present` and carries the spelling it was found
+ * as, so the table can say to write the posting's once. Every row is set or
+ * cleared here, so nothing the model wrote in the field survives.
+ */
+export function annotateAliasOnly(keywords: MatchKeyword[], resumeText: string, matcher: KeywordMatcher): MatchKeyword[] {
+  return keywords.map((k) => {
+    const hit =
+      k.status === 'present' && k.aliases.length > 0 && matcher.findTerm(resumeText, k.term, []).length === 0
+        ? matcher.findTerm(resumeText, k.term, k.aliases)[0]
+        : undefined;
+    const aliasOnly = hit ? resumeText.slice(hit.start, hit.end) : null;
+    return (k.aliasOnly ?? null) === aliasOnly ? k : { ...k, aliasOnly };
+  });
+}
+
 export function anchorKeywords(
   keywords: MatchKeyword[],
   posting: string,

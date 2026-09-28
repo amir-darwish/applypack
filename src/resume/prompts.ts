@@ -283,6 +283,10 @@ const MatchSchema = z.object({
         evidence: z.enum(EVIDENCE_LEVELS).optional(),
         // Set by post-processing when another stored resume evidences the term.
         elsewhere: nullableText,
+        // Set by post-processing (keyword-anchor.ts:annotateAliasOnly): the
+        // spelling a present term was found as when the posting's own is
+        // nowhere in the resume — what an ATS searching the posting's word misses.
+        aliasOnly: nullableText.optional(),
         // Set by post-processing when the posting contains the term in no
         // recognisable spelling — the panes cannot highlight it (F2 guard).
         unanchored: z.boolean().optional(),

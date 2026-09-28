@@ -22,7 +22,7 @@ import { floorDemand, floorGaps } from './suggestion-floor';
 import { suggestForMatch } from './suggestions';
 import { withTableAliases } from './keyword-aliases';
 import { carryOverrides, effectiveKeywords } from './keyword-overrides';
-import { anchorKeywords, anchorStatuses, elsewhereForPosting } from './keyword-anchor';
+import { annotateAliasOnly, anchorKeywords, anchorStatuses, elsewhereForPosting } from './keyword-anchor';
 import { appliedWording, freshActions, rewritesOfApplied } from './applied';
 import { domainMismatch } from './domain';
 import { reconcileGroups } from './keyword-group';
@@ -178,7 +178,7 @@ export async function matchResumeToJob(
   // How strongly the text shows each term — read off the resume, never asked
   // of the model (evidence.ts): a skills line, a sentence about work, or a
   // sentence with a number in it.
-  const evidence = annotateEvidence(anchoredStatuses.keywords, resume.text, matcher);
+  const evidence = annotateEvidence(annotateAliasOnly(anchoredStatuses.keywords, resume.text, matcher), resume.text, matcher);
   const keywords = evidence.keywords;
   // What may be applied with one press is decided here, in code, against
   // the resume, the posting and the facts — never by the model (ADR 0037).

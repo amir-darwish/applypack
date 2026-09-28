@@ -1085,6 +1085,11 @@ const KeywordRow: FC<{ k: CountedKeyword; edit?: KeywordEditTarget }> = ({ k, ed
           </span>
         )}
         {k.elsewhere && <Badge tone="neutral">in "{k.elsewhere}"</Badge>}
+        {k.aliasOnly && (
+          <span title={`Written as "${k.aliasOnly}". An ATS that searches for "${k.term}" may not find it — write the posting's spelling once, in a bullet or on the skills line.`}>
+            <Badge tone="warn">as "{k.aliasOnly}"</Badge>
+          </span>
+        )}
         {k.unanchored && (
           <span
             title={
