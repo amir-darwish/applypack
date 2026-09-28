@@ -13,15 +13,16 @@ function num(stats: CronStats, key: string): number {
   return typeof v === 'number' ? v : 0;
 }
 
-export function summarizeFetchRun(stats: CronStats): { kind: FlashKind; text: string } {
+/** `label` opens every sentence: "Fetch now", or "Checked Acme" for the watchlist's Check now (TASKS S23). */
+export function summarizeFetchRun(stats: CronStats, label = 'Fetch now'): { kind: FlashKind; text: string } {
   if (stats.reason === 'overlap') {
     return {
       kind: 'warn',
-      text: 'Fetch now did nothing: another fetch is running (the hourly one, or a fetch-once script), and two at once would score the same postings twice. Its row on /runs shows when it is done.',
+      text: `${label} did nothing: another fetch is running (the hourly one, or a fetch-once script), and two at once would score the same postings twice. Its row on /runs shows when it is done.`,
     };
   }
   if (stats.reason === 'no-active-profile') {
-    return { kind: 'err', text: 'Fetch now: no running search — create one on Settings → Profile.' };
+    return { kind: 'err', text: `${label}: no running search — create one on Settings → Profile.` };
   }
   const fetched = num(stats, 'fetched');
   const sources = num(stats, 'sources');
@@ -30,7 +31,7 @@ export function summarizeFetchRun(stats: CronStats): { kind: FlashKind; text: st
   if (stats.reason === 'paused-mid-run') {
     return {
       kind: 'warn',
-      text: `Fetch now stopped: fetching was paused mid-run after ${sources} sources (${fetched} jobs, nothing stored).`,
+      text: `${label} stopped: fetching was paused mid-run after ${sources} sources (${fetched} jobs, nothing stored).`,
     };
   }
   const unchanged = num(stats, 'sourcesUnchanged');
@@ -40,16 +41,16 @@ export function summarizeFetchRun(stats: CronStats): { kind: FlashKind; text: st
     if (unchanged > 0) {
       return {
         kind: 'ok',
-        text: `Fetch now: nothing new in ${took} — ${unchanged} of ${sources} sources unchanged since the last tick${failed > 0 ? `, ${failed} failed` : ''}.`,
+        text: `${label}: nothing new in ${took} — ${unchanged} of ${sources} sources unchanged since the last tick${failed > 0 ? `, ${failed} failed` : ''}.`,
       };
     }
     return {
       kind: 'warn',
-      text: `Fetch now: no jobs from ${sources} sources${failed > 0 ? ` (${failed} failed)` : ''} in ${took} — check the network, then the Quiet sources card on /companies.`,
+      text: `${label}: no jobs from ${sources} sources${failed > 0 ? ` (${failed} failed)` : ''} in ${took} — check the network, then the Quiet sources card on /companies.`,
     };
   }
   const persisted = num(stats, 'persisted');
-  const head = `Fetch now: ${fetched} jobs from ${sources} sources${sourceNotes(unchanged, failed)} in ${took} — ${persisted} new stored`;
+  const head = `${label}: ${fetched} jobs from ${sources} sources${sourceNotes(unchanged, failed)} in ${took} — ${persisted} new stored`;
   if (stats.classify === false) {
     return {
       kind: 'ok',
@@ -59,7 +60,7 @@ export function summarizeFetchRun(stats: CronStats): { kind: FlashKind; text: st
   if (stats.skippedBlankProfile === 1) {
     return {
       kind: 'warn',
-      text: `Fetch now: ${fetched} jobs from ${sources} sources in ${took}, nothing stored — every running search is empty, so classification is idle.`,
+      text: `${label}: ${fetched} jobs from ${sources} sources in ${took}, nothing stored — every running search is empty, so classification is idle.`,
     };
   }
   if (stats.abortedMidRun === 1) {

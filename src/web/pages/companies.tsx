@@ -39,6 +39,7 @@ import { StarterPackPicker, type PackSegmentChoice } from './starter-pack';
 import type { SourceSuggestion } from '../../starter-packs/suggest';
 import { AddCompaniesCard, WatchlistSection, type WatchedRow } from './watchlist';
 import { MutedCompaniesSection, type MutedRow } from './muted-companies';
+import type { PackOffer } from '../pack-offers';
 import type { WatchlistRun } from '../watchlist-runs';
 
 interface CompanyRow {
@@ -70,6 +71,8 @@ export interface CompaniesProps {
   suggestions: SourceSuggestion[];
   /** Keyed sources whose credential is in place — the only ones the form offers (ADR 0034). */
   keyedUnlocked: string[];
+  /** TASKS S26: the starter packs that fit the running searches, as the wizard offers them. */
+  fitPacks: PackOffer[];
   flash?: FlashMessage | null;
   fetchingEnabled: boolean;
   /** ADR 0056: the companies the user does not want to see. */
@@ -196,45 +199,76 @@ const KEYED_ATS: string[] = [AtsType.ADZUNA, AtsType.FRANCETRAVAIL];
  * from each search's stack. Added off, like a pack; the row's own toggle
  * switches it on. Nothing to show when no running search names such a place.
  */
-const SuggestedSources: FC<{ suggestions: SourceSuggestion[] }> = ({ suggestions }) => {
-  if (suggestions.length === 0) return null;
+const SuggestedSources: FC<{ suggestions: SourceSuggestion[]; packs: PackOffer[] }> = ({ suggestions, packs }) => {
+  if (suggestions.length === 0 && packs.length === 0) return null;
   const waiting = suggestions.filter((s) => s.state !== 'on').length;
   return (
     <Card>
-      <Hint class="mb-3">
-        Feeds that fit where your running searches hunt. Add (off) probes a feed and adds it
-        switched off; Enable puts it in the hourly tick.
-      </Hint>
-      {waiting > 1 && (
-        <ActionForm action="/companies/suggested/all" class="mb-3" once>
-          <Button size="sm">Enable all {waiting}</Button>
-        </ActionForm>
+      {suggestions.length > 0 && (
+        <>
+          <Hint class="mb-3">
+            Feeds that fit where your running searches hunt. Add (off) probes a feed and adds it
+            switched off; Enable puts it in the hourly tick.
+          </Hint>
+          {waiting > 1 && (
+            <ActionForm action="/companies/suggested/all" class="mb-3" once>
+              <Button size="sm">Enable all {waiting}</Button>
+            </ActionForm>
+          )}
+          <ul class="divide-y divide-line">
+            {suggestions.map((s) => (
+              <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
+                <div class="min-w-0">
+                  <div class="text-label text-ink">{s.name}</div>
+                  <div class="truncate text-xs text-ink-faint">
+                    {s.reason} · <Code>{s.atsToken}</Code>
+                  </div>
+                </div>
+                {s.state === 'missing' && (
+                  <form method="post" action="/companies/suggested">
+                    <input type="hidden" name="atsType" value={s.atsType} />
+                    <input type="hidden" name="atsToken" value={s.atsToken} />
+                    <Button size="sm" variant="secondary">Add (off)</Button>
+                  </form>
+                )}
+                {s.state === 'off' && s.companyId !== null && (
+                  <form method="post" action={`/companies/${s.companyId}/toggle-active`}>
+                    <Button size="sm">Enable</Button>
+                  </form>
+                )}
+                {s.state === 'on' && <Badge tone="ok">On</Badge>}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
-      <ul class="divide-y divide-line">
-        {suggestions.map((s) => (
-          <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
-            <div class="min-w-0">
-              <div class="text-label text-ink">{s.name}</div>
-              <div class="truncate text-xs text-ink-faint">
-                {s.reason} · <Code>{s.atsToken}</Code>
-              </div>
-            </div>
-            {s.state === 'missing' && (
-              <form method="post" action="/companies/suggested">
-                <input type="hidden" name="atsType" value={s.atsType} />
-                <input type="hidden" name="atsToken" value={s.atsToken} />
-                <Button size="sm" variant="secondary">Add (off)</Button>
-              </form>
-            )}
-            {s.state === 'off' && s.companyId !== null && (
-              <form method="post" action={`/companies/${s.companyId}/toggle-active`}>
-                <Button size="sm">Enable</Button>
-              </form>
-            )}
-            {s.state === 'on' && <Badge tone="ok">On</Badge>}
-          </li>
-        ))}
-      </ul>
+      {packs.length > 0 && (
+        <div class={suggestions.length > 0 ? 'mt-4 border-t border-line pt-4' : ''}>
+          <div class="text-label text-ink">Company packs for your searches</div>
+          <Hint class="mt-0.5">
+            Boards picked and checked by hand that fit what your searches hunt. The preview lists every company
+            before anything is added, and they land switched off.
+          </Hint>
+          <form method="post" action="/companies/starter-pack" class="mt-2">
+            {packs.map((p) => (
+              <input type="hidden" name="segment" value={p.id} />
+            ))}
+            <ul class="mb-3 space-y-1 text-sm">
+              {packs.map((p) => (
+                <li>
+                  <span class="font-medium text-ink">{p.label}</span>{' '}
+                  <span class="text-ink-faint">
+                    · {p.count - p.tracked} of {p.count} not here yet
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Button size="sm" variant="secondary">
+              Preview {packs.length === 1 ? 'this pack' : `these ${packs.length} packs`}
+            </Button>
+          </form>
+        </div>
+      )}
     </Card>
   );
 };
@@ -246,6 +280,7 @@ export const CompaniesPage: FC<CompaniesProps> = ({
   packs,
   suggestions,
   keyedUnlocked,
+  fitPacks,
   flash,
   fetchingEnabled,
   muted,
@@ -411,16 +446,16 @@ export const CompaniesPage: FC<CompaniesProps> = ({
             </Card>
           </div>
         </Disclosure>
-        {suggestions.length > 0 && (
+        {(suggestions.length > 0 || fitPacks.length > 0) && (
           <Disclosure
             variant="button"
             summary="Sources for your searches"
-            count={suggestions.filter((x) => x.state !== 'on').length}
+            count={suggestions.filter((x) => x.state !== 'on').length + fitPacks.length}
             open={empty}
             class="contents"
           >
             <div class="order-last basis-full">
-              <SuggestedSources suggestions={suggestions} />
+              <SuggestedSources suggestions={suggestions} packs={fitPacks} />
             </div>
           </Disclosure>
         )}

@@ -4,6 +4,7 @@ import type { JobStatus } from '@prisma/client';
 import { Layout } from '../layout';
 import {
   ActionForm,
+  Badge,
   Button,
   Card,
   Disclosure,
@@ -34,6 +35,7 @@ import { jobHref } from '../job-tabs';
 import { CoverLetterCard, type CoverLetterCardProps } from './cover-letter-card';
 import { ResumeMatchCard, type ResumeMatchCardProps } from './resume-match-card';
 import { VerificationCard, type VerificationCardProps } from './verification-card';
+import { LIVENESS_CODE_LABEL, type LivenessCode } from '../../verification/liveness';
 
 interface JobDetail {
   id: number;
@@ -549,6 +551,12 @@ const PageHeaderBlock: FC<{ job: JobDetail; primary: boolean }> = ({ job, primar
       <div class="flex shrink-0 flex-wrap items-center gap-3">
         <FitBadge score={job.fitScore} worded />
         <StatusBadge status={job.status} />
+        {/* A whole board listing no longer carries it, or a check found it gone (TASKS S13, ADR 0016). */}
+        {job.liveness === 'expired' && (
+          <span title={closedTitle(job)}>
+            <Badge tone="warn">Closed</Badge>
+          </span>
+        )}
         {safeHref(job.url) && (
           <Button href={safeHref(job.url)!} target="_blank" rel="noopener" size="sm" variant={primary ? 'primary' : 'secondary'}>
             Open posting ↗
@@ -765,3 +773,9 @@ const MuteCard: FC<{ jobId: number; tab: JobTab; mute: MuteState }> = ({ jobId, 
     </Card>
   );
 };
+
+/** Why a posting reads as closed, and since when — the badge's tooltip. */
+function closedTitle(job: { livenessCode: string | null; livenessCheckedAt: Date | null }): string {
+  const why = job.livenessCode && job.livenessCode in LIVENESS_CODE_LABEL ? LIVENESS_CODE_LABEL[job.livenessCode as LivenessCode] : 'it was found gone';
+  return job.livenessCheckedAt ? `Closed: ${why} (seen ${formatDate(job.livenessCheckedAt)})` : `Closed: ${why}`;
+}

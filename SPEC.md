@@ -380,6 +380,16 @@ manual "Fetch now" asks every row, due or not. That means watched
 companies **follow the user's search schedule** (§16) and are not checked
 during hours the search sleeps.
 
+"Check now" on a watched row reads that company at once, on the Fetch now
+progress page, and says what it found ("Checked Acme: …"). While another
+fetch runs, it makes the row due on the next tick instead (TASKS S23).
+
+A board whose read is known to be whole also says what it took down
+(TASKS S13, ADR 0019 addendum). After an `ok` read of such a list, a stored
+row the list no longer carries becomes `liveness = expired`
+(`api_delisted`), and the job page and the list call it *Closed*. A row that
+returns is marked back.
+
 `alertPolicy = 'all'` bypasses the base filter and the fit threshold: the
 posting is still classified, so it carries a score, but the alert reads
 `★ New posting` rather than claiming a match. `★` marks the company on

@@ -224,3 +224,18 @@ beside Lever's. A feed on another host than the page gets none. Rows added
 before 2.26.0 have none until they are added again. Nothing re-reads
 robots.txt on the tick, so a site that changes its delay later is honoured
 from the next add, not the next hour.
+
+## Addendum (2026-09-28): the validators live on the row too
+
+The last trigger above — a restart that stops being rare — fired with
+`npm start` (ADR 0054). A laptop install restarts with the laptop, and each
+restart cost one full read per source. `commitConditionalCache` now hands
+back what it promoted, and `jobs/fetch-job.ts` writes it to
+`Company.validator` (`{ url, etag, lastModified, count }`). A process's first
+tick takes the rows' validators back (`hydrateConditionalCache`), so the
+worker and the dashboard's "Fetch now" share one set.
+
+Rule 3 is unchanged: nothing reaches a row that was not committed, and
+nothing is committed before its jobs are stored. Measured on a scratch
+install: a fresh process's first tick answered 304 from the validator the
+previous process kept.

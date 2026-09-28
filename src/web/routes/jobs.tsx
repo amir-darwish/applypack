@@ -261,6 +261,7 @@ jobsRoute.get('/jobs', async (c) => {
         postedAt: true,
         techMatch: true,
         employer: true,
+        liveness: true,
         company: { select: { name: true, atsType: true, atsToken: true, watched: true } },
         verifications: {
           select: { verdict: true },

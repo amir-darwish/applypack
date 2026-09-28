@@ -8,6 +8,12 @@ import { loadWelcomeContext } from '../welcome-facts';
 import { currentStep, needsWelcome } from '../welcome-steps';
 import { OverviewPage } from '../pages/overview';
 import { loadFunnel } from '../../jobs/funnel-store';
+import { loadHeldLine, loadNextCheck } from '../schedule-view';
+import { withoutMuted } from '../../employer';
+import { mutedKeys } from '../../jobs/employer-store';
+import { getActiveProfile } from '../../profiles';
+import { nextThings, type NextThing } from '../next-things';
+import { spendHint } from '../cost-hint';
 
 /** ★ How many companies the user watches, and what they put up today (ADR 0036). */
 async function watchedSummary(): Promise<{ companies: number; newJobs: number; toPaste: number }> {
@@ -22,12 +28,6 @@ async function watchedSummary(): Promise<{ companies: number; newJobs: number; t
   ]);
   return { companies, newJobs, toPaste };
 }
-import { loadHeldLine, loadNextCheck } from '../schedule-view';
-import { withoutMuted } from '../../employer';
-import { mutedKeys } from '../../jobs/employer-store';
-import { getActiveProfile } from '../../profiles';
-import { nextThings, type NextThing } from '../next-things';
-import { spendHint } from '../cost-hint';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RECENT_LIMIT = 8;

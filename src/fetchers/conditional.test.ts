@@ -8,6 +8,9 @@ import {
   rememberResponse,
   resetConditionalCache,
   tickStoredEverything,
+  hydrateConditionalCache,
+  needsHydration,
+  readValidator,
 } from './conditional';
 
 /** What we send instead of the `no-cache` Node would add. */
@@ -162,5 +165,34 @@ describe('tickStoredEverything — the rule that keeps a posting from vanishing'
     // The AI chain ran dry mid-tick: those postings were dropped, and a
     // committed ETag would hide them until the feed changed.
     assert.equal(tickStoredEverything({ ...clean, classifyFailed: 1 }), false);
+  });
+});
+
+describe('the validators the rows kept (TASKS S31)', () => {
+  it('become the live ones once per process; a row without one is skipped', () => {
+    resetConditionalCache();
+    assert.equal(needsHydration(), true);
+    const taken = hydrateConditionalCache([
+      { id: 1, validator: { url: 'https://a.example/feed', etag: '"v1"', lastModified: null, count: 12 } },
+      { id: 2, validator: null },
+      { id: 3, validator: { url: 'https://c.example', etag: null, lastModified: null, count: 3 } },
+      { id: 4, validator: 'nonsense' },
+    ]);
+    assert.equal(taken, 1);
+    assert.equal(needsHydration(), false);
+    assert.equal(conditionalHeaders(1, 'https://a.example/feed')['If-None-Match'], '"v1"');
+    assert.equal(cachedCount(1), 12);
+    assert.deepEqual(conditionalHeaders(3, 'https://c.example'), {});
+    assert.equal(readValidator({ url: 'u', etag: 'e', lastModified: null, count: -1 })?.count, 0);
+    resetConditionalCache();
+  });
+
+  it('a commit hands back what it promoted, for the rows', () => {
+    resetConditionalCache();
+    rememberResponse(9, 'https://b.example', response({ etag: '"x"' }), 4);
+    const promoted = commitConditionalCache();
+    assert.deepEqual([...promoted.keys()], [9]);
+    assert.equal(promoted.get(9)?.count, 4);
+    resetConditionalCache();
   });
 });

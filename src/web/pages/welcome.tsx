@@ -28,15 +28,8 @@ import type { AiProviderId } from '../../ai-engine';
 import { SCORE_BATCH } from '../../jobs/score-pick';
 import { WELCOME_STEPS, type WelcomeStep } from '../welcome-steps';
 import type { SourceSuggestion } from '../../starter-packs/suggest';
+import type { PackOffer } from '../pack-offers';
 
-/** A starter pack that fits the running searches, and how much of it is here already (ADR 0040). */
-export interface PackOffer {
-  id: string;
-  label: string;
-  blurb: string;
-  count: number;
-  tracked: number;
-}
 
 /*
  * First-run wizard (docs/onboarding-plan.md §2). One screen, one action:

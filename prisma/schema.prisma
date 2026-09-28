@@ -141,6 +141,12 @@ model Company {
   // TASKS N8 — BROWSER_PAGE rows: the lines of the page's text as the user
   // last pasted it (watchlist/paste.ts), the lines that were new against the
   // paste before, and when. Nothing reads them but the watchlist row.
+  // ADR 0035 (TASKS S31): the validators the last committed read of this
+  // source carried — { url, etag, lastModified, count } — so a restart does
+  // not cost one full read per source, and the worker and "Fetch now" in the
+  // dashboard share them. Written only once the jobs they came with are stored.
+  validator Json?
+
   // The site's own `Crawl-delay` for our token, read from its robots.txt when
   // a FEED or CAREER_PAGE row is added (ADR 0035's trigger: rows on any host).
   // The tick waits at least this long after reading the row; null = none.

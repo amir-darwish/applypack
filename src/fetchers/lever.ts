@@ -4,6 +4,7 @@ import { fetchWithRetry } from '../http';
 import { conditionalHeaders, rememberResponse } from './conditional';
 import { workplaceFromText } from '../location';
 import type { NormalizedJob } from '../types';
+import { listedInFull } from './listing';
 
 const LeverPostingSchema = z.object({
   id: z.string(),
@@ -47,6 +48,8 @@ export async function fetchLever(
     );
   }
   const jobs = parsed.data.map((p) => mapLeverPosting(p, company.id));
+  // Without `limit` the API lists every published posting (TASKS S13).
+  listedInFull(company.id);
   rememberResponse(company.id, url, resp, jobs.length);
   return jobs;
 }

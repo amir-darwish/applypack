@@ -55,6 +55,8 @@ interface JobRow {
   techMatch: string[];
   /** ADR 0056: who hires, when an aggregator named them; the row then says "via" the source. */
   employer: string | null;
+  /** ADR 0016: `expired` once a whole board listing dropped it or a check found it gone (TASKS S13). */
+  liveness: string | null;
   company: { name: string; atsType: string; atsToken: string; watched: boolean };
   verifications: { verdict: string }[];
   /** Present only when one search is selected: that search's own verdict. */
@@ -360,6 +362,11 @@ export const JobsListPage: FC<JobsListProps> = ({
                           >
                             {j.title}
                           </a>
+                          {j.liveness === 'expired' && (
+                            <div class="text-meta text-warn" title="No longer on the company's board">
+                              Closed
+                            </div>
+                          )}
                           {j.techMatch.length > 0 && (
                             <div class="mt-0.5 truncate text-xs text-ink-faint">
                               {j.techMatch.join(' · ')}

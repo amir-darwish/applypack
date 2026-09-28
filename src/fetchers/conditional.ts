@@ -31,12 +31,14 @@
  *    committing after either would answer 304 next tick and leave those
  *    postings unseen until the feed happened to change again.
  *
- * The cache is per-process and dies with it: a restart costs one full read
- * per source. That is the price of keeping it out of the schema, and at an
- * hourly tick it is a rounding error.
+ * The cache lives in the process and on the Company row (TASKS S31): the
+ * first tick of a process takes what the rows kept, and every commit writes
+ * what it promoted back. `npm start` installs restart with the laptop, and
+ * each restart used to cost one full read per source; the worker and the
+ * dashboard's "Fetch now" now share one set of validators as well.
  */
 
-interface Entry {
+export interface Entry {
   /** The URL the validators came from — a source whose URL follows the searches must not reuse them. */
   url: string;
   etag: string | null;
@@ -47,6 +49,8 @@ interface Entry {
 
 /** What the next request may send. */
 const live = new Map<number, Entry>();
+/** Whether this process has taken the validators the rows kept. */
+let hydrated = false;
 /** What this tick learned, promoted only once its jobs are stored. */
 const staged = new Map<number, Entry>();
 
@@ -119,14 +123,48 @@ export function tickStoredEverything(stats: {
   return stats.abortedMidRun === 0 && stats.skippedBlankProfile === 0 && stats.classifyFailed === 0;
 }
 
-/** The jobs are stored — the validators they came with may now be sent. */
-export function commitConditionalCache(): void {
+/** The jobs are stored — the validators they came with may now be sent. Returns what it promoted, for the rows to keep. */
+export function commitConditionalCache(): Map<number, Entry> {
+  const promoted = new Map(staged);
   for (const [companyId, entry] of staged) live.set(companyId, entry);
   staged.clear();
+  return promoted;
+}
+
+/** A row's `validator` column read back; anything that is not one is nothing. */
+export function readValidator(value: unknown): Entry | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const v = value as Record<string, unknown>;
+  const text = (x: unknown): string | null => (typeof x === 'string' && x.length > 0 ? x : null);
+  const url = text(v.url);
+  const etag = text(v.etag);
+  const lastModified = text(v.lastModified);
+  if (url === null || (etag === null && lastModified === null)) return null;
+  return { url, etag, lastModified, count: typeof v.count === 'number' && Number.isInteger(v.count) && v.count >= 0 ? v.count : 0 };
+}
+
+/** Whether this process still has to take the rows' validators. */
+export function needsHydration(): boolean {
+  return !hydrated;
+}
+
+/** Once per process: the validators the rows kept become the live ones. Returns how many. */
+export function hydrateConditionalCache(rows: readonly { id: number; validator: unknown }[]): number {
+  hydrated = true;
+  let taken = 0;
+  for (const row of rows) {
+    const entry = readValidator(row.validator);
+    if (entry !== null && !live.has(row.id)) {
+      live.set(row.id, entry);
+      taken++;
+    }
+  }
+  return taken;
 }
 
 /** Tests only. */
 export function resetConditionalCache(): void {
   live.clear();
   staged.clear();
+  hydrated = false;
 }

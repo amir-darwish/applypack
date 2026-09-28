@@ -8,7 +8,9 @@ import { FETCH_FAILED, FETCH_RUN_STEPS, type FetchRun } from '../fetch-runs';
 function stepView({ classify, scope }: Pick<FetchRun, 'classify' | 'scope'>): Record<string, StepView> {
   return {
     fetch:
-      scope === 'aggregators'
+      typeof scope === 'object'
+        ? { label: `Check ${scope.name}`, detail: 'one request to its board or page — seconds' }
+        : scope === 'aggregators'
         ? {
             label: 'Ask the aggregators',
             detail: 'the boards that publish every posting they have, a polite second apart — well under a minute',

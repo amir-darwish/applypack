@@ -4,6 +4,7 @@ import { fetchWithRetry, stripHtml } from '../http';
 import { conditionalHeaders, rememberResponse } from './conditional';
 import { workplaceFromText } from '../location';
 import type { NormalizedJob } from '../types';
+import { listedInFull } from './listing';
 
 const AshbyJobSchema = z.object({
   id: z.string(),
@@ -67,6 +68,8 @@ export async function fetchAshby(
   const jobs = parsed.data.jobs
     .filter((j) => j.isListed !== false)
     .map((j) => mapAshbyJob(j, company.id));
+  // The posting API answers with the whole board; a job it marks unlisted is taken down (TASKS S13).
+  listedInFull(company.id);
   rememberResponse(company.id, url, resp, jobs.length);
   return jobs;
 }

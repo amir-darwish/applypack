@@ -35,7 +35,12 @@ export async function beginFetchNow(
     await recordCronRun('fetch-now', async () => {
       const out = await runFetchJob({
         manual: true,
-        only: scope === 'aggregators' ? isAggregator : undefined,
+        only:
+          typeof scope === 'object'
+            ? (c: { id: number }) => c.id === scope.companyId
+            : scope === 'aggregators'
+              ? isAggregator
+              : undefined,
         places: opts.places,
         onSource: (p) => recordSource(run.id, p),
         onProcessing: () => updateFetchRun(run.id, { stage: 'store' }),
