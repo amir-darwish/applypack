@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
-import { displayName, expandUploads, findDuplicate, fingerprintBytes, fingerprintText, isAcceptedResume } from './intake';
+import { displayName, expandUploads, findDuplicate, fingerprintBytes, fingerprintText, isAcceptedResume, planIntake, type ReadFile } from './intake';
 
 /** The same in-memory zip writer zip.test.ts uses. */
 function buildZip(entries: { name: string; data: Buffer }[]): Buffer {
@@ -90,4 +90,33 @@ test('fingerprintBytes: the same bytes are one hash, different bytes are not, an
   assert.equal(a, fingerprintBytes(Buffer.from('%PDF-1.4 scanned')));
   assert.notEqual(a, fingerprintBytes(Buffer.from('%PDF-1.4 scanned ')));
   assert.match(a, /^[0-9a-f]{32}$/);
+});
+
+test('planIntake decides the whole upload before a row is written (TASKS H23/H25)', () => {
+  const cv = (who: string, extra = '') => `${who} — QA engineer. Built Playwright suites for payments; ran the release train. ${extra}`.repeat(6);
+  const read = (text: string | null, email: string | null = null): ReadFile => ({
+    text,
+    email,
+    phone: null,
+    print: text === null ? { hash: `bytes-${Math.random()}`, simhash: null } : fingerprintText(text),
+  });
+  const stored = { id: 41, number: 7, email: 'old@x.io', phone: null, ...fingerprintText(cv('Old')) };
+  const plan = planIntake(
+    [
+      read(cv('Ann'), 'ann@x.io'), // new
+      read(cv('Old')), // the same text as a stored row: a repeat
+      read(cv('Ann', 'Cover letter attached.'), 'ann@x.io'), // Ann's second document, earlier in this upload
+      read(null), // unreadable: added, compared with nothing
+      read(cv('Ann'), 'ann@x.io'), // Ann's first file again, in the same upload: a repeat
+      read(cv('Bob'), 'old@x.io'), // the stored applicant's email: another of theirs
+    ],
+    [stored],
+  );
+  assert.deepEqual(plan.repeats, [1, 4]);
+  assert.deepEqual(plan.adds, [
+    { file: 0, sameAs: null },
+    { file: 2, sameAs: { add: 0 } },
+    { file: 3, sameAs: null },
+    { file: 5, sameAs: { id: 41 } },
+  ]);
 });

@@ -2408,6 +2408,15 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
+- [x] **`screening-fixes`** (minor, part 1 v2.34.0) — the 2026-09 plan's
+      W8. E1 had shipped in v2.19.0 (a skill's "within N months" in its
+      text). E5: religion and health fields are redacted. E4 (Q6): an
+      applicant the leak check flags is held — no model reads it until a
+      person presses Score it anyway on the scorecard. H23/H25: an upload is
+      decided whole (`intake.ts:planIntake`) and written in one transaction
+      (`store.ts:createApplicants`) instead of one locked transaction per
+      file.
+
 - [x] **`resume-honesty`** (minor, parts 1–3 v2.31.0 … v2.33.0) — the 2026-09 plan's
       W7. R1: a one-off file is judged on its text alone unless it is the
       person's own (a checkbox on both launchers, or the same text as a saved

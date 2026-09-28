@@ -4,9 +4,11 @@
  * details and links identify the person; date of birth, age, marital
  * status, children, gender, citizenship and a street address are the
  * protected characteristics hr-screening-plan.md §3.C lists — Ukrainian and
- * European CVs carry most of them in the header; graduation years are an
- * age proxy and the score never reads them. The city stays: a location gate
- * needs it. Pure — text in, text and an audit out.
+ * European CVs carry most of them in the header; religion and health are the
+ * special-category data a DACH or Polish CV still states ("Konfession:",
+ * "Stan zdrowia:" — TASKS E5); graduation years are an age proxy and the
+ * score never reads them. The city stays: a location gate needs it. Pure —
+ * text in, text and an audit out.
  *
  * Two shapes of removal: a whole field ("Date of birth: 12.05.1990") goes
  * as one SEGMENT of its line, split on the separators resumes use between
@@ -29,6 +31,8 @@ const REDACTION_KINDS = [
   'gender',
   'citizenship',
   'address',
+  'religion',
+  'health',
   'graduation',
 ] as const;
 export type RedactionKind = (typeof REDACTION_KINDS)[number];
@@ -44,6 +48,8 @@ const REDACTION_LABELS: Record<RedactionKind, string> = {
   gender: 'gender',
   citizenship: 'citizenship',
   address: 'street address',
+  religion: 'religion',
+  health: 'health / disability',
   graduation: 'graduation year',
 };
 
@@ -113,6 +119,23 @@ const STREET = new RegExp(
   'iu',
 );
 const UNIT = word('(?:apt\\.?|apartment|suite|ste\\.?|кв\\.?|квартира|буд\\.?|д\\.)\\s*#?\\s*\\d{1,5}[a-z]?');
+/**
+ * Religion and health go only in the shape of a field — a name and a colon,
+ * no word edge after it ("Religion:Catholic" has no space). The words alone
+ * name products, domains and employers ("Health tech", "Christian Dior"), and
+ * a bare "Health:" can open a line of domain skills, so the health fields are
+ * the ones only a personal-data block uses.
+ */
+const field = (names: string): RegExp => new RegExp(`${B}(?:${names})\\s*[:：]`, 'iu');
+const RELIGION_FIELD = field(
+  "religion|religious affiliation|віросповідання|релігія|конфесія|вероисповедание|религия|конфессия|konfession|religionszugehörigkeit|glaubensbekenntnis|wyznanie|religia",
+);
+/** A bare faith next to a birth / family field is the religion line, as a bare demonym is the citizenship one. */
+const RELIGION_WORD =
+  /^(?:(?:roman |römisch-)?(?:catholic|katholisch)|orthodox|protestant|evangelisch|christian|muslim|jewish|hindu|buddhist|atheist|православн\p{L}*|католи\p{L}*|протестант\p{L}*|мусульман\p{L}*|іуде\p{L}*|иуде\p{L}*|katoli\p{L}*|prawosławn\p{L}*|muzułman\p{L}*)$/iu;
+const HEALTH_FIELD = field(
+  "health status|state of health|medical condition|disability|disabilities|стан здоров['’]я|інвалідність|состояние здоровья|инвалидность|gesundheitszustand|behinderung|schwerbehinderung|grad der behinderung|stan zdrowia|niepełnosprawność",
+);
 const BARE_YEAR = /(?<![\d.])(?:19[6-9]\d|20[0-4]\d)(?![\d.])/g;
 const DATE_RANGE = /((?:\p{L}{3,10}\.?\s*)?(?:19|20)\d\d)\s*[–—-]\s*((?:\p{L}{3,10}\.?\s*)?(?:19|20)\d\d|present|current|дотепер|зараз|heute|obecnie)/giu;
 /** An education heading, in the languages the corpus writes them. */
@@ -211,10 +234,12 @@ function dropFields(line: string, count: (kind: RedactionKind) => void): string 
   const pieces = line.split(SEGMENT);
   const segments = pieces.filter((_, i) => i % 2 === 0);
   const kinds = segments.map((s) => fieldKind(s));
-  // A demonym alone is only citizenship beside a birth or family field.
-  const identityLine = kinds.some((k) => k === 'birth' || k === 'marital' || k === 'gender' || k === 'citizenship');
+  // A demonym or a faith alone is only citizenship or religion beside a birth or family field.
+  const identityLine = kinds.some((k) => k === 'birth' || k === 'marital' || k === 'gender' || k === 'citizenship' || k === 'religion');
   segments.forEach((s, i) => {
-    if (kinds[i] === null && identityLine && DEMONYM.test(s.trim())) kinds[i] = 'citizenship';
+    if (kinds[i] !== null || !identityLine) return;
+    if (DEMONYM.test(s.trim())) kinds[i] = 'citizenship';
+    else if (RELIGION_WORD.test(s.trim())) kinds[i] = 'religion';
   });
   if (kinds.every((k) => k === null)) return line;
   if (segments.length === 1) {
@@ -245,6 +270,8 @@ function fieldKind(segment: string): RedactionKind | null {
   if (MARITAL_FIELD.test(s) || MARITAL_WORD.test(s) || CHILDREN.test(s)) return 'marital';
   if (GENDER_FIELD.test(s) || GENDER_WORD.test(s)) return 'gender';
   if (CITIZENSHIP.test(s)) return 'citizenship';
+  if (RELIGION_FIELD.test(s)) return 'religion';
+  if (HEALTH_FIELD.test(s)) return 'health';
   if (STREET.test(s) || UNIT.test(s)) return 'address';
   return null;
 }
@@ -300,6 +327,16 @@ export function findLeaks(redacted: string, identity: { name: string | null; ema
   return leaks;
 }
 
+/** A leak entry without the part of the person it names: "name:Petrenko" is "name". */
+export function leakKinds(leaks: string[]): string[] {
+  return [...new Set(leaks.map((l) => l.split(':')[0]!))];
+}
+
+/** The row's note while it is held (TASKS E4): what the leak check found, never the text it found. */
+export function heldNote(kinds: string[]): string {
+  return `Held for a look: after redaction the leak check still found ${kinds.join(', ')}.`;
+}
+
 /** Reader for the stored `redactions` column. */
 export function readRedactions(value: unknown): Redaction[] {
   if (!Array.isArray(value)) return [];
@@ -315,7 +352,7 @@ export function describeRedactions(redactions: Redaction[]): string {
   return redactions
     .map((r) => {
       const label = REDACTION_LABELS[r.kind];
-      if (r.kind === 'name' || r.kind === 'birth' || r.kind === 'gender' || r.kind === 'citizenship') return label;
+      if (r.kind === 'name' || r.kind === 'birth' || r.kind === 'gender' || r.kind === 'citizenship' || r.kind === 'religion' || r.kind === 'health') return label;
       return `${r.count} ${label}${r.count === 1 ? '' : 's'}`;
     })
     .join(', ');

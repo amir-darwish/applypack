@@ -13,7 +13,7 @@ export interface ExportRow {
   /** Shown to the person only; the model never saw it. */
   name: string | null;
   file: string;
-  status: 'ok' | 'unreadable';
+  status: 'ok' | 'unreadable' | 'held';
   note: string | null;
   bucket: GateBucket | null;
   /** The computed score. */

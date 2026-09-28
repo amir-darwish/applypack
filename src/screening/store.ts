@@ -2,7 +2,7 @@ import type { Applicant, Prisma, Screening, ScreeningComparison, ScreeningVerdic
 import { prisma } from '../db';
 import { readRubric, type Rubric } from './rubric';
 import { toDbBigInt } from '../fingerprint';
-import type { KnownApplicant } from './intake';
+import type { KnownApplicant, SameAs } from './intake';
 
 /*
  * The only file in src/screening/ that touches Prisma (the resume module's
@@ -46,7 +46,7 @@ export interface ScreeningSummary {
   applicants: number;
   /** Applicants with a verdict under the current rubric. */
   scored: number;
-  /** Files that could not be read or were a copy of another applicant. */
+  /** Files that could not be read, or held for a look before any model reads them (TASKS E4). */
   unread: number;
 }
 
@@ -132,7 +132,6 @@ export async function countApplicants(screeningId: number): Promise<number> {
 }
 
 export interface NewApplicant {
-  screeningId: number;
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -143,36 +142,88 @@ export interface NewApplicant {
   /** The redacted text for the number the store assigns — the "Applicant №N" label has to carry the real one. */
   redactedTextFor: (number: number) => string;
   redactions: { kind: string; count: number }[];
-  parseStatus: 'ok' | 'unreadable';
+  /** `held`: the leak check found something identifying after redaction — no model reads it until a person releases it (TASKS E4). */
+  parseStatus: 'ok' | 'unreadable' | 'held';
   parseNote: string | null;
-  sameAsId: number | null;
+  /** Another document of an applicant already stored, or of one earlier in `inputs` (`intake.ts:planIntake`). */
+  sameAs: SameAs;
   textHash: string;
   simhash: bigint | null;
 }
 
-/** Numbers are handed out in one transaction per row, so two uploads never share a №. */
-export async function createApplicant(input: NewApplicant): Promise<ApplicantSummary> {
-  return prisma.$transaction(async (tx) => {
-    // Two uploads to one screening at once would read the same max: the row
-    // lock serialises them, so a № is handed out exactly once.
-    await tx.$executeRaw`SELECT id FROM screening WHERE id = ${input.screeningId} FOR UPDATE`;
-    const last = await tx.applicant.aggregate({ where: { screeningId: input.screeningId }, _max: { number: true } });
-    const number = (last._max.number ?? 0) + 1;
-    const { redactedTextFor, ...fields } = input;
-    const row = await tx.applicant.create({
-      data: {
-        ...fields,
-        // Prisma 6 types Bytes as Uint8Array<ArrayBuffer>; a Buffer's backing store may be shared.
-        original: new Uint8Array(input.original),
-        redactedText: redactedTextFor(number),
-        redactions: input.redactions as Prisma.InputJsonValue,
-        simhash: toDbBigInt(input.simhash),
-        number,
-      },
-    });
-    const { original: _original, ...summary } = row;
-    return summary;
-  });
+/** Rows per INSERT: an upload's 200 MB of files is not one statement. */
+const INSERT_CHUNK = 20;
+/** Three hundred files' bytes go in inside it. */
+const INTAKE_TX_TIMEOUT_MS = 120_000;
+
+/**
+ * One upload's applicants in one transaction (TASKS H23/H25): the screening
+ * locked once — two uploads at once would read the same max, and the lock
+ * serialises them, so a № is handed out exactly once — numbers in upload
+ * order, a `sameAs` to a file earlier in the same upload resolved once its
+ * row exists. A file whose text or bytes are already stored — by another
+ * upload since the plan was made, or earlier in this one (two copies of one
+ * unreadable scan) — is `skipped`: the unique key of ADR 0053 would refuse it.
+ */
+export async function createApplicants(
+  screeningId: number,
+  inputs: NewApplicant[],
+): Promise<{ created: (ApplicantSummary & { input: number })[]; skipped: number }> {
+  if (inputs.length === 0) return { created: [], skipped: 0 };
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT id FROM screening WHERE id = ${screeningId} FOR UPDATE`;
+      const taken = new Set(
+        (await tx.applicant.findMany({ where: { screeningId, textHash: { in: inputs.map((i) => i.textHash) } }, select: { textHash: true } })).map(
+          (r) => r.textHash,
+        ),
+      );
+      const last = await tx.applicant.aggregate({ where: { screeningId }, _max: { number: true } });
+      let next = last._max.number ?? 0;
+      // The plan compares texts; two copies of one unreadable file share a byte hash, and the unique key would refuse the second.
+      const rows = inputs.flatMap((input, index) => {
+        if (taken.has(input.textHash)) return [];
+        taken.add(input.textHash);
+        return [{ input, index, number: ++next }];
+      });
+      const created: (ApplicantSummary & { input: number })[] = [];
+      for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+        const chunk = rows.slice(i, i + INSERT_CHUNK);
+        const out = await tx.applicant.createManyAndReturn({
+          data: chunk.map(({ input, number }) => {
+            const { redactedTextFor, sameAs, ...fields } = input;
+            return {
+              ...fields,
+              screeningId,
+              // Prisma 6 types Bytes as Uint8Array<ArrayBuffer>; a Buffer's backing store may be shared.
+              original: new Uint8Array(input.original),
+              redactedText: redactedTextFor(number),
+              redactions: input.redactions as Prisma.InputJsonValue,
+              simhash: toDbBigInt(input.simhash),
+              sameAsId: sameAs !== null && 'id' in sameAs ? sameAs.id : null,
+              number,
+            };
+          }),
+          omit: { original: true },
+        });
+        // RETURNING has no promised order; the number is unique within the screening.
+        const indexOf = new Map(chunk.map((r) => [r.number, r.index]));
+        created.push(...out.map((row) => ({ ...row, input: indexOf.get(row.number)! })));
+      }
+      // A second document of someone earlier in this upload points at a row that exists now.
+      const idOf = new Map(created.map((row) => [row.input, row.id]));
+      for (const row of created) {
+        const sameAs = inputs[row.input]!.sameAs;
+        if (sameAs === null || !('add' in sameAs)) continue;
+        const target = idOf.get(sameAs.add);
+        if (target === undefined) continue;
+        await tx.applicant.update({ where: { id: row.id }, data: { sameAsId: target } });
+        row.sameAsId = target;
+      }
+      return { created: created.sort((a, b) => a.number - b.number), skipped: inputs.length - rows.length };
+    },
+    { timeout: INTAKE_TX_TIMEOUT_MS },
+  );
 }
 
 /** A table row: everything but the file and the two texts — three hundred applicants twice over is what the page used to load (DATA-5). */
@@ -259,6 +310,16 @@ export async function setDecisionMany(screeningId: number, ids: number[], decisi
 }
 
 /** The person's correction to the computed score, with its reason (ADR 0047 addendum). */
+/**
+ * A held applicant released for scoring by the person who read it (TASKS E4):
+ * only a `held` row moves, so a stale form cannot turn an unreadable file
+ * into a queued one. True when it moved.
+ */
+export async function releaseApplicant(screeningId: number, id: number): Promise<boolean> {
+  const out = await prisma.applicant.updateMany({ where: { id, screeningId, parseStatus: 'held' }, data: { parseStatus: 'ok', parseNote: null } });
+  return out.count > 0;
+}
+
 export async function setAdjustment(id: number, points: number, note: string | null): Promise<void> {
   await prisma.applicant.update({ where: { id }, data: { scoreAdjustment: points, adjustmentNote: points === 0 ? null : note } });
 }

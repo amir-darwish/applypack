@@ -17,8 +17,8 @@ import { ResumeTextError } from '../../resume/docx-text';
 import { extractResumeText } from '../../resume/resume-text';
 import { MAX_ZIP_ENTRIES } from '../../resume/zip';
 import { applyPreset, draftRubric, PRESETS, rubricEquals, rubricFromForm, rubricSummary, type Preset } from '../../screening/rubric';
-import { displayName, expandUploads, findDuplicate, fingerprintBytes, fingerprintText, MAX_APPLICANTS_PER_SCREENING, MAX_BATCH_UPLOAD_MB } from '../../screening/intake';
-import { findLeaks, readRedactions, redactApplicant } from '../../screening/redact';
+import { displayName, expandUploads, fingerprintBytes, fingerprintText, MAX_APPLICANTS_PER_SCREENING, MAX_BATCH_UPLOAD_MB, planIntake } from '../../screening/intake';
+import { findLeaks, heldNote, leakKinds, readRedactions, redactApplicant } from '../../screening/redact';
 import { MAX_COMPARE, MIN_COMPARE, readScreenReply } from '../../screening/prompts';
 import { comparisonMarkdown, comparisonView, readStoredComparison } from '../../screening/comparison';
 import { compareApplicants } from '../../screening/compare';
@@ -28,7 +28,8 @@ import { DECISION_LABELS, MAX_ADJUSTMENT, toCsv, toMarkdown } from '../../screen
 import { screeningRun, startScreeningRun } from '../../screening/batch';
 import {
   countApplicants,
-  createApplicant,
+  createApplicants,
+  releaseApplicant,
   createScreening,
   DECISIONS,
   deleteApplicant,
@@ -62,7 +63,7 @@ import { ScreenDetailPage } from '../pages/screen-detail';
 import { ScreenApplicantPage } from '../pages/screen-applicant';
 import { ScreenComparePage } from '../pages/screen-compare';
 import { sideBySide } from '../screen-compare';
-import { calibrationRows, exportRows, rowView, scoredBeforePosting } from '../screen-view';
+import { applicantStatus, calibrationRows, exportRows, rowView, scoredBeforePosting } from '../screen-view';
 import { calibrate } from '../../screening/calibration';
 import { toPickOption } from '../job-pick';
 import { claimRun, startRun, updateRun } from '../target-runs';
@@ -387,11 +388,17 @@ screenRoute.post('/screen/:id/applicants', (c, next) => batchUploadLimit(c.req.p
   const batch = files.slice(0, room);
 
   const known = await listKnownApplicants(screening.id);
-  let ok = 0;
-  let unreadable = 0;
-  let versions = 0;
-  let repeats = 0;
-  let leaked = 0;
+  // Read every file first, then decide the whole upload and write it in one
+  // transaction (TASKS H23/H25): the text extraction is the slow part, and it
+  // never runs inside the lock.
+  const read: {
+    file: (typeof batch)[number];
+    text: string | null;
+    note: string | null;
+    redacted: ReturnType<typeof redactApplicant> | null;
+    print: { hash: string; simhash: bigint | null };
+    leaks: string[];
+  }[] = [];
   for (const file of batch) {
     let text: string | null = null;
     let note: string | null = null;
@@ -405,61 +412,56 @@ screenRoute.post('/screen/:id/applicants', (c, next) => batchUploadLimit(c.req.p
     // dedupe reads; the store puts its own number on the label.
     const redacted = text ? redactApplicant(text, 0) : null;
     const print = text ? fingerprintText(text) : { hash: fingerprintBytes(file.bytes), simhash: null };
-    const dup = text ? findDuplicate({ email: redacted?.email ?? null, phone: redacted?.phone ?? null, ...print }, known) : null;
-    if (dup?.kind === 'same-text') {
-      // The same file again: nothing new to read, and a second row would only be scored twice.
-      repeats++;
-      continue;
-    }
-    const leaks = redacted ? findLeaks(redacted.text, redacted) : [];
-    if (leaks.length > 0) leaked++;
-    let row: Awaited<ReturnType<typeof createApplicant>>;
-    try {
-      row = await createApplicant({
-        screeningId: screening.id,
-        name: redacted?.name ?? null,
-        email: redacted?.email ?? null,
-        phone: redacted?.phone ?? null,
-        sourceFilename: displayName(file),
-        mimeType: mimeOf(file.name),
-        original: file.bytes,
-        text: text ?? '',
-        redactedTextFor: (n) => redacted?.text.replaceAll('Applicant №0', `Applicant №${n}`) ?? '',
-        redactions: redacted?.redactions ?? [],
-        parseStatus: text ? 'ok' : 'unreadable',
-        parseNote: text ? null : note,
-        sameAsId: dup?.match.id ?? null,
-        textHash: print.hash,
-        simhash: print.simhash,
-      });
-    } catch (err) {
-      // The unique on (screening, textHash) is the check `known` cannot make:
-      // another upload of the same file landed since it was read (ADR 0053).
-      if (isUniqueViolation(err)) {
-        repeats++;
-        continue;
-      }
-      throw err;
-    }
-    if (!text) unreadable++;
-    else {
-      ok++;
-      if (dup) versions++;
-      known.push({ id: row.id, number: row.number, email: redacted?.email ?? null, phone: redacted?.phone ?? null, hash: print.hash, simhash: print.simhash });
-    }
+    // TASKS E4 (Q6): what the redaction missed holds the applicant back from
+    // every model until a person has looked. The kinds only — a leak entry
+    // names a part of the person.
+    const leaks = redacted ? leakKinds(findLeaks(redacted.text, redacted)) : [];
+    read.push({ file, text, note, redacted, print, leaks });
+  }
+  const plan = planIntake(
+    read.map((r) => ({ text: r.text, email: r.redacted?.email ?? null, phone: r.redacted?.phone ?? null, print: r.print })),
+    known,
+  );
+  const adding = plan.adds.map(({ file, sameAs }) => ({ ...read[file]!, sameAs }));
+  const { created, skipped } = await createApplicants(
+    screening.id,
+    adding.map(({ file, text, note, redacted, print, leaks, sameAs }) => ({
+      name: redacted?.name ?? null,
+      email: redacted?.email ?? null,
+      phone: redacted?.phone ?? null,
+      sourceFilename: displayName(file),
+      mimeType: mimeOf(file.name),
+      original: file.bytes,
+      text: text ?? '',
+      redactedTextFor: (n: number) => redacted?.text.replaceAll('Applicant №0', `Applicant №${n}`) ?? '',
+      redactions: redacted?.redactions ?? [],
+      parseStatus: !text ? ('unreadable' as const) : leaks.length > 0 ? ('held' as const) : ('ok' as const),
+      parseNote: !text ? note : leaks.length > 0 ? heldNote(leaks) : null,
+      sameAs,
+      textHash: print.hash,
+      simhash: print.simhash,
+    })),
+  );
+  for (const row of created) {
     // Counts only: a leak entry names a part of the person, and a log line is not the place for it.
+    const { text, redacted, leaks } = adding[row.input]!;
     logger.info(
-      { screeningId: screening.id, applicantId: row.id, number: row.number, status: row.parseStatus, sameAs: dup?.match.number ?? null, chars: text?.length ?? 0, redactions: redacted?.redactions, leaks: leaks.length },
+      { screeningId: screening.id, applicantId: row.id, number: row.number, status: row.parseStatus, sameAsId: row.sameAsId, chars: text?.length ?? 0, redactions: redacted?.redactions, leaks: leaks.length },
       'screening: applicant added',
     );
   }
+  const ok = created.filter((r) => r.parseStatus === 'ok').length;
+  const held = created.filter((r) => r.parseStatus === 'held').length;
+  const unreadable = created.filter((r) => r.parseStatus === 'unreadable').length;
+  const versions = created.filter((r) => r.sameAsId !== null).length;
+  const repeats = plan.repeats.length + skipped;
 
   // Scoring starts by itself: the person picked the files, and the run
   // drains, so files added while it works join the same run.
   const rubricEmpty = rubricOf(screening).criteria.length === 0;
   const started = ok > 0 && !rubricEmpty ? await startScreeningRun(screening.id) : null;
 
-  const parts = [`${ok} applicant${ok === 1 ? '' : 's'} added`];
+  const parts = [`${ok + held} applicant${ok + held === 1 ? '' : 's'} added`];
   if (versions > 0) parts.push(`${versions} of them another document of someone already in the list`);
   if (repeats > 0) parts.push(`${repeats} file${repeats === 1 ? '' : 's'} already added, skipped`);
   if (unreadable > 0) parts.push(`${unreadable} file${unreadable === 1 ? '' : 's'} could not be read`);
@@ -472,14 +474,16 @@ screenRoute.post('/screen/:id/applicants', (c, next) => batchUploadLimit(c.req.p
     );
   }
   if (files.length > room) parts.push(`${files.length - room} left out — the screening holds ${MAX_APPLICANTS_PER_SCREENING} at most`);
-  if (leaked > 0) parts.push(`${leaked} may still carry something identifying — check their scorecards`);
+  if (held > 0) {
+    parts.push(`${held} held for a look — the redaction may have missed something identifying, so no model reads ${held === 1 ? 'it' : 'them'} until you release ${held === 1 ? 'it' : 'them'} on the scorecard`);
+  }
   const tail =
     started?.kind === 'started' || started?.kind === 'joined'
       ? ' Scoring has started; the page updates itself.'
       : ok > 0 && rubricEmpty
         ? ' Add criteria above, then press Score.'
         : '';
-  return flashRedirect(`${back}#results`, leaked > 0 || unreadable > 0 ? 'warn' : 'ok', `${parts.join('; ')}.${tail}`);
+  return flashRedirect(`${back}#results`, held > 0 || unreadable > 0 ? 'warn' : 'ok', `${parts.join('; ')}.${tail}`);
 });
 
 const BULK_ACTIONS = ['interview', 'hold', 'declined', 'clear', 'again', 'compare', 'delete'] as const;
@@ -518,7 +522,7 @@ screenRoute.post('/screen/:id/applicants/bulk', async (c) => {
             ? 'The checked applicants are already in the running scoring — each row says where it is.'
             : `${outcome.queued} applicant${outcome.queued === 1 ? '' : 's'} queued behind the scoring already running; each row says where it is.`
           : outcome.kind === 'nothing'
-            ? 'None of the checked applicants can be scored (unreadable files).'
+            ? 'None of the checked applicants can be scored (unreadable, or held for a look).'
             : `Scoring ${plural} again — each row says where it is, and the page updates itself.`,
       );
     }
@@ -544,6 +548,24 @@ screenRoute.post('/screen/:id/applicants/:aid/adjust', async (c) => {
   await setAdjustment(applicant.id, points, note || null);
   logger.info({ screeningId: id, applicantId: applicant.id, number: applicant.number, points, hasNote: note.length > 0 }, 'screening: score adjusted by the user');
   return flashRedirect(back, 'ok', points === 0 ? `№${applicant.number}: adjustment removed.` : `№${applicant.number}: ${points > 0 ? '+' : ''}${points} — "${note}".`);
+});
+
+// TASKS E4 (Q6): the person read the redacted text the leak check flagged and lets the model read it as it is.
+screenRoute.post('/screen/:id/applicants/:aid/release', async (c) => {
+  const screening = await loadScreening(idParam(c.req.param('id')));
+  if (!screening) return flashRedirect('/screen', 'err', 'That screening no longer exists.');
+  const applicant = await loadApplicant(idParam(c.req.param('aid')));
+  if (!applicant || applicant.screeningId !== screening.id) return flashRedirect(`/screen/${screening.id}`, 'err', 'That applicant no longer exists.');
+  const back = `/screen/${screening.id}/applicants/${applicant.id}`;
+  if (!(await releaseApplicant(screening.id, applicant.id))) return flashRedirect(back, 'warn', `№${applicant.number} is not held — nothing changed.`);
+  logger.info({ screeningId: screening.id, applicantId: applicant.id, number: applicant.number }, 'screening: held applicant released by the user');
+  const rubricEmpty = rubricOf(screening).criteria.length === 0;
+  const started = rubricEmpty ? null : await startScreeningRun(screening.id);
+  return flashRedirect(
+    back,
+    'ok',
+    `№${applicant.number} will be scored as the redacted text reads now${started ? ' — scoring has started' : rubricEmpty ? ' — add criteria, then press Score' : ''}. Its scorecard shows the leak check's finding beside the result.`,
+  );
 });
 
 function mimeOf(filename: string): string {
@@ -599,6 +621,7 @@ async function shortlistOf(screening: ScreeningWithJob, ids: number[]): Promise<
   for (const id of ids) {
     const a = byId.get(id);
     if (!a) return { ok: false, flash: 'One of the ticked applicants no longer exists.' };
+    if (a.parseStatus === 'held') return { ok: false, flash: `№${a.number} is held for a look — release it on its scorecard first.` };
     if (a.parseStatus !== 'ok') return { ok: false, flash: `№${a.number} could not be read, so there is nothing to compare.` };
     if (!a.verdict || a.stale) return { ok: false, flash: `№${a.number} is not scored under rubric v${screening.rubricVersion} — Score first, then compare.` };
     applicants.push(a);
@@ -687,7 +710,7 @@ screenRoute.get('/screen/:id/applicants/:aid', async (c) => {
         email: applicant.email,
         phone: applicant.phone,
         file: applicant.sourceFilename,
-        status: applicant.parseStatus === 'unreadable' ? 'unreadable' : 'ok',
+        status: applicantStatus(applicant.parseStatus),
         note: applicant.parseNote,
         decision: applicant.decision,
         decidedAt: applicant.decidedAt,

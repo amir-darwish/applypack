@@ -10,7 +10,7 @@ import { SCREEN_PROMPT_VERSION } from '../../screening/prompts';
 import { CRITERION_KIND_LABELS, EVIDENCE_RUNG_LABELS, type Rubric } from '../../screening/rubric';
 import type { ScreenReply } from '../../screening/prompts';
 import { capExplanation, GATE_BUCKET_LABELS, type ScoreRow, type ScreenBreakdown } from '../../screening/score';
-import { describeRedactions, type Redaction } from '../../screening/redact';
+import { describeRedactions, leakKinds, type Redaction } from '../../screening/redact';
 import { DECISION_LABELS, GATE_MARK, MAX_ADJUSTMENT } from '../../screening/export';
 import { adjustedScore, ANSWER_TONE, RUNG_SHORT } from '../screen-view';
 import { DECISIONS } from '../../screening/store';
@@ -31,7 +31,7 @@ export interface ScreenApplicantProps {
     email: string | null;
     phone: string | null;
     file: string;
-    status: 'ok' | 'unreadable';
+    status: 'ok' | 'unreadable' | 'held';
     note: string | null;
     decision: string | null;
     decidedAt: Date | null;
@@ -122,10 +122,24 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
       </PageHeader>
       <Flash flash={flash} />
 
-      {applicant.status !== 'ok' && (
+      {applicant.status === 'unreadable' && (
         <Card class="mb-4">
           <Badge tone="warn">Could not be read</Badge>
           <p class="mt-2 text-sm text-ink-muted">{applicant.note ?? 'The file gave no text to read.'}</p>
+        </Card>
+      )}
+      {/* TASKS E4 (Q6): the redaction promise is what the mode rests on, so a leak waits for a person. */}
+      {applicant.status === 'held' && (
+        <Card class="mb-4">
+          <Badge tone="warn">Held for a look</Badge>
+          <p class="mt-2 text-sm text-ink-muted">
+            After redaction the leak check still found {leakKinds(applicant.leaks).join(', ') || 'something identifying'}, so no
+            model has read this applicant. The redacted text below is exactly what one would read.
+          </p>
+          <form method="post" action={`${back}/applicants/${applicant.id}/release`} class="mt-3 flex flex-wrap items-center gap-3">
+            <Button variant="secondary">Score it anyway</Button>
+            <Hint>Or tick it on the screening page and Delete.</Hint>
+          </form>
         </Card>
       )}
       {applicant.sameAs !== null && (
@@ -377,7 +391,9 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
       <div class="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <details>
-            <summary class="cursor-pointer text-sm font-semibold text-ink">Text the model read (redacted)</summary>
+            <summary class="cursor-pointer text-sm font-semibold text-ink">
+              {applicant.status === 'held' ? 'Text a model would read (redacted)' : 'Text the model read (redacted)'}
+            </summary>
             <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-[13px] leading-5 text-ink">{applicant.redactedText}</pre>
           </details>
         </Card>

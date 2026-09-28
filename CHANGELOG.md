@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.34.0] — 2026-09-28
+
+### Changed
+- **Screening: an applicant whose redaction may have missed something is
+  held.** When the check after redaction still finds an email, a phone or
+  a part of the name, no AI reads that applicant. The table shows them as
+  "Held for a look", and their scorecard says what kind of thing was found.
+  **Score it anyway** sends them on once you have read the redacted text.
+- **Screening: religion and health are removed too** when a resume states
+  them as personal details ("Konfession: …", "Stan zdrowia: …",
+  "Disability: …"). A job about health tech keeps its words.
+- **Screening: adding a folder of resumes writes them in one go** rather
+  than one database transaction per file.
+
 ## [2.33.0] — 2026-09-28
 
 ### Changed
