@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.26.0] — 2026-09-28
+
+### Fixed
+- **Workable boards past their first page were cut short, silently.** Every
+  page is read now, up to five.
+- **Hacker News salary ranges landed in job titles.** "$120–160k" was split
+  on its dash, so half a salary could become the location.
+- **An Adzuna snippet could show its markup.**
+- **A relative link in a job feed you added could not be opened.** It is
+  read against the feed's own address now.
+- **A 4 Day Week search with an unrecognised country code got nothing
+  back.** The unknown code is left out instead.
+- **A link from a feed or from "Is it real?" is shown only when it is an
+  http(s) address.** A `javascript:` link would have run in the dashboard.
+
+### Changed
+- A search that names a group beside its countries ("Poland, Germany and
+  the EU") also reads Himalayas' latest postings, so an EU role open to
+  Spain only is no longer missed.
+- A board that answers "too many requests" with a short wait is waited out
+  and asked once more.
+- A site you add to the watchlist can ask for its own pacing
+  (`Crawl-delay`), and ApplyPack keeps to it.
+
 ## [2.25.0] — 2026-09-28
 
 ### Added

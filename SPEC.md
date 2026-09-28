@@ -36,13 +36,13 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for diagrams.
 | GREENHOUSE         | per-company   | none      | `boards-api.greenhouse.io/v1/boards/<token>`    |
 | LEVER              | per-company   | none      | `api.lever.co/v0/postings/<slug>`               |
 | ASHBY              | per-company   | none      | `api.ashbyhq.com/posting-api/job-board/<org>`   |
-| WORKABLE           | per-company   | none      | POST `apply.workable.com/api/v3/accounts/<slug>/jobs`. List has **no description body** — Claude classifies on title alone. |
-| SMARTRECRUITERS    | per-company   | none      | List + per-posting detail. 60 details/cycle.    |
+| WORKABLE           | per-company   | none      | POST `apply.workable.com/api/v3/accounts/<slug>/jobs`, a page at a time (`nextPage` → `token`, at most 5 pages; a longer board is logged). List has **no description body** — Claude classifies on title alone. |
+| SMARTRECRUITERS    | per-company   | none      | List + per-posting detail. 60 details/cycle. One list page of 100 (a single URL keeps its conditional request); a longer board's `totalFound` is logged. |
 | RECRUITEE          | per-company   | none      | `<slug>.recruitee.com/api/offers/` — rich rows incl. description + salary |
 | BREEZY             | per-company   | none      | `<slug>.breezy.hr/json?verbose=true` (`verbose` adds the description) |
 | BAMBOOHR           | per-company   | none      | `<slug>.bamboohr.com/careers/list`. List-only: **no description, no date** (postedAt = first-seen). Unknown slug 302s to marketing site → `redirect: 'error'`. |
 | PINPOINT           | per-company   | none      | `<slug>.pinpointhq.com/postings.json` — rich rows, **no date** (postedAt = first-seen) |
-| RIPPLING           | per-company   | none      | List + per-job detail (`api.rippling.com/platform/api/ats/v1/board/<slug>/jobs`). 60 details/cycle. |
+| RIPPLING           | per-company   | none      | List + per-job detail (`api.rippling.com/platform/api/ats/v1/board/<slug>/jobs`). 60 details/cycle; the list is cut at 1,000 rows, and the cut is logged. |
 | TEAMTAILOR         | per-company   | none      | `<slug>.teamtailor.com/jobs.rss` (or a custom career domain as the token; private hosts refused) — `remoteStatus` (fully / hybrid / none) as the arrangement, `tt:locations` city + country name through the gazetteer, department and role in the head, full HTML; `jobs.json` beside it has ISO codes but no remote status, so the RSS is the feed read; an unknown slug is a 404 |
 | PERSONIO           | per-company   | none      | `<slug>.jobs.personio.de/xml?language=en` — documented XML (`<workzag-jobs><position>`), parsed without a dependency; `office` + `additionalOffices` free text for the parser, sections of `jobDescriptions` as the description, employment / seniority / schedule / salary in its head, `createdAt` as the date; an unknown slug is a 307 to personio.com (refused as "no feed") |
 | FEED               | per-company   | none      | A generic RSS / Atom job feed; the atsToken IS the feed URL, re-checked through the posting-URL guards on every tick. The rung below the vendor types — `watchlist/resolve.ts` only reaches it when no board resolves (ADR 0036) |

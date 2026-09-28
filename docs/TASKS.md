@@ -2382,6 +2382,26 @@ release-discipline skill, a docs/site block does not.
       which lines a search would take (ADR 0036 addendum). The renderer
       the feature-gap analysis scoped stays a later stage with its own ADR.
 
+- [ ] **`fetcher-edges`** (minor, two tags) — the 2026-09 plan's W5d (audit
+      FETCH-5 and the ADR 0035 trigger). **2026-09-28, v2.26.0:**
+      - Workable reads every page (`nextPage` → `token`, cap 5). SmartRecruiters
+        and Rippling log a board longer than what is read, and the Rippling
+        list and the HN thread have caps.
+      - A bare en-dash is a salary range to the HN parser, not a separator.
+      - The Adzuna snippet is stripped of markup.
+      - A relative `<link>` in a FEED is read against the feed.
+      - 4dayweek never sends a country code the gazetteer cannot name, and
+        Himalayas also reads its browse feed when a search names a group
+        beside countries.
+      - A 429 with a short `Retry-After` is waited out once.
+      - A user-added site's `Crawl-delay` is kept on its row.
+      - `web/format.ts:safeHref` makes every outside URL a link only when it
+        is http(s).
+
+      Next: S13 (a job that vanished from a complete board is marked
+      expired), S23 (Check now fetches that company now), S26 (the packs on
+      "Sources for your searches"), S31 (validators on the Company row).
+
 ### 20.4 Owner items
 
 - GitHub About → the package description; social preview from
