@@ -17,6 +17,13 @@ const scoreDetail = document.getElementById('score-detail');
 const scoreDelta = document.getElementById('score-delta');
 const chips = document.getElementById('chips');
 const resetButton = document.getElementById('reset');
+// A phone has no hover, so a chip's title never shows there: a tap says it in
+// this line instead, and the idle line tells a touch screen to tap (style.css).
+const chipDetail = document.createElement('p');
+chipDetail.className = 'chip-detail';
+chipDetail.setAttribute('aria-live', 'polite');
+chips.after(chipDetail);
+const TAP_HINT = 'Tap a word to see why the posting wants it.';
 
 // AA-safe on white at 13px (the delta line) as well as at 40px.
 const TONE = [
@@ -28,7 +35,14 @@ const TONE = [
 const toneColor = (score) => TONE.find(([min]) => score >= min)[1];
 const MUTED = '#667085';
 
+/** What a chip's title says: how hard the posting wants the word, how often, where it would go. */
+const chipWhy = (r) =>
+  [wantsLabel(r), r.count > 1 ? '×' + r.count + ' in the posting' : null, r.where ? 'add in: ' + r.where : null, r.note]
+    .filter(Boolean)
+    .join(' · ');
+
 function wire(data) {
+  let picked = null;
   function render() {
     const text = editor.value;
     const scored = scoreKeywords(data.keywords, text);
@@ -78,15 +92,24 @@ function wire(data) {
     // requirement first, then the words the posting keeps repeating; red for a
     // must the resume lacks, amber for a preferred, slate for a nice-to-have.
     for (const r of orderKeywords(missing, data.jobText)) {
-      const chip = document.createElement('span');
+      const chip = document.createElement('button');
+      chip.type = 'button';
       chip.className = 'chip-missing kw-w' + keywordRank(r);
       chip.textContent = r.count > 1 ? r.term + ' ×' + r.count : r.term;
-      chip.title = [wantsLabel(r), r.count > 1 ? '×' + r.count + ' in the posting' : null, r.where ? 'add in: ' + r.where : null, r.note]
-        .filter(Boolean)
-        .join(' · ');
+      chip.title = chipWhy(r);
+      chip.setAttribute('aria-pressed', String(r.term === picked));
+      chip.addEventListener('click', () => {
+        picked = picked === r.term ? null : r.term;
+        render();
+      });
       chips.appendChild(chip);
     }
     if (missing.length === 0) chips.innerHTML = '<span class="chips-empty">Every countable keyword is present.</span>';
+    // A word typed into the resume leaves the row, and its line goes with it.
+    const shown = missing.find((r) => r.term === picked);
+    if (!shown) picked = null;
+    chipDetail.textContent = shown ? shown.term + ': ' + chipWhy(shown) : missing.length > 0 ? TAP_HINT : '';
+    chipDetail.classList.toggle('idle', !shown);
 
     resetButton.hidden = !dirty;
   }
