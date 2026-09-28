@@ -13,6 +13,12 @@ function num(stats: CronStats, key: string): number {
 }
 
 export function summarizeFetchRun(stats: CronStats): { kind: FlashKind; text: string } {
+  if (stats.reason === 'overlap') {
+    return {
+      kind: 'warn',
+      text: 'Fetch now did nothing: another fetch is running (the hourly one, or a fetch-once script), and two at once would score the same postings twice. Its row on /runs shows when it is done.',
+    };
+  }
   if (stats.reason === 'no-active-profile') {
     return { kind: 'err', text: 'Fetch now: no running search — create one on Settings → Profile.' };
   }

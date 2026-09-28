@@ -7,6 +7,7 @@ import { getSchedule, getSettings } from '../settings';
 import { recordCandidatesFromText } from '../discovery';
 import { makeFetchPauseProbe } from './fetch-pause';
 import { processNormalizedJobs, type ProcessStats } from './process-jobs';
+import { tryFetchLock } from './fetch-lock';
 import type { CronStats } from './cron-run';
 
 const HN_COMPANY_NAME = 'HN Who is Hiring';
@@ -19,6 +20,20 @@ const HN_CAREER_URL = 'https://news.ycombinator.com/from?site=ycombinator.com';
  * filter / classify / alert pipeline as ATS-fetched jobs.
  */
 export async function runHnHiringJob(): Promise<{ stats: CronStats }> {
+  // The same lock as the fetch tick: the hourly walk reads this thread too.
+  const lock = await tryFetchLock();
+  if (!lock) {
+    logger.warn('hn-hiring: a fetch is running; skipped');
+    return { stats: { skipped: 1, reason: 'overlap' } };
+  }
+  try {
+    return await pullHnThread();
+  } finally {
+    await lock.release();
+  }
+}
+
+async function pullHnThread(): Promise<{ stats: CronStats }> {
   const started = Date.now();
   logger.info('hn-hiring: start');
 

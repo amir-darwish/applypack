@@ -4,6 +4,36 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.19.1] — 2026-09-28
+
+### Fixed
+- **One fetch at a time.** The worker's hourly tick and "Fetch now" in the
+  dashboard could run at once, reading the same sources and paying the AI
+  twice for the same postings, and they could deliver held alerts twice. A
+  Postgres advisory lock now guards the tick, "Fetch now", `fetch-once.js`
+  and the monthly HN pull. The one that cannot take it records `overlap` and
+  does nothing. node-cron 4 skips a beat whose previous run is still going.
+- The Docker image installs from the lockfile (`npm ci`), prunes the dev
+  dependencies and pins the three CLI engines, so two builds a month apart
+  run the same code.
+
+### Added
+- **Container healthchecks.** `docker compose ps` says `healthy`: the
+  dashboard's `/health` (it signs in when `WEB_BASIC_AUTH` is set), and a
+  heartbeat file the worker touches every minute.
+- **CI gates** for a high advisory in the shipped dependencies, a schema
+  committed without its migration, an unused export, a setting missing from
+  `.env.example`, and a Docker build. Dependabot proposes weekly updates.
+
+### Changed
+- In Docker the logs are JSON, one object per line. `npm start` keeps
+  readable lines.
+- node-cron 4, pino 10, @hono/node-server 2 (the same API, faster), the
+  Anthropic SDK 0.128, and patch updates of hono, docx, jszip and tsx.
+  deepmerge-ts is pinned to 8 under prisma 6 for GHSA-ggr8-5vv4-36mx until
+  prisma ships the fix. `npm audit` reports no vulnerabilities.
+- `tsconfig` resolves modules as `nodenext`, ready for TypeScript 7.
+
 ## [2.19.0] — 2026-09-25
 
 ### Fixed
@@ -4050,6 +4080,7 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.19.1]: https://github.com/applypack/applypack/compare/v2.19.0...v2.19.1
 [2.19.0]: https://github.com/applypack/applypack/compare/v2.18.5...v2.19.0
 [2.18.5]: https://github.com/applypack/applypack/compare/v2.18.4...v2.18.5
 [2.18.4]: https://github.com/applypack/applypack/compare/v2.18.3...v2.18.4

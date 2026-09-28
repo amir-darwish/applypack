@@ -1,6 +1,6 @@
 # 0003 — No job queue; node-cron is enough
 
-**Status:** Accepted (phase-1, reaffirmed phase-3); see the 2026-09-24 addendum
+**Status:** Accepted (phase-1, reaffirmed phase-3); see the 2026-09-24 and 2026-09-28 addenda
 
 ## Context
 
@@ -71,3 +71,17 @@ If we hit any of:
   (`src/web/fetch-now.ts:beginFetchNow`) allows one run at a time inside the
   web process only, so it can run beside the worker's hourly tick. The unique
   constraints still keep the data whole.
+
+## Addendum (2026-09-28): the overlap guard exists
+
+The 2026-09-24 addendum found no lock. There is one now, in two layers.
+node-cron 4 replaced 3, and every cron is registered with `noOverlap`: a
+beat that finds its own previous run still going is skipped inside the
+worker. Across processes the fetch tick, "Fetch now", `fetch-once.js` and
+the monthly HN pull take one Postgres advisory lock
+(`src/jobs/fetch-lock.ts`). It lives on a client with a single connection,
+because a session lock belongs to its connection. A crash closes that
+connection, and Postgres releases the lock. A run that cannot take the lock
+records `overlap` and reads, sends and classifies nothing, so no posting is
+paid for twice. There is still no time cap on a tick. The route smoke holds
+the lock and checks that "Fetch now" stands down.

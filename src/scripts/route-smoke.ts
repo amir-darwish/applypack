@@ -24,6 +24,8 @@ import { setEmployerMode } from '../settings';
 import { createApplicant, createScreening } from '../screening/store';
 import { draftRubric } from '../screening/rubric';
 import { fingerprintText } from '../screening/intake';
+import { tryFetchLock } from '../jobs/fetch-lock';
+import { getFetchRun } from '../web/fetch-runs';
 
 /** What a page may answer: itself, or a redirect to where the state lives. */
 const ACCEPT = new Set([200, 302, 303]);
@@ -273,6 +275,25 @@ async function main(): Promise<void> {
     ok: raced.every((r) => r.status === 303 && /^\/jobs\/\d+/.test(r.headers.get('location') ?? '')),
   });
 
+  // "Fetch now" while another fetch holds the lock, as the worker's tick
+  // would: the run is accepted and does nothing — no source read, no alert,
+  // no AI — because two at once would score the same postings twice.
+  const held = await tryFetchLock();
+  if (!held) throw new Error('route smoke: the fetch lock is already taken');
+  try {
+    const started = await app.request('/runs/fetch-now', form({}));
+    const runId = (started.headers.get('location') ?? '').split('/').pop() ?? '';
+    const run = await settledFetchRun(runId);
+    rows.push({
+      route: 'POST /runs/fetch-now while another fetch holds the lock (overlap)',
+      url: '/runs/fetch-now',
+      status: started.status,
+      ok: started.status === 303 && run?.stats?.reason === 'overlap',
+    });
+  } finally {
+    await held.release();
+  }
+
   const failed = rows.filter((r) => !r.ok);
   const width = Math.max(...rows.map((r) => r.route.length));
   for (const r of rows) console.log(`${r.ok ? 'ok ' : 'FAIL'}  ${r.status}  ${r.route.padEnd(width)}  ${r.url}`);
@@ -280,6 +301,17 @@ async function main(): Promise<void> {
   await prisma.$disconnect();
   // A background scan the upload started may still hold a child; the answer is in.
   process.exit(failed.length > 0 ? 1 : 0);
+}
+
+/** A "Fetch now" run once it has finished, or null if it never does within the wait. */
+async function settledFetchRun(id: string, waitMs = 10_000): Promise<ReturnType<typeof getFetchRun>> {
+  const until = Date.now() + waitMs;
+  for (;;) {
+    const run = getFetchRun(id);
+    if (run && (run.stage === 'done' || run.stage === 'error')) return run;
+    if (Date.now() > until) return null;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
 }
 
 main().catch((err) => {

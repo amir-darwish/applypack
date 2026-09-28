@@ -133,6 +133,12 @@ minute, hashed from `AppSettings.instanceId` so that every deployment does
 not knock on the same board in the same second (ADR 0035); it applies to
 the three jobs that reach somebody else's server.
 
+One fetch runs at a time. Inside the worker, node-cron's `noOverlap` skips a
+beat whose previous run is still going. Across processes, the fetch tick,
+"Fetch now", `fetch-once.js` and the monthly HN pull take one Postgres
+advisory lock (`src/jobs/fetch-lock.ts`); the one that cannot take it
+records `overlap` and reads, sends and classifies nothing.
+
 The cron list itself never changes. What the user picks on Settings →
 General → Schedule is read by a pure gate (`src/user-schedule.ts`) at the
 start of each beat, in the schedule's own time zone: `isFetchDue` decides

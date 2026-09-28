@@ -4,6 +4,12 @@ import { summarizeFetchRun } from './fetch-summary';
 
 const base = { fetched: 312, sources: 71, sourcesFailed: 0, durationMs: 40_000, persisted: 118 };
 
+test('a run that met another fetch says it did nothing and why', () => {
+  const { kind, text } = summarizeFetchRun({ skipped: 1, reason: 'overlap' });
+  assert.equal(kind, 'warn');
+  assert.match(text, /did nothing: another fetch is running/);
+});
+
 test('a paused-pipeline run reports unscored storage and no AI spend', () => {
   const { kind, text } = summarizeFetchRun({ ...base, classify: false });
   assert.equal(kind, 'ok');

@@ -10,3 +10,11 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # Majors that are migrations, not bumps; each has its issue.
+    ignore:
+      - dependency-name: zod # #283
+        update-types: ["version-update:semver-major"]
+      - dependency-name: prisma # #284
+        update-types: ["version-update:semver-major"]
+      - dependency-name: '@prisma/client' # #284
+        update-types: ["version-update:semver-major"]
