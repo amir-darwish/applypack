@@ -125,6 +125,25 @@ the string itself is never rewritten (ADR 0031). `/jobs` filters on them
 The same inner loop is reused by `runHnHiringJob` (extracted into
 `src/jobs/process-jobs.ts`).
 
+### Search funnel
+
+Every tick counts what happened to each posting it read, and why: the base
+filter's gate (`filter.ts:baseFilterReason` — no title keyword, an excluded
+word, an arrangement the search did not pick, a place outside its own; with
+several searches, the one that got a posting furthest names the reason), the
+duplicates, what the AI scored, why every search dismissed a scored posting
+(the winner's `dismissReason`: fit, location, salary), what became a match
+and what was alerted. The counters ride in the run's stats and are summed
+per UTC day into `funnel_day` (`jobs/funnel-store.ts:addToFunnel`), which is
+never pruned — the raw runs go after 90 days. The migration that created it
+backfilled the days the stored runs covered, with the totals only.
+
+`/runs` opens on the funnel over the last 7 and 30 days, the reasons in
+words and, folded, what each source brought in 30 days (read off the jobs
+themselves). The Overview carries one line of it; a "Fetch now" verdict names
+the two gates that took the most, and the wizard's scoring pass says why the
+rest did not match. None of it spends an AI call.
+
 ## Cron schedule (in `TZ`, `UTC` by default)
 
 node-cron runs every expression below in `config.TZ`: the `TZ` variable of
@@ -524,6 +543,17 @@ records which version scored; the card shows the delta vs the previous run.
 The model marks facts and `resume/score.ts` computes the number from them
 (ADR 0012), so scores are comparable; the full report also returns
 `removals`, what to cut so the resume reads cleaner.
+
+From five compared postings on, `/resumes/:id` adds **Missing across
+postings** (`resume/coverage.ts`, no AI): the keyword table of the latest
+saved comparison of each posting (a draft is the editor's text and is left
+out), read against the resume's text as it is now (ADR 0045) and the
+confirmed facts as they are now, folded by term. A term counts once per
+posting, a `context` row not at all, and a member of an "any of" group the
+resume meets elsewhere not at all. It lists the ten terms missing from the
+most postings (two at least), each with how many list it as a must and what
+closes it: a word to write (`add`), a question to answer (`ask_user`), or a
+gap (`cannot_claim`).
 
 ## Manual jobs + verification (Phase 8.2)
 
