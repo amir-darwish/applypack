@@ -140,9 +140,12 @@ class AnthropicApiProvider implements AiProvider {
       req.onError?.('no API key — paste one on /settings, or set it in .env');
       return failed('error');
     }
+    // What the requests of this call spent so far: a web-search turn resumed
+    // and then refused was still billed for the turns before it.
+    const tally: { spend: AiSpend | null } = { spend: null };
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
-        return await this.run(req, this.clientFor(key));
+        return await this.run(req, this.clientFor(key), tally);
       } catch (err) {
         const status = err instanceof Anthropic.APIError ? err.status : undefined;
         if (status === 429 && attempt < MAX_ATTEMPTS - 1) {
@@ -154,12 +157,15 @@ class AnthropicApiProvider implements AiProvider {
         req.onError?.(
           describeAiFailure(status ? `HTTP ${status}: ${errorReason(err)}` : errorReason(err)),
         );
-        // A request the API refused or never answered is not billed: no usage to record.
-        return failed(status === 429 ? 'rate_limited' : err instanceof Anthropic.APIConnectionTimeoutError ? 'timeout' : 'error');
+        // The request that failed is not billed; the ones before it were.
+        return failed(
+          status === 429 ? 'rate_limited' : err instanceof Anthropic.APIConnectionTimeoutError ? 'timeout' : 'error',
+          tally.spend,
+        );
       }
     }
     req.onError?.('rate-limited on every attempt');
-    return failed('rate_limited');
+    return failed('rate_limited', tally.spend);
   }
 
   /** A reply the API billed and the caller cannot use: logged and reported as the thrown errors are. */
@@ -169,7 +175,7 @@ class AnthropicApiProvider implements AiProvider {
     return failed(outcome, spend);
   }
 
-  private async run(req: AiRequest, client: Anthropic): Promise<AiAttempt> {
+  private async run(req: AiRequest, client: Anthropic, tally: { spend: AiSpend | null }): Promise<AiAttempt> {
     const messages: Anthropic.MessageParam[] = [{ role: 'user', content: req.user }];
     const model = req.model ?? config.CLAUDE_MODEL;
     const callers = webToolsDirectOnly(model) ? { allowed_callers: ['direct' as const] } : {};
@@ -180,7 +186,7 @@ class AnthropicApiProvider implements AiProvider {
         ]
       : undefined;
     // A paused web-search turn is resumed as a new request: each is billed, so they add.
-    let usage = NO_USAGE;
+    let usage = tally.spend?.usage ?? NO_USAGE;
     for (let resumes = 0; ; resumes++) {
       // The same ceiling the chain hands every other backend; without it the
       // SDK's own ten minutes was the only limit and the chain's deadline
@@ -210,6 +216,7 @@ class AnthropicApiProvider implements AiProvider {
       );
       usage = addUsage(usage, anthropicUsage(resp.usage));
       const spend: AiSpend = { usage, model: resp.model, reportedUsd: null };
+      tally.spend = spend;
       if (resp.stop_reason === 'pause_turn' && resumes < MAX_PAUSE_TURN_RESUMES) {
         messages.push({ role: 'assistant', content: resp.content });
         continue;

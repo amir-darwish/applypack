@@ -65,6 +65,8 @@ async function warnOnBudget(now: Date): Promise<void> {
   const cents = settings?.aiBudgetCents;
   if (!cents) return;
   const month = budgetMonth(now);
+  // The month's last warning is out: nothing left to send, so no sum to take on every billed call.
+  if ((settings.aiBudgetAlerted ?? '') >= `${month}:100`) return;
   const billed = await billedMicroIn(month);
   const marker = budgetAlert(billed, cents, month, settings.aiBudgetAlerted);
   if (!marker) return;
