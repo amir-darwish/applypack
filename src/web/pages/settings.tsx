@@ -2,8 +2,35 @@
 import type { Child, FC, PropsWithChildren } from 'hono/jsx';
 import type { Profile } from '@prisma/client';
 import { Layout } from '../layout';
-import { ActionForm, Badge, Button, Card, Code, Empty, Field, FILE_INPUT_CLASS, Flash, Hint, Input, More, PageHeader, PillCheckbox, Radio, SectionTitle, Select, Table, Tag, Td, Textarea, ToggleRow, Tr, TagListInput } from '../ui';
-import { formatDate, formatRelative } from '../format';
+import {
+  ActionForm,
+  Badge,
+  Button,
+  Card,
+  Code,
+  Empty,
+  Field,
+  FILE_INPUT_CLASS,
+  Flash,
+  Hint,
+  Input,
+  More,
+  Notice,
+  PageHeader,
+  PillCheckbox,
+  Radio,
+  SectionTitle,
+  Select,
+  Table,
+  Tag,
+  TagListInput,
+  Td,
+  Textarea,
+  ToggleRow,
+  Tr,
+  When,
+} from '../ui';
+import { formatDate } from '../format';
 import { isNewer } from '../../versions';
 import { REAPPLY_CHOICES } from '../../employer';
 import type { FlashMessage } from '../flash';
@@ -119,6 +146,8 @@ export interface ScheduleView {
   nextFetch: string;
   /** Matches waiting to be sent — for the window, for Alerts, for a chat — or null. */
   held: HeldLine | null;
+  /** No schedule saved yet: the zone is the install's default, and the browser's is the better guess (TASKS S28). */
+  unsaved: boolean;
 }
 
 export interface AiStatusSummary {
@@ -157,6 +186,8 @@ export interface ProfileDraftNotice {
 }
 
 export interface SettingsProps {
+  /** `?fill=<resume id>` from a resume's page: the fill form starts on that resume (TASKS R20). */
+  fillResumeId?: number;
   telegramEnabled: boolean;
   classifierMode: 'single' | 'two_stage';
   applicationTrackingEnabled: boolean;
@@ -288,11 +319,15 @@ const ALERT_MODE_TITLE: Record<(typeof ALERT_MODES)[number], string> = {
 };
 
 const ScheduleForm: FC<{ view: ScheduleView }> = ({ view }) => {
-  const { schedule: s, zones, nextFetch, held } = view;
+  const { schedule: s, zones, nextFetch, held, unsaved } = view;
   return (
     <form method="post" action="/settings/schedule" class="space-y-5">
-      <Field label="Time zone" hint="One zone for every hour in this section." class="max-w-sm">
-        <Select name="timezone">
+      <Field
+        label="Time zone"
+        hint={unsaved ? "One zone for every hour in this section — your browser's is picked until you save one." : 'One zone for every hour in this section.'}
+        class="max-w-sm"
+      >
+        <Select name="timezone" data-browser-zone={unsaved ? '' : undefined}>
           {zones.map((z) => (
             <option value={z} selected={z === s.timezone}>
               {z}
@@ -300,6 +335,15 @@ const ScheduleForm: FC<{ view: ScheduleView }> = ({ view }) => {
           ))}
         </Select>
       </Field>
+      {unsaved && (
+        <script
+          type="module"
+          dangerouslySetInnerHTML={{
+            __html:
+              "const s = document.querySelector('select[data-browser-zone]'); const z = Intl.DateTimeFormat().resolvedOptions().timeZone; if (s && [...s.options].some((o) => o.value === z)) s.value = z;",
+          }}
+        />
+      )}
 
       <div class="border-t border-line pt-4">
         <div class="text-label text-ink">Check for jobs</div>
@@ -383,6 +427,7 @@ const ScheduleForm: FC<{ view: ScheduleView }> = ({ view }) => {
 };
 
 export const SettingsPage: FC<SettingsProps> = ({
+  fillResumeId,
   telegramEnabled,
   classifierMode,
   applicationTrackingEnabled,
@@ -476,13 +521,13 @@ export const SettingsPage: FC<SettingsProps> = ({
         {/* Order follows the user's journey: contextual warnings → fill from a
             resume → the editor → profile management last (docs/onboarding-plan.md §3). */}
         {profiles.some((p) => p.running && p.blank) && profiles.every((p) => !p.running || p.blank) && (
-          <div class="rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn">
+          <Notice tone="warn">
             Every running search is empty — classification idle. New jobs are fetched but
             not scored or alerted until one lists a required stack or role types.
             {resumes.length > 0
               ? ' Fastest fix: fill the fields from a resume below.'
               : ' Fastest fix: upload a resume below and fill the fields from it.'}
-          </div>
+          </Notice>
         )}
         {activeProfile && !profiles.some((p) => p.id === activeProfile.id && p.running) && (
           <div class="rounded-md border border-line bg-surface-overlay px-3.5 py-2.5 text-[13px] leading-5 text-ink-muted">
@@ -493,7 +538,7 @@ export const SettingsPage: FC<SettingsProps> = ({
         )}
         {/* A well inside the section: a tool that writes into the editor below, not a second card. */}
         {activeProfile && (
-          <Card variant="subtle">
+          <Card variant="subtle" id="fill">
             <div class="mb-1 text-entity text-ink">Fill from a resume</div>
             {resumes.length > 0 ? (
               <>
@@ -516,7 +561,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                     aria-label="Resume to fill the profile from"
                   >
                     {resumes.map((r) => (
-                      <option value={r.id} selected={r.isDefault}>
+                      <option value={r.id} selected={fillResumeId !== undefined ? r.id === fillResumeId : r.isDefault}>
                         {r.name}
                         {r.isDefault ? ' (default)' : ''}
                         {r.scannedAt ? '' : ' (not scanned yet)'}
@@ -657,13 +702,13 @@ export const SettingsPage: FC<SettingsProps> = ({
             )}
           </div>
           {aiStatus.billingNotes.map((note) => (
-            <div class="rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn">{note}</div>
+            <Notice tone="warn">{note}</Notice>
           ))}
           {aiStatus.skipped.length > 0 && (
-            <div class="rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn">
+            <Notice tone="warn">
               Enabled but skipped for now: {aiStatus.skipped.join(', ')} — not usable on this
               host yet. Each joins the chain automatically once its key or login appears.
-            </div>
+            </Notice>
           )}
         </div>
         {/* The engines are rows of the section, a hairline between each — the
@@ -928,7 +973,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                   </Td>
                   <Td class="font-mono text-xs text-ink-muted">{t.destination}</Td>
                   <Td class="whitespace-nowrap text-[13px] text-ink-faint">
-                    {formatRelative(t.lastUsed)}
+                    <When at={t.lastUsed} />
                   </Td>
                   <Td>
                     <ActionForm action={`/settings/targets/${t.id}/toggle`}>
@@ -1653,10 +1698,7 @@ const ProfileEditor: FC<{
     {/* Warn, not violet: an unsaved draft, the state "Unsaved changes" names in warn too.
         Violet is for the button that spends the AI (DESIGN.md), not for what it wrote. */}
     {draft && (
-      <div
-        role="status"
-        class="rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn"
-      >
+      <Notice tone="warn" role="status">
         <span class="font-medium">
           AI prefilled this profile from resume "{draft.resumeName}"
         </span>{' '}
@@ -1664,7 +1706,7 @@ const ProfileEditor: FC<{
         {draft.warnings.length > 0 && <> Note: {draft.warnings.join('; ')}.</>}{' '}
         Nothing is saved yet — review the fields and press "Save profile" or "Save &amp;
         re-classify".
-      </div>
+      </Notice>
     )}
     <div class="grid gap-4 sm:grid-cols-2">
       <Field label="Name" hint="Yours alone; nothing reads it.">

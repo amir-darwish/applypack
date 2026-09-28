@@ -250,6 +250,7 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
     zones: supportedTimezones(check.schedule.timezone),
     nextFetch: check.next,
     held: await loadHeldLine(check.schedule),
+    unsaved: settings.schedule === null,
   };
   const countByStage = new Map(
     stageCounts.map((row) => [row.pipelineStage, row._count._all]),
@@ -424,8 +425,9 @@ settingsRoute.get('/settings', async (c) => {
     const editorProfile = await getProfile(profileParam);
     if (editorProfile) props.activeProfile = editorProfile;
   }
+  const fill = idParam(c.req.query('fill'));
   const flash = parseFlashCookie(c.req.header('cookie'));
-  return c.html(<SettingsPage {...props} activeTab={activeTab} flash={flash} />, 200, {
+  return c.html(<SettingsPage {...props} fillResumeId={Number.isFinite(fill) ? fill : undefined} activeTab={activeTab} flash={flash} />, 200, {
     'Set-Cookie': clearFlashCookie(),
   });
 });

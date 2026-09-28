@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { ActionForm, Badge, Button, Card, Flash, Hint, PageHeader } from '../ui';
+import { ActionForm, Badge, Button, Card, Flash, Hint, Notice, PageHeader } from '../ui';
 import type { FlashMessage } from '../flash';
 import { formatDate } from '../format';
 import { CRITERION_KIND_LABELS, EVIDENCE_RUNG_LABELS } from '../../screening/rubric';
@@ -9,7 +9,7 @@ import { GATE_BUCKET_LABELS, type ScoreRow } from '../../screening/score';
 import { GATE_MARK } from '../../screening/export';
 import { who, type ComparisonView } from '../../screening/comparison';
 import type { SideBySide } from '../screen-compare';
-import { ANSWER_TONE, RUNG_SHORT } from '../screen-view';
+import { ANSWER_TONE, BUCKET_TONE, RUNG_SHORT } from '../screen-view';
 
 /*
  * Side by side (plan §5) and Compare with AI (plan §5.1, ADR 0051): the
@@ -29,8 +29,6 @@ export interface ScreenCompareProps {
   engine: { label: string; warn: string | null };
   flash?: FlashMessage | null;
 }
-
-const BUCKET_TONE = { pass: 'ok', ask: 'warn', fail: 'danger' } as const;
 
 const Cell: FC<{ r: ScoreRow | null }> = ({ r }) => {
   if (!r) return <span class="text-ink-faint">—</span>;
@@ -199,10 +197,10 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
                 : `On ${view.disagreements} criteri${view.disagreements === 1 ? 'on' : 'a'} they placed different applicants first.`}
             </div>
             {view.injection && (
-              <p class="rounded-md border border-danger/25 bg-danger/5 px-3 py-2 text-[13px] text-danger">
+              <Notice tone="danger">
                 A resume in this shortlist carried text addressed to an AI reader; it was reported and the texts
                 were judged on their merits. Read that scorecard before trusting the order.
-              </p>
+              </Notice>
             )}
             <div class="grid gap-4 sm:grid-cols-2">
               {view.orders.map((order, i) => (

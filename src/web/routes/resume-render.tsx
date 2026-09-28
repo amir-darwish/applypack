@@ -18,7 +18,8 @@ import { parseWarnings } from '../../resume/parse-warnings';
 import { scanInBackground } from '../../resume/scan';
 import { structureResume } from '../../resume/structure';
 import { hashShortId } from '../../text-utils';
-import { claimRun, runFailure, startRun, updateRun, type TargetRun } from '../target-runs';
+import { claimRun, startRun, updateRun, type TargetRun } from '../target-runs';
+import { runFailure } from '../run-failure';
 import { ResumeRenderPage } from '../pages/resume-render';
 import { clearFlashCookie, flashRedirect, parseFlashCookie } from '../flash';
 

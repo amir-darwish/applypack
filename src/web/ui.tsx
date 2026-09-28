@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { Child, FC, PropsWithChildren } from 'hono/jsx';
 import type { JobStatus } from '@prisma/client';
-import { fitTone, fitWord, statusLabel, statusTone, type Tone } from './format';
+import { fitTone, fitWord, formatDate, formatRelative, statusLabel, statusTone, type Tone } from './format';
 import type { FlashKind, FlashMessage } from './flash';
 import { hideCellsClass, hideHeaderClass, type HideBelow } from './table-hide';
 import { TOKENS, hex } from './tokens';
@@ -29,7 +29,8 @@ const TONE_SOFT: Record<Tone, string> = {
   neutral: 'bg-surface-overlay text-ink-muted ring-line',
 };
 
-const TONE_TEXT: Record<Tone, string> = {
+/** A tone as text colour, and as a solid fill — one map each for every page (TASKS U18). */
+export const TONE_TEXT: Record<Tone, string> = {
   ok: 'text-ok',
   warn: 'text-warn',
   danger: 'text-danger',
@@ -38,7 +39,7 @@ const TONE_TEXT: Record<Tone, string> = {
   neutral: 'text-ink-faint',
 };
 
-const TONE_FILL: Record<Tone, string> = {
+export const TONE_FILL: Record<Tone, string> = {
   ok: 'bg-ok',
   warn: 'bg-warn',
   danger: 'bg-danger',
@@ -95,11 +96,44 @@ export const PageHeader: FC<
   </header>
 );
 
-const FLASH_TONE: Record<FlashKind, string> = {
+/** "3 hours ago", with the date and time it stands for on hover and in the markup (TASKS R20). */
+export const When: FC<{ at: Date | null | undefined }> = ({ at }) =>
+  at ? (
+    <time datetime={at.toISOString()} title={formatDate(at)}>
+      {formatRelative(at)}
+    </time>
+  ) : (
+    <>—</>
+  );
+
+/** A criterion's weight as stars for the eye and as a number for a screen reader (TASKS U12). */
+export const Stars: FC<{ n: number; class?: string }> = ({ n, class: extra }) => (
+  <span class={extra}>
+    <span aria-hidden="true">{'★'.repeat(n)}</span>
+    <span class="sr-only">{`weight ${n}`}</span>
+  </span>
+);
+
+/** A message's ground and text by tone — one map for the flash and the standing notice (TASKS U4). */
+const MESSAGE_TONE = {
   ok: 'border-ok/25 bg-ok/5 text-ok',
   warn: 'border-warn/25 bg-warn/5 text-warn',
-  err: 'border-danger/25 bg-danger/5 text-danger',
-};
+  danger: 'border-danger/25 bg-danger/5 text-danger',
+} as const;
+
+const FLASH_TONE: Record<FlashKind, string> = { ok: MESSAGE_TONE.ok, warn: MESSAGE_TONE.warn, err: MESSAGE_TONE.danger };
+
+/**
+ * What a page says on every render in a tone — the posting changed, a run
+ * failed, every search is empty — in the flash's shape, which is for what one
+ * action did (TASKS U4). `children` may carry its one action after the text.
+ */
+export const Notice: FC<PropsWithChildren<{ tone: keyof typeof MESSAGE_TONE; class?: string; role?: 'status' | 'alert' }>> = ({
+  tone,
+  class: extra,
+  role,
+  children,
+}) => <div role={role} class={`rounded-md border px-3.5 py-2.5 text-[13px] leading-5 ${MESSAGE_TONE[tone]}${extra ? ` ${extra}` : ''}`}>{children}</div>;
 
 /** `children` is the message's one action, if any — a form or a button after the text. */
 export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ flash, children }) =>
@@ -138,6 +172,11 @@ export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ 
         )}
       </svg>
       <span class="min-w-0 flex-1">{flash.text}</span>
+      {flash.download && (
+        <a href={flash.download} class="shrink-0 font-medium underline">
+          Download .docx
+        </a>
+      )}
       {children}
     </div>
   ) : null;
@@ -538,7 +577,14 @@ export const Table: FC<
       <tbody class="divide-y divide-line">{children}</tbody>
     </table>
   );
-  return stickyHeader ? table : <div class="overflow-x-auto">{table}</div>;
+  // A region that scrolls sideways takes a tab stop, so a keyboard can scroll it too (TASKS R20).
+  return stickyHeader ? (
+    table
+  ) : (
+    <div class="overflow-x-auto" tabindex={0} role="region" aria-label={caption ?? 'Table'}>
+      {table}
+    </div>
+  );
 };
 
 export const Tr: FC<PropsWithChildren<Record<string, unknown> & { class?: string }>> = ({

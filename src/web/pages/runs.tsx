@@ -8,7 +8,7 @@ import { formatDate, formatDuration, formatStamp } from '../format';
 import { displayZoneLabel } from '../display-zone';
 import type { FetchRun } from '../fetch-runs';
 import type { CronStats, SourceStat } from '../../jobs/cron-run';
-import { summarizeRun } from '../runs-summary';
+import { failedRunLine, summarizeRun } from '../runs-summary';
 import { FetchNowButton } from './fetch-run';
 import { FunnelCard } from './funnel-card';
 import { runLabel, runTone } from './overview';
@@ -101,9 +101,13 @@ const RunsTable: FC<{ runs: RunRow[]; caption: string }> = ({ runs, caption }) =
               </Td>
               <Td>
                 {r.errorMessage ? (
-                  <pre class="whitespace-pre-wrap break-words font-mono text-xs leading-5 text-danger">
-                    {r.errorMessage}
-                  </pre>
+                  <div>
+                    <p class="text-[13px] leading-5 text-danger">{failedRunLine(r.name, r.errorMessage)}</p>
+                    <details class="mt-1">
+                      <summary class="cursor-pointer text-xs text-ink-faint transition-colors duration-150 hover:text-ink">Details</summary>
+                      <pre class="mt-1 whitespace-pre-wrap break-words font-mono text-xs leading-5 text-ink-muted">{r.errorMessage}</pre>
+                    </details>
+                  </div>
                 ) : r.stats ? (
                   <StatsCell name={r.name} stats={r.stats} />
                 ) : (

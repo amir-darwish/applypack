@@ -53,7 +53,8 @@ import { compareFormats, formatSides } from '../format-compare';
 import { loadLineDiff } from '../../resume/line-diff';
 import { ResumesPage } from '../pages/resumes';
 import { clearFlashCookie, flashRedirect, parseFlashCookie } from '../flash';
-import { claimRun, startRun, updateRun, runFailure } from '../target-runs';
+import { claimRun, startRun, updateRun } from '../target-runs';
+import { runFailure } from '../run-failure';
 import { hashShortId } from '../../text-utils';
 import {
   MAX_RESUME_NAME_CHARS,
@@ -261,8 +262,10 @@ resumesRoute.post('/resumes/:id/draft', async (c) => {
   // Scan and match are the slow part after it: two AI calls back to back is
   // the worst wait on the site, which is why this gets a run at all.
   startRun(run.id, async () => {
-    const { resume, note } = await saveEdited(id, text, baseText);
+    const { resume, note, patched } = await saveEdited(id, text, baseText);
     const saved = `Saved as v${resume.version} (${note})`;
+    // TASKS R25: the user's own .docx, written into — the flash hands it back.
+    const downloadUrl = patched ? `/resumes/${resume.id}/download` : undefined;
     updateRun(run.id, {
       resumeName: resume.name,
       subtitle: `${saved}.${job ? ' Scoring it against the posting.' : ''}`,
@@ -274,7 +277,7 @@ resumesRoute.post('/resumes/:id/draft', async (c) => {
     if (!job) {
       const scan = await scanResume(resume, noteReason);
       updateRun(run.id, scan
-        ? { stage: 'done', resultUrl: `/resumes/${resume.id}`, flash: `${saved}.` }
+        ? { stage: 'done', resultUrl: `/resumes/${resume.id}`, flash: `${saved}.`, downloadUrl }
         : { stage: 'error', error: runFailure(`${saved}, but the scan failed`, reason, 'The saved version is intact; press Re-scan on its page.') });
       return;
     }
@@ -292,6 +295,7 @@ resumesRoute.post('/resumes/:id/draft', async (c) => {
           stage: 'done',
           resultUrl: `/jobs/${job.id}/target?match=${match.id}`,
           flash: `${saved} and checked: match ${match.matchScore}/100. The headline and skills refresh in the background.`,
+          downloadUrl,
         }
       : {
           stage: 'error',
@@ -319,7 +323,7 @@ async function saveEdited(
   id: number,
   text: string,
   baseText: string,
-): Promise<{ resume: ResumeSummary; note: string }> {
+): Promise<{ resume: ResumeSummary; note: string; patched: boolean }> {
   const [current, row] = await Promise.all([getResume(id), getResumeOriginal(id)]);
   if (!current) throw new Error(`resume ${id} is gone`);
   const nextVersion = current.version + 1;
@@ -349,7 +353,7 @@ async function saveEdited(
     original: Buffer.from(text, 'utf8'),
     text,
   };
-  return { resume: await replaceResumeFile(id, payload), note };
+  return { resume: await replaceResumeFile(id, payload), note, patched: file !== null };
 }
 
 /**

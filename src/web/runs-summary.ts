@@ -1,5 +1,6 @@
 import type { CronStats } from '../jobs/cron-run';
 import { DISMISS_KEY, FILTER_KEY } from '../funnel';
+import { runFailure } from './run-failure';
 
 /*
  * A finished run as a reader meets it on /runs: the facts worth a glance, in a
@@ -113,4 +114,28 @@ export function summarizeRun(name: string, stats: CronStats): string[] {
     out.push(`${value.toLocaleString('en-US')} ${humanise(key)}`);
   }
   return out;
+}
+
+/** What is safe after a failed run of each job, and what comes next — the second and third parts of the sentence. */
+const AFTER_FAILURE: Record<string, string> = {
+  fetch: 'What it stored before the failure stays, and the next tick tries again',
+  'fetch-now': 'What it stored before the failure stays; press Fetch now again, or wait for the next tick',
+  'hn-hiring': 'What it stored before the failure stays, and the next run tries again',
+  digest: 'Nothing was sent; the next digest hour tries again',
+  'stale-applications': 'Nothing was sent; the next digest hour tries again',
+  cleanup: 'Nothing past the failure was deleted, and tomorrow\'s run tries again',
+  discovery: 'The next run tries again',
+};
+/** A reason is its first line, and one sentence of it — the rest folds behind Details. */
+const REASON_MAX_CHARS = 160;
+
+/**
+ * A failed run as a sentence (TASKS U6): what failed, why in one line, what is
+ * safe and what comes next — the raw error goes under Details, not in place of
+ * the explanation.
+ */
+export function failedRunLine(name: string, error: string): string {
+  const first = error.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+  const reason = first.length > REASON_MAX_CHARS ? `${first.slice(0, REASON_MAX_CHARS - 1)}…` : first.replace(/[.\s]+$/, '');
+  return runFailure(`The ${name} run failed`, reason, `${AFTER_FAILURE[name] ?? 'The next scheduled run tries again'}.`);
 }

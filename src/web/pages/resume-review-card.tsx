@@ -1,9 +1,9 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import type { ResumeReview } from '@prisma/client';
-import { ActionForm, Badge, Button, Card, FitBadge, Hint, Input, SectionTitle } from '../ui';
+import { ActionForm, Badge, Button, Card, FitBadge, Hint, Input, SectionTitle, When } from '../ui';
 import type { Tone } from '../format';
-import { formatRelative } from '../format';
+
 import { readReviewAdvice, readReviewGrades, type ReviewAdvice } from '../../resume/prompts';
 import { answerFor, unansweredAsks, type ReviewAnswer } from '../../resume/answers';
 import { deltaSentence, type ReviewDelta } from '../../resume/review-delta';
@@ -133,7 +133,7 @@ const ReviewReport: FC<{
           <Badge tone="info">v{review.resumeVersion}</Badge>
         )}
         <span class="text-xs text-ink-faint">
-          {formatRelative(review.createdAt)} · <span class="font-mono">{review.model}</span>
+          <When at={review.createdAt} /> · <span class="font-mono">{review.model}</span>
         </span>
       </div>
       <p class="text-sm leading-6 text-ink">{review.headline}</p>

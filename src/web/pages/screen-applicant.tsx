@@ -1,7 +1,22 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { ActionForm, Badge, Button, Card, Flash, Hint, Input, PageHeader, Select, Table, Td, Tr } from '../ui';
+import {
+  ActionForm,
+  Badge,
+  Button,
+  Card,
+  Flash,
+  Hint,
+  Input,
+  Notice,
+  PageHeader,
+  Select,
+  Stars,
+  Table,
+  Td,
+  Tr,
+} from '../ui';
 import type { FlashMessage } from '../flash';
 import { formatDate } from '../format';
 import { formatRange, parseRange } from '../../screening/dates';
@@ -69,7 +84,7 @@ const CriterionAnswerRow: FC<{ r: ScoreRow }> = ({ r }) => {
       <Td class="align-top">
         <div class="text-ink">{r.label}</div>
         <div class="text-xs text-ink-faint">
-          {CRITERION_KIND_LABELS[r.kind as keyof typeof CRITERION_KIND_LABELS] ?? r.kind} · {r.mode === 'gate' ? 'gate' : r.mode === 'note' ? 'note' : `${'★'.repeat(r.weight)}`}
+          {CRITERION_KIND_LABELS[r.kind as keyof typeof CRITERION_KIND_LABELS] ?? r.kind} · {r.mode === 'gate' ? 'gate' : r.mode === 'note' ? 'note' : <Stars n={r.weight} />}
         </div>
       </Td>
       <Td class="align-top">
@@ -155,10 +170,10 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
         </div>
       )}
       {stale && reply && (
-        <div class="mb-4 rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn" role="status">
+        <Notice tone="warn" role="status" class="mb-4">
           This scorecard was written under an earlier rubric. The screening page's Score button reads the applicant
           again with the current one; until then the number below is about a different yardstick.
-        </div>
+        </Notice>
       )}
 
       {reply && breakdown && (
@@ -174,10 +189,10 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
                 <dd class="font-medium text-ink">{reply.summary.verdict || '—'}</dd>
               </dl>
               {reply.injection && (
-                <p class="mt-3 rounded-md border border-danger/25 bg-danger/5 px-3 py-2 text-[13px] text-danger">
+                <Notice tone="danger" class="mt-3">
                   The resume carried text addressed to an AI reader. It was ignored and the resume judged on its
                   merits; see "Consistency" below.
-                </p>
+                </Notice>
               )}
             </Card>
 
@@ -300,25 +315,34 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
 
           <div class="space-y-4">
             <Card>
-              <h2 class="text-entity text-ink">How the score was made</h2>
-              <table class="mt-2 w-full text-sm">
+              <h2 id="score-made" class="text-entity text-ink">How the score was made</h2>
+              {/* TASKS U13: header cells with a scope, and the heading as the table's name. */}
+              <table class="mt-2 w-full text-sm" aria-labelledby="score-made">
+                <thead class="sr-only">
+                  <tr>
+                    <th scope="col">Criterion and answer</th>
+                    <th scope="col">Points</th>
+                  </tr>
+                </thead>
                 <tbody class="divide-y divide-line">
                   {breakdown.rows
                     .filter((r) => r.mode === 'scored')
                     .map((r) => (
                       <tr class={r.max === 0 ? 'text-ink-faint' : ''}>
-                        <td class="py-1.5 pr-2 align-top">
+                        <th scope="row" class="py-1.5 pr-2 text-left align-top font-normal">
                           <div class="text-ink">{r.label}</div>
                           <div class="text-xs text-ink-faint">
                             {r.answer}
                             {r.max === 0 ? ' — not counted' : ''}
                           </div>
-                        </td>
+                        </th>
                         <td class="whitespace-nowrap py-1.5 text-right align-top tabular-nums">{r.max === 0 ? '—' : `${r.pts} / ${r.max}`}</td>
                       </tr>
                     ))}
                   <tr class="font-medium text-ink">
-                    <td class="py-1.5 pr-2">Score{breakdown.cap !== null ? ' (capped)' : ''}</td>
+                    <th scope="row" class="py-1.5 pr-2 text-left font-medium">
+                      Score{breakdown.cap !== null ? ' (capped)' : ''}
+                    </th>
                     <td class="py-1.5 text-right tabular-nums">{breakdown.score}</td>
                   </tr>
                 </tbody>

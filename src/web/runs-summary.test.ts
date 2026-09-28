@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeRun } from './runs-summary';
+import { failedRunLine, summarizeRun } from './runs-summary';
 
 describe('summarizeRun', () => {
   it('reads a fetch tick as its facts, in a fixed order', () => {
@@ -129,5 +129,21 @@ describe('summarizeRun', () => {
 
   it('has nothing to say about an empty record', () => {
     assert.deepEqual(summarizeRun('fetch', {}), []);
+  });
+});
+
+describe('failedRunLine (TASKS U6)', () => {
+  it('says what failed, why in one line, and what comes next', () => {
+    assert.equal(
+      failedRunLine('fetch', 'PrismaClientKnownRequestError: connection refused.\n    at Object.request (node_modules/...)'),
+      'The fetch run failed: PrismaClientKnownRequestError: connection refused. What it stored before the failure stays, and the next tick tries again.',
+    );
+    assert.equal(failedRunLine('digest', 'Telegram 401 Unauthorized'), 'The digest run failed: Telegram 401 Unauthorized. Nothing was sent; the next digest hour tries again.');
+  });
+  it('an unknown job still gets a way forward, and an empty error points at the log', () => {
+    assert.equal(failedRunLine('reclassify', ''), 'The reclassify run failed. The next scheduled run tries again. The web log has the detail.');
+  });
+  it('a long reason is cut to one sentence', () => {
+    assert.ok(failedRunLine('cleanup', 'x'.repeat(400)).includes('…'));
   });
 });

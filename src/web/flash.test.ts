@@ -50,3 +50,13 @@ test('safeBack refuses a control character, so a Location cannot be split', () =
   // A space and a percent-escape are ordinary path characters.
   assert.equal(safeBack('/jobs?q=a%20b', '/'), '/jobs?q=a%20b');
 });
+
+test('a download link rides the flash only when it is ours (TASKS R25)', () => {
+  const cookie = (download: string) => {
+    const res = flashRedirect('/resumes/3', 'ok', 'Saved as v4 (.docx patched).', { download });
+    return parseFlashCookie((res.headers.get('set-cookie') ?? '').split(';')[0]!);
+  };
+  assert.equal(cookie('/resumes/3/download')?.download, '/resumes/3/download');
+  assert.equal(cookie('https://evil.example/x')?.download, undefined, 'the cookie is the browser\'s to edit');
+  assert.equal(cookie('/resumes/3/download?x=1')?.download, undefined);
+});

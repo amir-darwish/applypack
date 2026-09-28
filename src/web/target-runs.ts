@@ -61,6 +61,8 @@ export interface TargetRun {
   resultUrl?: string;
   /** The editor for the comparison this run made — rides into the flash as "Tailor resume →" (#164). */
   tailorUrl?: string;
+  /** A .docx the run wrote into the user's own file — rides into the flash as "Download .docx" (TASKS R25). */
+  downloadUrl?: string;
   flash?: string;
   /** Done with a stored analysis, not a fresh one — the flash warns and offers "Re-run anyway". */
   reused?: boolean;
@@ -173,16 +175,6 @@ export function getRun(id: string): TargetRun | null {
   return runs.get(id) ?? null;
 }
 
-/** Runs the async chain; any uncaught failure flips the run to error. */
-/**
- * The run's error line: what failed, the provider's one-line reason when there
- * is one (#184), then `next` — what is safe and the way forward, which only
- * the caller knows. Without a reason the web log is where the detail lives.
- */
-export function runFailure(what: string, reason: string, next: string): string {
-  return `${what}${reason ? `: ${reason}` : ''}. ${next}${reason ? '' : ' The web log has the detail.'}`;
-}
-
 /** The engine came back with no letter (the fact gate's refusal has its own sentence). */
 export const LETTER_FAILED =
   'The engine returned no letter, so nothing was saved and earlier letters are untouched. Test the engine on Settings → AI engine, then generate again; the web log has the detail.';
@@ -191,6 +183,7 @@ export const LETTER_FAILED =
 export const UNEXPECTED_FAILURE =
   'The run stopped on an unexpected error before it stored a result. Go back and start it again; the web log has the detail.';
 
+/** Runs the async chain; any uncaught failure flips the run to error. */
 export function startRun(id: string, fn: () => Promise<void>): void {
   void fn().catch((err) => {
     logger.error({ err, runId: id }, 'web: compare run failed');

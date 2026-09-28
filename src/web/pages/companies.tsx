@@ -22,6 +22,7 @@ import {
   Tag,
   Td,
   Tr,
+  When,
 } from '../ui';
 import { formatRelative, safeHref } from '../format';
 import { sourceFamily } from '../source-groups';
@@ -356,7 +357,7 @@ export const CompaniesPage: FC<CompaniesProps> = ({
                     {c.alertedTotal}
                   </Td>
                   <Td class="whitespace-nowrap text-right text-[13px] text-ink-faint">
-                    {formatRelative(c.lastFetchedAt)}
+                    <When at={c.lastFetchedAt} />
                   </Td>
                   <Td>
                     <ActionForm action={`/companies/${c.id}/toggle-active`}>

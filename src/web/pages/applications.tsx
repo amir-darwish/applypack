@@ -199,6 +199,19 @@ export const ApplicationsPage: FC<ApplicationsProps> = ({
         </Empty>
       ) : (
         <>
+        {/* TASKS U5: an empty board says how a card gets onto it, once, above the empty columns. */}
+        {Object.values(byStage).every((items) => items.length === 0) && (
+          <Empty
+            title="Nothing on the board yet"
+            action={
+              <Button href="/jobs" variant="secondary" size="sm">
+                Open your jobs
+              </Button>
+            }
+          >
+            Mark a job Applied in its Application tracking panel and it lands in the first column.
+          </Empty>
+        )}
         <nav aria-label="Stages" class="mb-3 flex flex-wrap gap-1.5 md:hidden">
           {columns.map((s) => (
             <a

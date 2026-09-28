@@ -82,6 +82,7 @@ targetRoute.get('/target/runs/:id', async (c) => {
     return flashRedirect(run.resultUrl, run.flashKind ?? (run.reused ? 'warn' : 'ok'), run.flash ?? 'Done.', {
       rerun: run.reused,
       tailor: run.tailorUrl,
+      download: run.downloadUrl,
     });
   }
   return c.html(<TargetRunPage run={run} lane={await resumeLane()} />);
