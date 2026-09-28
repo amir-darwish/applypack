@@ -24,6 +24,14 @@ test('a running-pipeline run reports scored and alerted counts', () => {
   assert.match(text, /118 new stored, 100 scored, 5 alerted\./);
 });
 
+test('a run the filter thinned says which gates took the most (N2)', () => {
+  const stats = { ...base, persisted: 0, classified: 0, filterRejected: 300, rejectedTitle: 270, rejectedPlace: 25, rejectedExcluded: 5 };
+  assert.match(summarizeFetchRun(stats).text, /0 alerted\. The filter set aside 300: 270 without a title keyword, 25 outside your places\.$/);
+  assert.match(summarizeFetchRun({ ...stats, classify: false }).text, /paused\. The filter set aside 300: .* Score them later/);
+  // A run from before the counters, or one the filter left alone, says nothing about it.
+  assert.doesNotMatch(summarizeFetchRun({ ...base, filterRejected: 300 }).text, /filter/);
+});
+
 test('zero jobs is not a warning when the sources were simply unchanged', () => {
   // 44 of 62 sources answer 304 on an ordinary second tick; "check the
   // network" would be nonsense there.

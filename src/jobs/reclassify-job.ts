@@ -4,7 +4,8 @@ import { config } from '../config';
 import { logger } from '../logger';
 import { createLimiter } from '../concurrency';
 import { classifyJob } from '../classifier';
-import { passesAnyBaseFilter } from '../filter';
+import { anyBaseFilterReason, passesAnyBaseFilter } from '../filter';
+import { DISMISS_KEY, FILTER_KEY } from '../funnel';
 import { getActiveProfile, listActiveProfiles } from '../profiles';
 import { getSettings } from '../settings';
 import { isBlankProfile } from '../profile-guards';
@@ -67,10 +68,16 @@ export async function runScoreUnscored(
     },
   });
   const rejectedIds: number[] = [];
+  const rejectedBy = { rejectedTitle: 0, rejectedExcluded: 0, rejectedWorkplace: 0, rejectedPlace: 0 };
   const passing: ScorableJob[] = [];
   for (const j of unscored) {
-    if (passesAnyBaseFilter(j, profiles)) passing.push(j);
-    else rejectedIds.push(j.id);
+    const rejected = anyBaseFilterReason(j, profiles);
+    if (rejected === null) {
+      passing.push(j);
+    } else {
+      rejectedIds.push(j.id);
+      rejectedBy[FILTER_KEY[rejected]]++;
+    }
   }
   if (rejectedIds.length > 0) {
     await prisma.job.updateMany({
@@ -86,6 +93,7 @@ export async function runScoreUnscored(
       ...stats,
       unscored: unscored.length,
       filterDismissed: rejectedIds.length,
+      ...rejectedBy,
       remaining: ranked.length - ids.length,
     },
   };
@@ -123,6 +131,9 @@ async function reclassify(opts: ReclassifyOptions): Promise<{ stats: CronStats }
   let failed = 0;
   let filterRejected = 0;
   let priorityBoosted = 0;
+  // Why a scored job was set aside, by the winning search's reason — the
+  // wizard's "look like a match" line says why the rest did not (N2).
+  const dismissedBy = { dismissedLowFit: 0, dismissedLocation: 0, dismissedSalary: 0 };
   // Why the last failed call failed — "no API key", "HTTP 401 …" — so the
   // flash and /runs can say it instead of leaving it to the container logs (#97).
   let lastError: string | null = null;
@@ -210,6 +221,7 @@ async function reclassify(opts: ReclassifyOptions): Promise<{ stats: CronStats }
       reclassified++;
       priorityBoosted += boosted;
 
+      if (!merged.kept && merged.winner.dismissReason) dismissedBy[DISMISS_KEY[merged.winner.dismissReason]]++;
       const previousStatus = j.status;
       const targetStatus = !merged.kept
         ? JobStatus.DISMISSED
@@ -250,6 +262,7 @@ async function reclassify(opts: ReclassifyOptions): Promise<{ stats: CronStats }
     demoted,
     unchanged,
     filterRejected,
+    ...dismissedBy,
     priorityBoosted,
     failed,
     lastError,

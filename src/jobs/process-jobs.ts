@@ -3,7 +3,8 @@ import { isUniqueViolation, prisma } from '../db';
 import { config } from '../config';
 import { logger } from '../logger';
 import { createLimiter } from '../concurrency';
-import { passesAnyBaseFilter } from '../filter';
+import { anyBaseFilterReason } from '../filter';
+import { DISMISS_KEY, FILTER_KEY } from '../funnel';
 import { withApplyLinkFlags } from '../apply-link';
 import { validDate } from '../fetchers/dates';
 import { parseLocation } from '../location';
@@ -73,6 +74,50 @@ export interface ProcessStats {
   alertNoTarget: number;
   /** Postings kept because a watched company alerts on everything (ADR 0036). */
   watchedKept: number;
+  /** Stored as a match after scoring — kept by a search, or by a watched company's policy. */
+  matched: number;
+  /** The base filter's reject, by the gate that took it (filter.ts:FILTER_REASONS) — the search funnel's first half. */
+  rejectedTitle: number;
+  rejectedExcluded: number;
+  rejectedWorkplace: number;
+  rejectedPlace: number;
+  /** Dismissed by every search after scoring, by the winner's reason — the funnel's second half. */
+  dismissedLowFit: number;
+  dismissedLocation: number;
+  dismissedSalary: number;
+}
+
+/** A tick's counters before it starts: every number at zero. */
+export function emptyProcessStats(): ProcessStats {
+  return {
+    filterRejected: 0,
+    duplicate: 0,
+    preFiltered: 0,
+    classified: 0,
+    classifyFailed: 0,
+    classifyError: null,
+    persisted: 0,
+    dismissed: 0,
+    alerted: 0,
+    alertFailed: 0,
+    priorityBoosted: 0,
+    crossListed: 0,
+    abortedMidRun: 0,
+    skippedByPause: 0,
+    skippedBlankProfile: 0,
+    alertHeld: 0,
+    alertsOffHeld: 0,
+    alertNoTarget: 0,
+    watchedKept: 0,
+    matched: 0,
+    rejectedTitle: 0,
+    rejectedExcluded: 0,
+    rejectedWorkplace: 0,
+    rejectedPlace: 0,
+    dismissedLowFit: 0,
+    dismissedLocation: 0,
+    dismissedSalary: 0,
+  };
 }
 
 export interface ProcessOptions {
@@ -167,11 +212,12 @@ export async function processNormalizedJobs(
     // to SEE what appears there, so the roster's gate does not apply to it.
     // The posting is still classified below — the policy decides what is done
     // with the verdict, not whether one is formed (ADR 0036).
-    if (
-      !alertsEveryPosting(item.watch) &&
-      !passesAnyBaseFilter({ ...item.job, ...place }, classify ? profiles : activeProfiles)
-    ) {
+    const rejected = alertsEveryPosting(item.watch)
+      ? null
+      : anyBaseFilterReason({ ...item.job, ...place }, classify ? profiles : activeProfiles);
+    if (rejected !== null) {
       stats.filterRejected++;
+      stats[FILTER_KEY[rejected]]++;
       continue;
     }
     const key = `${item.job.companyId}:${item.job.externalId}`;
@@ -290,6 +336,7 @@ export async function processNormalizedJobs(
       );
       if (stored) {
         stats.dismissed++;
+        if (winner.dismissReason) stats[DISMISS_KEY[winner.dismissReason]]++;
         logger.debug(
           {
             title: job.title,
@@ -323,6 +370,7 @@ export async function processNormalizedJobs(
       alertHeldAt,
     );
     if (!stored) continue;
+    stats.matched++;
     const { created, crossListing } = stored;
     // Counted where every other counter is: after the row exists. A posting
     // the unique key rejected was not kept by anything.

@@ -4,6 +4,7 @@
  * it produces exists. Pure — the route gathers the facts, the page renders
  * the first undone step. Tested in welcome-steps.test.ts.
  */
+import { dismissedReasons, filteredReasons, funnelCounts, reasonsText } from '../funnel';
 
 export const WELCOME_STEPS = ['ai', 'search', 'profile', 'sources', 'matches'] as const;
 export type WelcomeStep = (typeof WELCOME_STEPS)[number];
@@ -63,8 +64,14 @@ export function summarizeScoreRun(stats: Record<string, unknown>): { kind: 'ok' 
   }
   const scored = n('reclassified');
   const matches = n('unchanged') + n('promoted');
-  const parts = [`Scored ${scored} jobs — ${matches} look like a match`];
-  if (n('filterDismissed') > 0) parts.push(`${n('filterDismissed')} set aside as off-topic without AI`);
+  const counts = funnelCounts(stats);
+  // Why the rest did not match (N2): the winning search's reason, then the base filter's gate.
+  const notMatched = reasonsText(dismissedReasons(counts));
+  const parts = [`Scored ${scored} jobs — ${matches} look like a match${notMatched ? ` (not a match: ${notMatched})` : ''}`];
+  if (n('filterDismissed') > 0) {
+    const why = reasonsText(filteredReasons(counts));
+    parts.push(`${n('filterDismissed')} set aside as off-topic without AI${why ? ` — ${why}` : ''}`);
+  }
   if (n('failed') > 0) {
     const why = typeof stats.lastError === 'string' && stats.lastError ? ` — the AI did not answer: ${stats.lastError}` : '';
     parts.push(`${n('failed')} could not be scored${why}`);

@@ -7,18 +7,29 @@ import { clearFlashCookie, flashRedirect, parseFlashCookie } from '../flash';
 import { FETCH_RUN_STEPS, activeFetchRun, getFetchRun } from '../fetch-runs';
 import { beginFetchNow } from '../fetch-now';
 import { summarizeFetchRun } from '../fetch-summary';
+import { loadFunnel, loadSourceYield } from '../../jobs/funnel-store';
 
 const RUNS_LIMIT = 100;
 
 export const runsRoute = new Hono();
 
 runsRoute.get('/runs', async (c) => {
-  const runs = await prisma.cronRun.findMany({
-    orderBy: { startedAt: 'desc' },
-    take: RUNS_LIMIT,
-  });
+  const now = new Date();
+  const [runs, funnel, sources] = await Promise.all([
+    prisma.cronRun.findMany({
+      orderBy: { startedAt: 'desc' },
+      take: RUNS_LIMIT,
+    }),
+    loadFunnel(now),
+    loadSourceYield(now),
+  ]);
   return c.html(
-    <RunsPage runs={runs} fetchRun={activeFetchRun()} flash={parseFlashCookie(c.req.header('cookie'))} />,
+    <RunsPage
+      runs={runs}
+      funnel={{ ...funnel, sources }}
+      fetchRun={activeFetchRun()}
+      flash={parseFlashCookie(c.req.header('cookie'))}
+    />,
     200,
     { 'Set-Cookie': clearFlashCookie() },
   );

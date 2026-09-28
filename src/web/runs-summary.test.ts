@@ -19,6 +19,23 @@ describe('summarizeRun', () => {
     assert.deepEqual(summarizeRun('fetch', stats), ['594 fetched', '3 new', '55 duplicates', '3 classified', '0 alerted']);
   });
 
+  it('names the matches, and leaves the filter and dismissal reasons to the funnel card', () => {
+    const stats = {
+      fetched: 540,
+      filterRejected: 500,
+      rejectedTitle: 480,
+      rejectedPlace: 20,
+      persisted: 40,
+      classified: 40,
+      dismissed: 38,
+      dismissedLowFit: 30,
+      dismissedLocation: 8,
+      matched: 2,
+      alerted: 2,
+    };
+    assert.deepEqual(summarizeRun('fetch', stats), ['540 fetched', '40 new', '40 classified', '2 matches', '2 alerted']);
+  });
+
   it('an uneventful tick says so in two facts', () => {
     assert.deepEqual(summarizeRun('fetch', { fetched: 25, persisted: 0, duplicate: 0, classified: 0, alerted: 0, sources: 2 }), [
       '25 fetched',

@@ -1,4 +1,5 @@
 import type { CronStats } from '../jobs/cron-run';
+import { DISMISS_KEY, FILTER_KEY } from '../funnel';
 
 /*
  * A finished run as a reader meets it on /runs: the facts worth a glance, in a
@@ -34,6 +35,7 @@ const FACTS: { key: string; one: string; many: string; always?: true; job?: stri
   { key: 'crossListed', one: 'cross-listed', many: 'cross-listed' },
   { key: 'classified', one: 'classified', many: 'classified' },
   { key: 'classifyFailed', one: 'failed to classify', many: 'failed to classify' },
+  { key: 'matched', one: 'match', many: 'matches' },
   { key: 'alerted', one: 'alerted', many: 'alerted' },
   { key: 'alertHeld', one: 'held for the alert window', many: 'held for the alert window' },
   { key: 'alertsOffHeld', one: 'held while Alerts are off', many: 'held while Alerts are off' },
@@ -54,8 +56,8 @@ const FACTS: { key: string; one: string; many: string; always?: true; job?: stri
  * Counts the sentence leaves to other places: the Duration column, the
  * by-source list, the reason — and the routine ones every tick carries (what
  * the base filter and the prefilter turned away, what the classifier
- * dismissed), which are the pipeline working, not news. They stay in the raw
- * block.
+ * dismissed, and why), which are the pipeline working, not news. They stay
+ * in the raw block, and the funnel card above the table sums them.
  */
 const ELSEWHERE = new Set([
   'durationMs',
@@ -66,6 +68,8 @@ const ELSEWHERE = new Set([
   'filterRejected',
   'preFiltered',
   'dismissed',
+  ...Object.values(FILTER_KEY),
+  ...Object.values(DISMISS_KEY),
 ]);
 
 /** A 0 / 1 flag a job raises, as the sentence it stands for. */

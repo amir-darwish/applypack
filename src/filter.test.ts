@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  anyBaseFilterReason,
+  baseFilterReason,
   passesAnyBaseFilter,
   passesBaseFilter,
   placesOverlap,
@@ -249,5 +251,38 @@ describe('passesAnyBaseFilter', () => {
 
   it('admits nothing when no search is running', () => {
     assert.equal(passesAnyBaseFilter(job('Senior Laravel Engineer', 'Remote, US'), []), false);
+  });
+});
+
+describe('baseFilterReason — which gate turned the posting away', () => {
+  it('names each gate in turn, and nothing for a posting that passes', () => {
+    assert.equal(baseFilterReason(job('Senior Ruby Engineer', 'Remote'), phpProfile), 'title');
+    assert.equal(baseFilterReason(job('Junior PHP Developer', 'Remote'), phpProfile), 'excluded');
+    assert.equal(baseFilterReason(job('PHP Developer', 'Berlin, Germany (on-site)'), phpProfile), 'workplace');
+    assert.equal(baseFilterReason(job('PHP Developer', 'Remote, Brazil'), euProfile), 'place');
+    assert.equal(baseFilterReason(job('Senior PHP Developer', 'Remote'), phpProfile), null);
+  });
+
+  it('agrees with passesBaseFilter on every case', () => {
+    for (const j of [job('Senior Ruby Engineer', 'Remote'), job('PHP Developer', 'Remote, Brazil'), job('Laravel Backend Engineer', 'Remote')]) {
+      for (const p of [phpProfile, euProfile, austinHybridProfile]) {
+        assert.equal(passesBaseFilter(j, p), baseFilterReason(j, p) === null, `${j.title} / ${j.location}`);
+      }
+    }
+  });
+});
+
+describe('anyBaseFilterReason — the union', () => {
+  it('is null when any search admits the posting', () => {
+    assert.equal(anyBaseFilterReason(job('Java Engineer', 'Remote'), [phpProfile, austinHybridProfile]), null);
+  });
+
+  it('keeps the gate of the search that got the posting furthest', () => {
+    // The PHP search fails it on its title; the EU search matches the title and fails it on the place.
+    assert.equal(anyBaseFilterReason(job('PHP Developer', 'Remote, Brazil'), [austinHybridProfile, euProfile]), 'place');
+  });
+
+  it('with no search at all, the first gate is the reason', () => {
+    assert.equal(anyBaseFilterReason(job('PHP Developer', 'Remote'), []), 'title');
   });
 });
