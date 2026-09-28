@@ -71,14 +71,23 @@ export async function fetchWorkable(
   let total: number | null = null;
   for (let page = 0; page < MAX_PAGES; page++) {
     if (page > 0) await sleep(PAGE_DELAY_MS);
-    const resp = await fetchWithRetry(ENDPOINT_TEMPLATE(company.atsToken), {
-      init: {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: '', workplace: [], department: [], ...(token !== null && { token }) }),
-      },
-    });
-    const data: unknown = await resp.json();
+    let data: unknown;
+    try {
+      const resp = await fetchWithRetry(ENDPOINT_TEMPLATE(company.atsToken), {
+        init: {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: '', workplace: [], department: [], ...(token !== null && { token }) }),
+        },
+      });
+      data = await resp.json();
+    } catch (err) {
+      // The first page failing is the source failing, as it always was; a
+      // later one keeps what the earlier pages brought.
+      if (page === 0) throw err;
+      logger.warn({ err, atsToken: company.atsToken, page }, 'workable: a later page failed; keeping the pages read');
+      break;
+    }
     out.push(...mapWorkableFeed(data, company.id, company.atsToken));
     const paging = workablePage(data);
     read += paging.rows;
