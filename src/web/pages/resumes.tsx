@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmAction,
   Disclosure,
   Empty,
   Field,
@@ -210,11 +211,14 @@ export const ResumesPage: FC<{
                     {f.status === 'confirmed' ? "I don't, actually" : 'I do have it'}
                   </Button>
                 </ActionForm>
-                <ActionForm action="/facts/delete" hidden={{ term: f.term, back: '/resumes' }}>
-                  <Button size="sm" variant="ghost">
-                    Forget
-                  </Button>
-                </ActionForm>
+                <ConfirmAction
+                  action="/facts/delete"
+                  hidden={{ term: f.term, back: '/resumes' }}
+                  label="Forget"
+                  variant="ghost"
+                  ariaLabel={`Forget ${f.term}`}
+                  confirm={`Forget what you said about ${f.term}? The next comparison that meets it asks again.`}
+                />
               </div>
             </li>
           ))}

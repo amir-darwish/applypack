@@ -59,7 +59,7 @@ import {
   type ScreeningWithJob,
 } from '../../screening/store';
 import { requireEmployerMode } from '../employer-mode';
-import { clearFlashCookie, firstIssue, flashRedirect, parseFlashCookie, safeBack } from '../flash';
+import { clearFlashCookie, firstIssue, flashRedirect, parseFlashCookie, refusedField, safeBack } from '../flash';
 import { ScreenListPage } from '../pages/screen-list';
 import { ScreenNewPage } from '../pages/screen-new';
 import { ScreenDetailPage } from '../pages/screen-detail';
@@ -130,7 +130,7 @@ screenRoute.post('/screen', postingUploadLimit, onceGuard(() => 'screen:new', ()
   const form = await c.req.parseBody();
   const parsed = NewScreeningSchema.safeParse(form);
   if (!parsed.success) {
-    return flashRedirect('/screen/new', 'err', `No screening was started (${firstIssue(parsed.error.issues)}). Pick a position below and start again.`);
+    return flashRedirect('/screen/new', 'err', `No screening was started (${firstIssue(parsed.error.issues)}). Pick a position below and start again.`, refusedField(c.req.path, parsed.error.issues));
   }
   const f = parsed.data;
 

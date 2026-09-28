@@ -2,10 +2,10 @@
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
 import {
-  ActionForm,
   Badge,
   Button,
   Card,
+  ConfirmAction,
   Flash,
   Hint,
   Input,
@@ -449,11 +449,7 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
         </Card>
       </div>
       <div class="mt-4">
-        <ActionForm action={`${back}/applicants/${applicant.id}/delete`} confirm="Remove this applicant with the file and every verdict?">
-          <Button variant="danger" size="sm">
-            Remove this applicant
-          </Button>
-        </ActionForm>
+        <ConfirmAction action={`${back}/applicants/${applicant.id}/delete`} label="Remove this applicant" confirm="Remove this applicant with the file and every verdict?" class="inline-block" />
       </div>
       <script type="module" dangerouslySetInnerHTML={{ __html: "import { wireCopy } from '/static/copy.mjs'; wireCopy(document);" }} />
     </Layout>

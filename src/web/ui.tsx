@@ -5,6 +5,7 @@ import { fitTone, fitWord, formatDate, formatRelative, statusLabel, statusTone, 
 import type { FlashKind, FlashMessage } from './flash';
 import { hideCellsClass, hideHeaderClass, type HideBelow } from './table-hide';
 import { TOKENS, hex } from './tokens';
+import { hashShortId } from '../text-utils';
 
 /*
  * Shared primitives. Every page composes these instead of writing raw
@@ -138,6 +139,7 @@ export const Notice: FC<PropsWithChildren<{ tone: keyof typeof MESSAGE_TONE; cla
 /** `children` is the message's one action, if any — a form or a button after the text. */
 export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ flash, children }) =>
   flash ? (
+    <>
     <div
       role="status"
       class={`mb-4 flex items-start gap-2.5 rounded-md border px-3.5 py-2.5 text-sm ${FLASH_TONE[flash.kind]}`}
@@ -171,7 +173,7 @@ export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ 
           </>
         )}
       </svg>
-      <span class="min-w-0 flex-1">{flash.text}</span>
+      <span id="flash-text" class="min-w-0 flex-1">{flash.text}</span>
       {flash.download && (
         <a href={flash.download} class="shrink-0 font-medium underline">
           Download .docx
@@ -179,6 +181,18 @@ export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ 
       )}
       {children}
     </div>
+    {/* TASKS U15: the field the message is about says so itself — invalid, described by the message, focused.
+        Looked up inside the form that posted; both parts passed flash.ts's patterns, so neither can close a quote.
+        Focused on load: the jump to a redirect's #fragment comes after this script and takes the focus back. */}
+    {flash.field && (
+      <script
+        type="module"
+        dangerouslySetInnerHTML={{
+          __html: `const f = document.querySelector('form[action=${JSON.stringify(flash.field.form)}] [name=${JSON.stringify(flash.field.name)}]'); if (f) { f.setAttribute('aria-invalid', 'true'); f.setAttribute('aria-describedby', ['flash-text', f.getAttribute('aria-describedby')].filter(Boolean).join(' ')); const focus = () => f.focus(); if (document.readyState === 'complete') focus(); else addEventListener('load', focus, { once: true }); }`,
+        }}
+      />
+    )}
+    </>
   ) : null;
 
 const CARD_VARIANT = {
@@ -652,7 +666,7 @@ export const Field: FC<PropsWithChildren<{ label: string; hint?: string; more?: 
 );
 
 const CONTROL =
-  'w-full rounded-md border border-line-strong bg-surface-raised px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint shadow-sm transition-colors duration-150 hover:border-ink-faint focus:border-accent-strong focus:outline-none focus:ring-2 focus:ring-accent/25';
+  'w-full rounded-md border border-line-strong bg-surface-raised px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint shadow-sm transition-colors duration-150 hover:border-ink-faint focus:border-accent-strong focus:outline-none focus:ring-2 focus:ring-accent/25 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-danger/20';
 
 export const Input: FC<Record<string, unknown> & { mono?: boolean }> = ({
   mono,
@@ -742,6 +756,69 @@ const BUTTON_SIZE = {
   lg: 'px-4 py-2 text-sm',
 } as const;
 
+function buttonClass(variant: ButtonVariant, size: keyof typeof BUTTON_SIZE, extra = ''): string {
+  return `inline-flex min-h-[32px] cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]} ${extra}`;
+}
+
+/**
+ * A POST that deserves a second look — a delete, a spend — behind one more
+ * press that needs no JavaScript (TASKS U8). The first press opens a native
+ * popover (`popovertarget`) saying what will happen, with the real button in
+ * it: the popover sits in the top layer, so a table's scroll box cannot clip
+ * it, and Escape or a click outside closes it. `confirm()` in an onsubmit did
+ * nothing without a script, and the delete went through.
+ */
+export const ConfirmAction: FC<{
+  action: string;
+  /** What the first button says. */
+  label: string;
+  /** What will happen, in one or two sentences. */
+  confirm: string;
+  /** The real button's words; the label when omitted. */
+  yes?: string;
+  variant?: ButtonVariant;
+  size?: keyof typeof BUTTON_SIZE;
+  hidden?: Record<string, string | number>;
+  /** On a wrapper around the button — alignment in a cell or a row. */
+  class?: string;
+  /** For a label that needs more than its words ("Delete" on a row). */
+  ariaLabel?: string;
+  disabled?: boolean;
+}> = ({ action, label, confirm, yes, variant = 'danger', size = 'sm', hidden, class: extra, ariaLabel, disabled }) => {
+  // The same action with the same fields is the same question, so one id per question on a page.
+  const id = `confirm-${hashShortId(`${action}\n${label}\n${JSON.stringify(hidden ?? {})}`)}`;
+  const parts = disabled ? (
+    <button type="button" class={buttonClass(variant, size)} disabled>
+      {label}
+    </button>
+  ) : (
+    <>
+      <button type="button" popovertarget={id} class={buttonClass(variant, size)} aria-label={ariaLabel}>
+        {label}
+      </button>
+      <div
+        id={id}
+        popover="auto"
+        role="dialog"
+        aria-label={ariaLabel ?? label}
+        class="m-auto w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-surface-raised p-4 text-left text-[13px] leading-5 text-ink shadow-lg backdrop:bg-[rgb(0_0_0/0.15)]"
+      >
+        <p>{confirm}</p>
+        <form method="post" action={action} class="mt-3 flex justify-end gap-2">
+          {hidden && Object.entries(hidden).map(([k, v]) => <input type="hidden" name={k} value={String(v)} />)}
+          <Button type="button" variant="secondary" size="sm" popovertarget={id} popovertargetaction="hide" autofocus>
+            Cancel
+          </Button>
+          <Button variant={variant === 'ghost' ? 'danger' : variant} size="sm">
+            {yes ?? label}
+          </Button>
+        </form>
+      </div>
+    </>
+  );
+  return extra ? <div class={extra}>{parts}</div> : parts;
+};
+
 export const Button: FC<
   PropsWithChildren<
     Record<string, unknown> & {
@@ -751,7 +828,7 @@ export const Button: FC<
     }
   >
 > = ({ children, variant = 'primary', size = 'md', href, class: className = '', ...rest }) => {
-  const cls = `inline-flex min-h-[32px] cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]} ${className}`;
+  const cls = buttonClass(variant, size, className as string);
   if (href) {
     return (
       <a href={href} class={cls} {...rest}>
@@ -788,22 +865,14 @@ export const SUBMIT_ONCE =
 export const ActionForm: FC<
   PropsWithChildren<{
     action: string;
-    confirm?: string;
     hidden?: Record<string, string | number>;
     class?: string;
     /** Disable the buttons once pressed — for POSTs that start an AI run. */
     once?: boolean;
   }>
-> = ({ action, confirm, hidden, children, class: className = '', once }) => (
-  <form
-    method="post"
-    action={action}
-    class={`flex ${className}`}
-    onsubmit={
-      [confirm ? `if(!confirm(${JSON.stringify(confirm)}))return false;` : '', once ? SUBMIT_ONCE : '']
-        .join('') || undefined
-    }
-  >
+> = ({ action, hidden, children, class: className = '', once }) => (
+  // A POST that wants a second look is ConfirmAction's, which needs no script (TASKS U8).
+  <form method="post" action={action} class={`flex ${className}`} onsubmit={once ? SUBMIT_ONCE : undefined}>
     {hidden &&
       Object.entries(hidden).map(([k, v]) => <input type="hidden" name={k} value={String(v)} />)}
     {children}

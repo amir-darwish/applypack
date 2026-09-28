@@ -85,8 +85,9 @@ export const RunsPage: FC<RunsProps> = ({ runs, funnel, fetchRun, flash }) => {
 const RunsTable: FC<{ runs: RunRow[]; caption: string }> = ({ runs, caption }) => (
   <Card flush>
     <div class="overflow-x-auto">
-      <div class="min-w-[56rem]">
-        <Table caption={caption} columns={columns()} widths={WIDTHS}>
+      {/* TASKS U7: a phone keeps the job, its status and what happened. */}
+      <div class="md:min-w-[56rem]">
+        <Table caption={caption} columns={columns()} widths={WIDTHS} hideBelow={['', 'sm', 'md', '', '']}>
           {runs.map((r) => (
             <Tr class="align-top">
               <Td class="whitespace-nowrap font-mono text-[13px] text-ink">{r.name}</Td>

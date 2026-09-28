@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   Code,
+  ConfirmAction,
   Empty,
   Field,
   FILE_INPUT_CLASS,
@@ -879,14 +880,12 @@ export const SettingsPage: FC<SettingsProps> = ({
                         </Button>
                       </ActionForm>
                       {s.count === 0 && work.length > 1 ? (
-                        <ActionForm
+                        <ConfirmAction
                           action={`/settings/stages/${s.key}/remove`}
+                          label="Delete"
+                          ariaLabel={`Delete ${s.label}`}
                           confirm={`Delete the "${s.label}" column?`}
-                        >
-                          <Button size="sm" variant="danger" aria-label={`Delete ${s.label}`}>
-                            Delete
-                          </Button>
-                        </ActionForm>
+                        />
                       ) : (
                         <span class="text-xs text-ink-faint">
                           {s.count > 0 ? 'move jobs out to delete' : 'last column'}
@@ -998,14 +997,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                           Test
                         </Button>
                       </ActionForm>
-                      <ActionForm
-                        action={`/settings/targets/${t.id}/delete`}
-                        confirm="Delete this target?"
-                      >
-                        <Button size="sm" variant="danger">
-                          Delete
-                        </Button>
-                      </ActionForm>
+                      <ConfirmAction action={`/settings/targets/${t.id}/delete`} label="Delete" confirm="Delete this target?" />
                     </div>
                   </Td>
                 </Tr>
@@ -1417,16 +1409,13 @@ const EngineKeyRow: FC<{ engine: AiEngineRow }> = ({ engine: e }) => {
         )}
         {e.keySource === 'env' && <Badge tone="neutral">from .env</Badge>}
         {e.keySource === 'db' && (
-          <ActionForm
+          <ConfirmAction
             action="/settings/ai/key"
             hidden={{ provider: e.id, clear: '1' }}
+            label="Remove"
             confirm={`Remove the saved ${e.label} ${label.toLowerCase()}?`}
             class="ml-auto"
-          >
-            <Button size="sm" variant="danger">
-              Remove
-            </Button>
-          </ActionForm>
+          />
         )}
       </div>
       <form method="post" action="/settings/ai/key" class="mt-2.5 flex flex-wrap items-end gap-2">
@@ -1585,7 +1574,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
             ))}
           </datalist>
         )}
-        <div class="grid gap-3 sm:grid-cols-3">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(19.5rem,100%),1fr))] gap-3">
         <Field label="Classifier model" hint="Scores every fetched job; keep it cheap.">
           <ModelPicker
             name="classifier"
@@ -1617,7 +1606,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
           />
         </Field>
         {e.id === 'claude_code' && /haiku/.test(e.resumeModel || e.resumeDefault) && (
-          <Hint class="sm:col-span-3">
+          <Hint class="col-span-full">
             Measured 2026-09-05 on this lane: Haiku 4.5 answers a quick check in 21–26 s but returned
             JSON that could not be parsed in 2 of 3 calls, and each costs a retry. Sonnet 5 answered
             in 19 s with none — it is the default when this slot is empty.

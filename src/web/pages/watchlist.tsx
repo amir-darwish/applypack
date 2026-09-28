@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Code,
+  ConfirmAction,
   Disclosure,
   Empty,
   Hint,
@@ -476,14 +477,13 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
                 )}
                 {needsPaste(r) ? (
                   // Nothing else reads this row, so leaving the watchlist is removing it.
-                  <ActionForm
+                  <ConfirmAction
                     action={`/companies/${r.id}/delete`}
+                    label="Remove"
+                    variant="ghost"
+                    ariaLabel={`Remove ${r.name} from the watchlist`}
                     confirm={`Remove ${r.name} from the watchlist? What you pasted from its page goes with it.`}
-                  >
-                    <Button size="sm" variant="ghost" aria-label={`Remove ${r.name} from the watchlist`}>
-                      Remove
-                    </Button>
-                  </ActionForm>
+                  />
                 ) : (
                   <ActionForm action={`/companies/${r.id}/unwatch`}>
                     <Button

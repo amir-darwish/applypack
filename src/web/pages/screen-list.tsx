@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { ActionForm, Badge, Button, Card, Empty, Flash, Hint, PageHeader, Table, Td, Tr, When } from '../ui';
+import { Badge, Button, Card, ConfirmAction, Empty, Flash, Hint, PageHeader, Table, Td, Tr, When } from '../ui';
 import type { FlashMessage } from '../flash';
 import { formatDateShort } from '../format';
 import type { ScreeningSummary } from '../../screening/store';
@@ -74,15 +74,14 @@ export const ScreenListPage: FC<{ screenings: ScreeningSummary[]; flash?: FlashM
               </Td>
               <Td class="text-ink-faint">{formatDateShort(s.retainUntil)}</Td>
               <Td class="text-right">
-                <ActionForm
+                <ConfirmAction
                   action={`/screen/${s.id}/delete`}
+                  label="Delete"
+                  variant="ghost"
+                  ariaLabel={`Delete ${s.title}`}
                   confirm={`Delete "${s.title}" with every applicant file and verdict? This cannot be undone.`}
-                  class="justify-end"
-                >
-                  <Button variant="ghost" size="sm">
-                    Delete
-                  </Button>
-                </ActionForm>
+                  class="inline-block"
+                />
               </Td>
             </Tr>
           ))}

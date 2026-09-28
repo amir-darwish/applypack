@@ -338,9 +338,11 @@ export const JobsListPage: FC<JobsListProps> = ({
           ) : (
             <>
               <div class="min-h-0 flex-1 overflow-auto">
-                <div class="min-w-[64rem]">
+                {/* TASKS U7: a phone keeps the title and the fit; the rest joins as the screen widens. */}
+                <div class="lg:min-w-[64rem]">
                   <Table caption="Jobs"
                     stickyHeader
+                    hideBelow={['', 'sm', 'md', '', 'lg', 'sm', 'md']}
                     widths={[
                       'w-[31%]',
                       'w-[15%]',

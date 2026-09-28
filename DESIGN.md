@@ -388,6 +388,12 @@ decisions live there and in the token layer, not in page files.
 - **Ghost:** borderless muted-ink text; hover subtle fill + ink text. For
   tertiary row actions.
 - **Focus:** global ring — 2px emerald outline, 2px offset, 4px corner.
+- **Confirm (`ConfirmAction`):** a delete, a removal or a spend that deserves
+  a second look opens a native popover (`popovertarget`, no JavaScript) in the
+  middle of the screen — the sentence of what will happen, Cancel (focused)
+  and the real button. It sits in the top layer, so a table's scroll box never
+  clips it; Escape or a click outside closes it. Never `confirm()`: without a
+  script it asked nothing and the delete went through.
 
 ### Badges & Tags
 - **Status pill (`Badge` / `StatusBadge`):** full pill, 2×8px padding, 12px/500
@@ -410,6 +416,9 @@ null renders an em dash.
   the selected surface at 50%, 150ms. Nothing a row offers depends on hover.
 - **Fixed layout:** wide list tables set proportional column widths and a
   min-width wrapper that scrolls horizontally inside the card.
+- **On a phone:** a wide list keeps the two or three columns that name a row
+  and say its state (`hideBelow`); the rest join as the screen widens, and the
+  min-width wrapper starts at `md` or `lg`.
 
 ### Inputs / Fields
 - **Style:** white, control-border 1px, 6px radius, 6×12px padding,
@@ -486,6 +495,8 @@ null renders an em dash.
 - **Flash:** rounded 6px banner, 25% tone border, 5% tone fill, tone text, with
   a drawn 16px icon; ok, warn and danger kinds. An error says three things:
   what failed, what is safe, the way forward. "Invalid form values" says none.
+  When a schema refused one field, the field says so too: a danger border and
+  ring (`aria-invalid`), described by the message, and focused.
 - **Empty state (`Empty`):** a 28px 1.5px-stroke drawn icon in control-border
   gray, then three parts, centered: the title (what is missing, entity type),
   one muted sentence (why it matters) and at most one action (a small
