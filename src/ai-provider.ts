@@ -10,6 +10,11 @@ import {
   anthropicMaxTokens,
   anthropicUsage,
   buildClaudeCodeArgs,
+  buildOllamaChatBody,
+  DEFAULT_LOCAL_CONTEXT_TOKENS,
+  localBudgetTokens,
+  ollamaError,
+  parseOllamaStream,
   buildCliEnv,
   buildCodexCliArgs,
   buildGeminiCliArgs,
@@ -31,6 +36,7 @@ import {
 } from './ai-provider-parse';
 import type { AiProviderId } from './ai-engine';
 import { AI_KEY_ENV_VARS } from './ai-keys';
+import { createLimiter, type Limiter } from './concurrency';
 
 /**
  * The single seam between the callers and whatever runs the AI (ADR 0013/0014).
@@ -71,8 +77,12 @@ export interface AiRequest {
    * Absent means "whatever .env holds" — the path scripts still take.
    */
   apiKey?: string;
-  /** The OpenAI-compatible engine's server, as the AI tab set it (TASKS S1); absent = OPENAI_BASE_URL. */
+  /** The server the OpenAI-compatible or the local engine talks to, as the AI tab set it; absent = .env's. */
   baseUrl?: string;
+  /** The caller parses JSON: a transport that can hold the model to it does (the local engine's JSON mode). */
+  json?: boolean;
+  /** The local engine's context window, in tokens (ADR 0057). */
+  contextTokens?: number;
   /**
    * Called with a one-line reason just before complete() resolves null. The
    * /settings connectivity test uses it to name the real cause instead of
@@ -110,6 +120,10 @@ const CLI_MAX_BUFFER = 1024 * 1024;
 const OPENAI_REASONING_MODEL = /^(gpt-5|o\d)/;
 const OPENAI_REASONING_HEADROOM_TOKENS = 2_048;
 const OPENAI_FALLBACK_MODEL = 'gpt-5-mini';
+/** Calls one local server runs at a time; the rest wait their turn (ADR 0057). */
+const LOCAL_CALLS_AT_ONCE = 1;
+/** A local call that got its turn with less than this left is not worth starting. */
+const MIN_LOCAL_CALL_MS = 5_000;
 
 const execFileAsync = promisify(execFile);
 
@@ -334,6 +348,85 @@ class OpenAiApiProvider implements AiProvider {
   }
 }
 
+/**
+ * A model on this machine through Ollama's own API (ADR 0057): the context
+ * window set per call, JSON mode where the caller parses JSON, the reply
+ * streamed so a long generation is not cut by Node's header timeout, and one
+ * call at a time per server — three at once on one GPU run at a third of the
+ * speed each and time out together. A prompt the window cannot hold is
+ * refused before it is sent: the server would cut it from the start, where
+ * the rules are, and answer anyway.
+ */
+class LocalApiProvider implements AiProvider {
+  readonly name = 'local_api';
+  private readonly slots = new Map<string, Limiter>();
+
+  async complete(req: AiRequest): Promise<AiAttempt> {
+    const root = req.baseUrl ?? config.OLLAMA_URL;
+    const model = req.model || config.LOCAL_MODEL;
+    if (!model) {
+      req.onError?.('no model chosen for the local engine — pick one on Settings → AI engine');
+      return failed('error');
+    }
+    const contextTokens = req.contextTokens ?? DEFAULT_LOCAL_CONTEXT_TOKENS;
+    const need = localBudgetTokens(req.system, req.user, req.maxTokens);
+    if (need > contextTokens) {
+      logger.warn({ label: req.label, need, contextTokens }, 'ai: prompt larger than the local context window');
+      req.onError?.(
+        `this call needs about ${need.toLocaleString('en-US')} tokens and the local context window is ${contextTokens.toLocaleString('en-US')} — a larger window on Settings → AI engine, or the engine behind this one, takes it`,
+      );
+      return failed('error');
+    }
+    const deadline = Date.now() + (req.timeoutMs ?? CLI_TIMEOUT_MS);
+    const slot = this.slots.get(root) ?? createLimiter(LOCAL_CALLS_AT_ONCE);
+    this.slots.set(root, slot);
+    return slot(() => this.send(req, root, model, contextTokens, deadline));
+  }
+
+  private async send(req: AiRequest, root: string, model: string, contextTokens: number, deadline: number): Promise<AiAttempt> {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs < MIN_LOCAL_CALL_MS) {
+      req.onError?.('the local model was busy with other calls for all the time this one had');
+      return failed('timeout');
+    }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), remainingMs);
+    try {
+      const resp = await fetch(`${root}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: buildOllamaChatBody({ system: req.system, user: req.user, model, maxTokens: req.maxTokens, contextTokens, json: req.json }),
+        signal: ctrl.signal,
+      });
+      const raw = await resp.text();
+      if (!resp.ok) {
+        const message = ollamaError(raw) ?? 'no reason given';
+        logger.error({ label: req.label, status: resp.status, error: message, model }, 'ai: local request failed');
+        req.onError?.(describeAiFailure(resp.status === 404 ? `${message} — pull it first: ollama pull ${model}` : `HTTP ${resp.status}: ${message}`));
+        return failed('error');
+      }
+      const out = parseOllamaStream(raw);
+      if (out.text !== null) {
+        logger.info(
+          { label: req.label, provider: this.name, model, inputTokens: out.spend?.usage.inputTokens, outputTokens: out.spend?.usage.outputTokens },
+          'ai: reply',
+        );
+        return { text: out.text, outcome: 'ok', spend: out.spend ?? null };
+      }
+      logger.error({ label: req.label, error: out.error, model }, 'ai: local reply unusable');
+      req.onError?.(describeAiFailure(out.error ?? 'no reply'));
+      return failed(out.outcome ?? 'error', out.spend ?? null);
+    } catch (err) {
+      const timedOut = ctrl.signal.aborted;
+      logger.error({ err, label: req.label, model }, 'ai: local request failed');
+      req.onError?.(timedOut ? `no reply within ${Math.round(remainingMs / 1000)} s` : `nothing answered at ${root} — is Ollama running?`);
+      return failed(timedOut ? 'timeout' : 'error');
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}
+
 interface CliSpec {
   buildArgs(req: { system: string; user: string; model: string; webTools?: boolean }): string[];
   parse(raw: string): CliOutcome;
@@ -526,6 +619,9 @@ export function getAiProviderById(id: AiProviderId): AiProvider {
       break;
     case 'openai_api':
       provider = new OpenAiApiProvider(config.OPENAI_BASE_URL);
+      break;
+    case 'local_api':
+      provider = new LocalApiProvider();
       break;
     case 'codex_cli':
       provider = new CliProvider('codex_cli', config.CODEX_CLI_BIN, {

@@ -8,14 +8,19 @@ import {
   buildCliEnv,
   buildCodexCliArgs,
   buildGeminiCliArgs,
+  buildOllamaChatBody,
   CLI_PROVIDER_ENV_KEYS,
   CLI_THINKING_CAP_ENV,
   cliRetryable,
   cliThinkingCap,
   describeAiFailure,
+  estimateTokens,
   failureKind,
   failureOutcome,
+  localBudgetTokens,
+  ollamaError,
   parseClaudeCodeOutput,
+  parseOllamaStream,
   refusedReason,
   retryWait,
   webToolsDirectOnly,
@@ -519,4 +524,52 @@ test('Gemini CLI: prompt minus cached, the answer plus the thinking, named for t
     model: 'gemini-2.5-pro',
     reportedUsd: null,
   });
+});
+
+test('a local call asks Ollama for its window, JSON when the caller parses it, and a stream', () => {
+  const body = JSON.parse(buildOllamaChatBody({ system: 'S', user: 'U', model: 'llama3.1:8b', maxTokens: 800, contextTokens: 16_384, json: true }));
+  assert.deepEqual(body.messages, [
+    { role: 'system', content: 'S' },
+    { role: 'user', content: 'U' },
+  ]);
+  assert.equal(body.stream, true);
+  assert.equal(body.format, 'json');
+  assert.equal(body.options.num_ctx, 16_384);
+  assert.ok(body.options.num_predict > 800, 'room past the answer for a model that thinks first');
+  const plain = JSON.parse(buildOllamaChatBody({ system: 'S', user: 'U', model: 'm', maxTokens: 20, contextTokens: 8_192 }));
+  assert.equal(plain.format, undefined);
+});
+
+test('the token estimate is cautious, more so for text outside Latin script', () => {
+  assert.equal(estimateTokens(''), 0);
+  assert.equal(estimateTokens('a'.repeat(350)), 100);
+  assert.equal(estimateTokens('я'.repeat(150)), 100);
+  assert.ok(localBudgetTokens('s'.repeat(3_500), 'u'.repeat(3_500), 1_000) > 3_000);
+});
+
+test("Ollama's stream: the pieces joined, the counts off the last line, a thinking block dropped", () => {
+  const lines = [
+    '{"model":"llama3.1:8b","created_at":"t","message":{"role":"assistant","content":"<think>let me see</think>{\\"ok\\""},"done":false}',
+    '{"model":"llama3.1:8b","created_at":"t","message":{"role":"assistant","content":": true}"},"done":false}',
+    '{"model":"llama3.1:8b","created_at":"t","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop","prompt_eval_count":1200,"eval_count":40}',
+  ].join('\n');
+  const out = parseOllamaStream(lines);
+  assert.equal(out.text, '{"ok": true}');
+  assert.equal(out.spend?.usage.inputTokens, 1200);
+  assert.equal(out.spend?.usage.outputTokens, 40);
+  assert.equal(out.spend?.model, 'llama3.1:8b');
+});
+
+test("Ollama's stream: a cut-off, an error line, a stream that stopped, an empty answer", () => {
+  const cut = parseOllamaStream('{"message":{"content":"{\\"a\\":"},"done":true,"done_reason":"length","eval_count":900}');
+  assert.equal(cut.outcome, 'cut_off');
+  assert.equal(cut.text, null);
+  const failed = parseOllamaStream('{"message":{"content":"x"},"done":false}\n{"error":"model requires more system memory"}');
+  assert.match(failed.error ?? '', /more system memory/);
+  const stopped = parseOllamaStream('{"message":{"content":"{"},"done":false}');
+  assert.match(stopped.error ?? '', /stopped before it ended/);
+  const empty = parseOllamaStream('{"message":{"content":"  "},"done":true,"done_reason":"stop"}');
+  assert.equal(empty.outcome, 'empty');
+  assert.equal(ollamaError('{"error":"model \'x\' not found"}'), "model 'x' not found");
+  assert.equal(ollamaError('not json'), null);
 });

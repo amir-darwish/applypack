@@ -158,6 +158,8 @@ export function billingOf(id: AiProviderId, facts: BillingFacts): AiBilling {
     case 'claude_code':
     case 'codex_cli':
       return 'plan';
+    case 'local_api':
+      return 'local';
   }
 }
 
@@ -183,6 +185,20 @@ export function checkOpenAiBaseUrl(input: string): { ok: true; url: string } | {
     return { ok: false, reason: 'A server on the internet takes https:// — plain http would send the key in the clear.' };
   }
   return { ok: true, url: clean };
+}
+
+/**
+ * The Ollama address typed for the local engine (ADR 0057): its root, on this
+ * machine or the user's own network — the engine is called local because it
+ * is. A pasted `/v1` or `/api` is dropped: the native API lives at the root.
+ */
+export function checkLocalAiUrl(input: string): { ok: true; url: string } | { ok: false; reason: string } {
+  const checked = checkOpenAiBaseUrl(input);
+  if (!checked.ok) return checked;
+  if (!isLocalUrl(checked.url)) {
+    return { ok: false, reason: 'The local engine talks to a server on this machine or your own network; one on the internet goes in the OpenAI-compatible engine.' };
+  }
+  return { ok: true, url: checked.url.replace(/\/(v1|api)$/, '') };
 }
 
 /**

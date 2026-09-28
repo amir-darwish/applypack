@@ -25,6 +25,8 @@ import {
   setPipelineStages,
   setSourceHealthAlerts,
   setStaleApplicationsDigestEnabled,
+  setLocalAiUrl,
+  setLocalContextTokens,
   setOpenAiBaseUrl,
   setReapplyDays,
   setUpdateCheck,
@@ -70,14 +72,15 @@ import {
   type AiEngineConfig,
   type AiProviderId,
 } from '../../ai-engine';
-import { billingFacts, forgetAiProbe, getAiEngineEnv, openAiBase, probeAiProviders } from '../../ai-runtime';
-import { knownModels } from '../../openai-models';
+import { billingFacts, forgetAiProbe, getAiEngineEnv, localAiBase, openAiBase, probeAiProviders } from '../../ai-runtime';
+import { DEFAULT_LOCAL_CONTEXT_TOKENS, LOCAL_CONTEXT_CHOICES } from '../../ai-provider-parse';
+import { knownModels } from '../../server-models';
 import { APP_VERSION } from '../../app-version';
 import { checkForUpdate } from '../../update-check';
 import { isNewer } from '../../versions';
 import { isReapplyChoice } from '../../employer';
 import { forgetUpdateNotice } from '../update-notice';
-import { billingOf, checkOpenAiBaseUrl, isLocalUrl, type AiBilling } from '../../ai-usage';
+import { billingOf, checkLocalAiUrl, checkOpenAiBaseUrl, isLocalUrl, type AiBilling } from '../../ai-usage';
 import { billingNotes, isSpendPeriod, periodRange, spendView, type SpendPeriod } from '../../ai-spend';
 import { billedThisMonth, loadSpendGroups } from '../../ai-ledger';
 import {
@@ -127,7 +130,7 @@ import {
 import { prisma } from '../../db';
 import { isBlankProfile } from '../../profile-guards';
 import type { Profile } from '@prisma/client';
-import { isSettingsTab, SettingsPage, type SourceKeyRow } from '../pages/settings';
+import { isSettingsTab, SettingsPage, type EngineServer, type SourceKeyRow } from '../pages/settings';
 import { sourceLabel } from '../source-names';
 import { clearFlashCookie, firstIssue, flashRedirect, parseFlashCookie } from '../flash';
 import { describeDestination } from '../../notify/targets';
@@ -193,6 +196,8 @@ const AI_PROVIDER_DESCS: Record<AiProviderId, string> = {
   openai_api:
     'Any server speaking /chat/completions: OpenAI, OpenRouter, Groq, local LM Studio / Ollama. Pays per token (or free locally).',
   codex_cli: 'Headless codex exec on your ChatGPT subscription.',
+  local_api:
+    'Ollama on this machine, through its own API: the context window set per call, JSON mode, one call at a time. Free, private, slower; the text never leaves.',
 };
 
 let reclassifyInFlight = false;
@@ -250,6 +255,28 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
   );
   const { openAiBaseUrl } = settings;
   const openAiServer = openAiBase(openAiBaseUrl);
+  const localServer = localAiBase(settings.localAiUrl);
+  const servers: Partial<Record<AiProviderId, EngineServer>> = {
+    openai_api: {
+      action: '/settings/ai/openai-base',
+      envVar: 'OPENAI_BASE_URL',
+      label: 'Server address',
+      hint: 'OpenRouter, Groq, LM Studio (http://127.0.0.1:1234/v1) — any server that speaks /chat/completions; Ollama is better through the Local model engine. From Docker, host.docker.internal instead of 127.0.0.1. Test lists the models it runs.',
+      value: openAiServer,
+      stored: openAiBaseUrl !== null,
+      local: isLocalUrl(openAiServer),
+    },
+    local_api: {
+      action: '/settings/ai/local',
+      envVar: 'OLLAMA_URL',
+      label: 'Ollama address',
+      hint: 'Ollama answers at http://127.0.0.1:11434 (from Docker: http://host.docker.internal:11434). Test lists the models it has pulled.',
+      value: localServer,
+      stored: settings.localAiUrl !== null,
+      local: true,
+      context: { value: settings.localContextTokens ?? DEFAULT_LOCAL_CONTEXT_TOKENS, choices: LOCAL_CONTEXT_CHOICES },
+    },
+  };
   const billing = billingFacts(aiKeys, openAiBaseUrl);
   const billingFor = (id: AiProviderId): AiBilling => billingOf(id, billing);
   const aiEnv = getAiEngineEnv(aiKeys, openAiBaseUrl);
@@ -274,9 +301,9 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
       // An empty cover slot takes the engine's own letter default, not the resume slot.
       coverDefault: defaultModelFor(id, 'cover', aiEnv) || 'CLI default',
       // TASKS S3: an OpenAI-compatible server's own models, as its last Test listed them.
-      options: id === 'openai_api' ? knownModels(openAiServer) : PROVIDER_MODEL_OPTIONS[id],
-      freeTextModels: id === 'openai_api',
-      server: id === 'openai_api' ? { value: openAiServer, stored: openAiBaseUrl !== null, local: isLocalUrl(openAiServer) } : null,
+      options: id === 'openai_api' ? knownModels(openAiServer) : id === 'local_api' ? knownModels(localServer) : PROVIDER_MODEL_OPTIONS[id],
+      freeTextModels: id === 'openai_api' || id === 'local_api',
+      server: servers[id] ?? null,
       billing: billingFor(id),
       // ADR 0027: the field takes a key, it never hands one back — only the
       // last four characters of what is stored, and where it came from.
@@ -620,6 +647,29 @@ settingsRoute.post('/settings/ai/models', async (c) => {
   return wantsJson
     ? c.json({ ok: true })
     : flashRedirect('/settings?tab=ai', 'ok', `${label} models saved.`);
+});
+
+/** ADR 0057: the local engine's Ollama address and its context window. */
+settingsRoute.post('/settings/ai/local', async (c) => {
+  const form = await c.req.parseBody();
+  if (form.clear === '1') {
+    await setLocalAiUrl(null);
+    forgetAiProbe();
+    return flashRedirect('/settings?tab=ai', 'ok', `Ollama address cleared — the engine uses ${config.OLLAMA_URL} again.`);
+  }
+  if (typeof form.contextTokens === 'string') {
+    const tokens = Number(form.contextTokens);
+    if (!(LOCAL_CONTEXT_CHOICES as readonly number[]).includes(tokens)) {
+      return flashRedirect('/settings?tab=ai', 'err', 'That context window is not one of the choices; nothing changed.');
+    }
+    await setLocalContextTokens(tokens);
+    return flashRedirect('/settings?tab=ai', 'ok', `Context window set to ${tokens.toLocaleString('en-US')} tokens.`);
+  }
+  const checked = checkLocalAiUrl(typeof form.baseUrl === 'string' ? form.baseUrl : '');
+  if (!checked.ok) return flashRedirect('/settings?tab=ai', 'err', `Ollama address not saved: ${checked.reason}`);
+  await setLocalAiUrl(checked.url);
+  forgetAiProbe();
+  return flashRedirect('/settings?tab=ai', 'ok', `Ollama address saved: ${checked.url}. Press Test to list its models.`);
 });
 
 /** TASKS S1: the OpenAI-compatible engine's server, set here instead of in .env. */

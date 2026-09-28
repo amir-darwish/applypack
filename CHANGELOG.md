@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.29.0] — 2026-09-28
+
+### Added
+- **Local model (Ollama): an engine of its own.** It talks to Ollama through
+  its own API, so ApplyPack sets the context window on every call — 8k to
+  64k tokens, 16k by default, on Settings → AI engine — instead of whatever
+  the server defaults to. It asks for JSON where it reads JSON, and runs one
+  call at a time so a single GPU is not split three ways. No key, no bill,
+  and the text never leaves your machine.
+- **A prompt too long for a local model is refused, not cut.** A local
+  server cuts an over-long prompt from its start — the rules — and answers
+  anyway. The local engine now refuses such a call with the size it needed,
+  and the next engine in your list takes it.
+- Setup's "A model on this computer" uses Ollama through the new engine and
+  LM Studio through the OpenAI-compatible one, which now can sit beside it
+  in the list.
+
 ## [2.28.1] — 2026-09-28
 
 ### Fixed

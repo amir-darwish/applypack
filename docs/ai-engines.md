@@ -156,7 +156,7 @@ free text — type whatever id your server serves (`gpt-5-mini`,
 `.env` sets the default for empty slots; with neither, Test uses the first
 model the server lists.
 
-### A model on this computer (Ollama, LM Studio)
+### A model on this computer (LM Studio, or Ollama on this engine)
 
 A server on this machine or your own network needs no key, costs nothing
 and keeps the text there: the card says **Local — free**, the spend ledger
@@ -164,18 +164,14 @@ counts its calls apart from billed and plan money, and robots.txt treats an
 install whose every engine is local as no vendor's crawler (ADR 0036
 addendum 2026-09-28).
 
-The quickest way in is step 1 of `/welcome`: it asks Ollama's and LM
-Studio's default addresses whether they are running and offers **Use it**
-with the models they list. That stores the address, puts this engine first
-with the chosen model in every slot, and keeps whatever you had behind it
-as the fallback. On `/settings` the same thing is the Server address plus
-the three model fields.
+For **Ollama**, use the **Local model (Ollama)** engine below instead: it
+sets the context window on every call, asks for JSON, and runs one call at
+a time. This engine cannot do any of that. On this engine, for LM Studio,
+llama.cpp's server or vLLM, three things are by hand:
 
-Three things decide whether it works well, today by hand:
-
-- **Context length.** Ollama cuts a long prompt from the start — the rules
-  — without an error. Start it with `OLLAMA_CONTEXT_LENGTH=16384` (or
-  more); in LM Studio set the context length when you load the model.
+- **Context length.** Set it when you load the model (16k tokens or more).
+  A server cuts a longer prompt from the start — the rules — without an
+  error.
 - **One call at a time.** A local server shares one GPU between the calls
   it gets; set `AI_CONCURRENCY=1` in `.env` so three do not run at a third
   of the speed each and time out together.
@@ -185,10 +181,31 @@ Three things decide whether it works well, today by hand:
   reply that does not parse is asked again of the same engine, once.
 
 **Docker:** the containers reach your machine as `host.docker.internal`,
-so the address is `http://host.docker.internal:11434/v1` (Ollama) or
-`http://host.docker.internal:1234/v1` (LM Studio). Docker Desktop knows
-that name; `docker-compose.yml` maps it on Linux too, where Ollama must
-also listen beyond loopback (`OLLAMA_HOST=0.0.0.0`).
+so LM Studio's address is `http://host.docker.internal:1234/v1`. Docker
+Desktop knows that name; `docker-compose.yml` maps it on Linux too.
+
+## Local model (Ollama)
+
+Ollama through its own chat route (`/api/chat`), on this machine or your own
+network — ADR 0057. No key, no bill, and the text never leaves.
+
+- **Set it up:** install Ollama, `ollama pull llama3.1:8b` (or any chat
+  model), and step 1 of `/welcome` finds it and offers **Use it**. Or, on
+  `/settings` → AI engine → **Local model (Ollama)**: the **Ollama address**
+  (default `http://127.0.0.1:11434`, `OLLAMA_URL` in `.env`), Enable, a model
+  in each field (**Test** lists what Ollama has pulled; `LOCAL_MODEL` in
+  `.env` fills an empty field).
+- **Context window** (8k / 16k / 32k / 64k tokens, 16k by default) is sent
+  with every call, so the server's own default does not matter. A call
+  whose prompt would not fit is refused before it is sent, with the size it
+  needed, and the engine behind this one in the list takes it. A resume
+  comparison wants 16k or more; each step up takes more memory on the
+  machine running Ollama.
+- **JSON mode** holds the model to valid JSON on every call that parses one.
+- **One call at a time:** the rest wait their turn, so `AI_CONCURRENCY`
+  keeps meaning hosted calls. Its calls get three times the usual time.
+- **Docker:** `http://host.docker.internal:11434` as the address; on Linux
+  Ollama must also listen beyond loopback (`OLLAMA_HOST=0.0.0.0`).
 
 ## Codex CLI (ChatGPT subscription)
 

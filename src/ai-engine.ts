@@ -13,6 +13,7 @@ export const AI_PROVIDER_IDS = [
   'gemini_cli',
   'openai_api',
   'codex_cli',
+  'local_api',
 ] as const;
 export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
 
@@ -22,6 +23,7 @@ export const AI_PROVIDER_LABELS: Record<AiProviderId, string> = {
   gemini_cli: 'Gemini CLI',
   openai_api: 'OpenAI-compatible API',
   codex_cli: 'Codex CLI',
+  local_api: 'Local model (Ollama)',
 };
 
 /** Which backends can research the web (verification calls ask for it). */
@@ -31,6 +33,7 @@ export const PROVIDER_WEB_TOOLS: Record<AiProviderId, boolean> = {
   gemini_cli: true,
   openai_api: false,
   codex_cli: true,
+  local_api: false,
 };
 
 /**
@@ -46,10 +49,11 @@ export const PROVIDER_WEB_TOOLS: Record<AiProviderId, boolean> = {
  * European companies whose robots.txt named only a scraper (Bytespider) or a
  * dataset crawler (CCBot) — neither of which is this project.
  *
- * `openai_api` is the loose one: the same slot serves api.openai.com and a
- * local model on localhost, and nothing in the config says which. It is
- * mapped to OpenAI's tokens because that is what the setting is named for,
- * and erring toward the vendor is the direction that asks for less.
+ * `openai_api` serves api.openai.com and a server on this machine alike: it
+ * carries OpenAI's tokens, and `aiCrawlerTokens` drops them when its address
+ * is local. `local_api` is a model on this machine by construction — its
+ * address must be local (ai-usage.ts:checkLocalAiUrl) — and is nobody's
+ * crawler (ADR 0036 addendum 2026-09-28).
  *
  * Anthropic publishes three names (support.claude.com, read 2026-09-16):
  * `ClaudeBot`, `Claude-User` and `Claude-SearchBot`. `Claude-Web` and
@@ -62,6 +66,7 @@ const PROVIDER_AI_TOKENS: Record<AiProviderId, readonly string[]> = {
   gemini_cli: ['google-extended'],
   openai_api: ['gptbot', 'chatgpt-user', 'oai-searchbot'],
   codex_cli: ['gptbot', 'chatgpt-user', 'oai-searchbot'],
+  local_api: [],
 };
 
 /**
@@ -87,7 +92,7 @@ export function bindingProviders(
   provider: AiProviderId,
   hosts: Partial<Pick<AiEngineEnv, 'openAiLocal'>> = {},
 ): AiProviderId[] {
-  const local = (id: AiProviderId) => id === 'openai_api' && hosts.openAiLocal === true;
+  const local = (id: AiProviderId) => id === 'local_api' || (id === 'openai_api' && hosts.openAiLocal === true);
   if (engine.lastResort === null && engine.skipped.length === 0 && engine.chain.every(local)) return [];
   return [...new Set([...engine.chain, ...engine.skipped, provider])];
 }
@@ -97,8 +102,9 @@ export type AiRole = 'classifier' | 'resume' | 'cover';
 /**
  * Curated per-family model ids for the dashboard selects. The empty string
  * means "the engine's own default" (CLI-configured model, or the built-in
- * default below). openai_api is free-text in the UI — with a custom base URL
- * (OpenRouter, Groq, local servers) any model id is legal.
+ * default below). openai_api and local_api are free text in the UI — a
+ * custom base URL (OpenRouter, Groq, a local server) takes any model id, and
+ * the fields suggest what the server itself lists.
  */
 export const PROVIDER_MODEL_OPTIONS: Record<AiProviderId, string[]> = {
   anthropic_api: ['claude-haiku-4-5-20251001', 'claude-sonnet-5', 'claude-opus-5'],
@@ -106,6 +112,7 @@ export const PROVIDER_MODEL_OPTIONS: Record<AiProviderId, string[]> = {
   gemini_cli: ['gemini-2.5-flash', 'gemini-2.5-pro'],
   openai_api: [],
   codex_cli: ['gpt-5.1', 'gpt-5-mini'],
+  local_api: [],
 };
 
 // Claude Code resolves these aliases in --model; the Messages API does not.
@@ -121,6 +128,7 @@ export function modelFitsProvider(model: string, provider: AiProviderId): boolea
     case 'gemini_cli':
       return model.startsWith('gemini');
     case 'openai_api':
+    case 'local_api':
       // Base-URL providers (OpenRouter, Groq, local) use arbitrary ids.
       return model.length > 0;
     case 'codex_cli':
@@ -218,6 +226,8 @@ export interface AiEngineEnv {
   coverModel: string;
   /** OPENAI_MODEL from .env, used when the openai_api slot is empty. */
   openAiModel: string;
+  /** LOCAL_MODEL: the local engine's model for an empty slot ('' = none chosen yet). */
+  localModel: string;
 }
 
 /**
@@ -246,6 +256,8 @@ export function providerUnusable(id: AiProviderId, env: AiEngineEnv): boolean {
       return !env.codexUsable;
     case 'claude_code':
       return false; // keychain auth is not detectable — let the call decide
+    case 'local_api':
+      return false; // no key; a server that is not running fails at once and the chain moves on
   }
 }
 
@@ -264,6 +276,8 @@ export function defaultModelFor(id: AiProviderId, role: AiRole, env: AiEngineEnv
       return role === 'classifier' ? 'gemini-2.5-flash' : 'gemini-2.5-pro';
     case 'openai_api':
       return env.openAiModel;
+    case 'local_api':
+      return env.localModel;
     case 'codex_cli':
       return '';
   }

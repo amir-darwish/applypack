@@ -31,7 +31,7 @@ export async function askForJson<T>(
 ): Promise<JsonAnswer<T> | null> {
   for (let attempt = 0; attempt < PARSE_ATTEMPTS; attempt++) {
     const started = Date.now();
-    const out = await ai.complete(req);
+    const out = await ai.complete({ ...req, json: true });
     if (out === null) return null;
     const parsed = parse(out.text);
     if (parsed.ok) {

@@ -35,6 +35,10 @@ export const ConfigSchema = z.object({
   OPENAI_BASE_URL: z.string().default('https://api.openai.com/v1'),
   // Default model for the openai_api engine when the dashboard slot is empty.
   OPENAI_MODEL: z.string().default(''),
+  // The local_api engine (ADR 0057): Ollama's own API on this machine, and the
+  // model for an empty slot. The AI tab's Server address overrides the URL.
+  OLLAMA_URL: z.string().default('http://127.0.0.1:11434'),
+  LOCAL_MODEL: z.string().default(''),
   // How many jobs are classified at the same time (both providers).
   AI_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(3),
   TELEGRAM_BOT_TOKEN: z.string().optional(),

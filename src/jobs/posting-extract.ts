@@ -112,6 +112,7 @@ export async function extractPostingFacts(description: string): Promise<PostingF
   const ai = await getAiRuntime();
   const started = Date.now();
   const out = await ai.complete({
+    json: true,
     system,
     user,
     maxTokens: MAX_TOKENS,

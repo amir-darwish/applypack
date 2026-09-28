@@ -6,7 +6,16 @@ import { isRelocation } from '../../eligibility';
 import { CronRunStatus, JobStatus, type Profile } from '@prisma/client';
 import { prisma } from '../../db';
 import { config } from '../../config';
-import { getAiKeys, getSettings, setAiEngineConfig, setAiKey, setFetchingEnabled, setOpenAiBaseUrl, setSetupCompleted } from '../../settings';
+import {
+  getAiKeys,
+  getSettings,
+  setAiEngineConfig,
+  setAiKey,
+  setFetchingEnabled,
+  setLocalAiUrl,
+  setOpenAiBaseUrl,
+  setSetupCompleted,
+} from '../../settings';
 import { getActiveProfile, updateProfile, type ProfileInput } from '../../profiles';
 import { flagOf, placeLabel, resolveCountries } from '../../countries';
 import { searchPlaces } from '../../fetchers/fetch-context';
@@ -15,7 +24,7 @@ import { beginFetchNow } from '../fetch-now';
 import { passesBaseFilter } from '../../filter';
 import { parsePriorityRules } from '../../priority-rules';
 import { hashShortId, parseTagList, toStringArray } from '../../text-utils';
-import { forgetAiProbe, getAiEngineEnv } from '../../ai-runtime';
+import { forgetAiProbe, getAiEngineEnv, localAiBase } from '../../ai-runtime';
 import {
   AI_PROVIDER_IDS,
   AI_PROVIDER_LABELS,
@@ -25,8 +34,8 @@ import {
   resolveAiEngine,
   withEngineFirst,
 } from '../../ai-engine';
-import { checkOpenAiBaseUrl, isLocalUrl } from '../../ai-usage';
-import { findLocalServers, listServerModels, preferredModel } from '../../openai-models';
+import { checkLocalAiUrl, checkOpenAiBaseUrl, isLocalUrl } from '../../ai-usage';
+import { findLocalServers, listOllamaModels, listServerModels, preferredModel } from '../../server-models';
 import { AI_KEY_ENV_VARS, MAX_AI_KEY_LENGTH, providerTakesKey } from '../../ai-keys';
 import { createResume, getResume, listResumes, type ResumeSummary } from '../../resume/store';
 import { scanResume } from '../../resume/scan';
@@ -91,7 +100,9 @@ welcomeRoute.get('/welcome', async (c) => {
     // One local request per default address, on step 1 only — no other step asks.
     current === 'ai' ? findLocalServers() : [],
   ]);
-  const openAiFirst = aiEngineOrder(parseAiEngineConfig(settings.aiEngine), config.AI_PROVIDER)[0] === 'openai_api';
+  const first = aiEngineOrder(parseAiEngineConfig(settings.aiEngine), config.AI_PROVIDER)[0];
+  // The found server the engine at the top of the list already talks to, if any.
+  const inUse = first === 'local_api' ? localAiBase(settings.localAiUrl) : first === 'openai_api' ? settings.openAiBaseUrl : null;
 
   const resumeId = idParam(c.req.query('resume'));
   const asNew = c.req.query('mode') === 'new';
@@ -114,7 +125,7 @@ welcomeRoute.get('/welcome', async (c) => {
         })),
         local: {
           servers: localServers.map((s) => ({ ...s, host: new URL(s.base).host, preferred: preferredModel(s.models) })),
-          inUse: openAiFirst ? settings.openAiBaseUrl : null,
+          inUse,
         },
       }}
       search={{
@@ -200,22 +211,25 @@ welcomeRoute.post('/welcome/ai/key', async (c) => {
 
 /**
  * Step 1's "Use it" on a model found on this computer (TASKS S1): the address
- * is stored, the OpenAI-compatible engine goes first with that model in every
- * slot, and whatever was in the list stays behind it as the fallback.
+ * is stored for the engine that server is used through — Ollama's own API
+ * (ADR 0057), or the OpenAI-compatible one for LM Studio — that engine goes
+ * first with the model in every slot, and whatever was in the list stays
+ * behind it as the fallback.
  */
 welcomeRoute.post('/welcome/ai/local', async (c) => {
   const form = await c.req.parseBody();
-  const checked = checkOpenAiBaseUrl(typeof form.base === 'string' ? form.base : '');
+  const engine = form.engine === 'local_api' ? 'local_api' : 'openai_api';
+  const checked = engine === 'local_api' ? checkLocalAiUrl(typeof form.base === 'string' ? form.base : '') : checkOpenAiBaseUrl(typeof form.base === 'string' ? form.base : '');
   if (!checked.ok || !isLocalUrl(checked.url)) return flashRedirect(AI_STEP, 'err', 'That is not a server on this machine; nothing changed.');
-  const listed = await listServerModels(checked.url, undefined);
+  const listed = engine === 'local_api' ? await listOllamaModels(checked.url) : await listServerModels(checked.url, undefined);
   if ('reason' in listed) return flashRedirect(AI_STEP, 'err', `Nothing changed — ${listed.reason}.`);
   const model = typeof form.model === 'string' ? form.model.trim() : '';
   if (!listed.models.includes(model)) {
     return flashRedirect(AI_STEP, 'err', `The server does not list "${model}"; nothing changed. Pick one of the models it runs.`);
   }
-  await setOpenAiBaseUrl(checked.url);
+  await (engine === 'local_api' ? setLocalAiUrl(checked.url) : setOpenAiBaseUrl(checked.url));
   const [settings, keys] = await Promise.all([getSettings(), getAiKeys()]);
-  await setAiEngineConfig(withEngineFirst(parseAiEngineConfig(settings.aiEngine), 'openai_api', getAiEngineEnv(keys, checked.url), model));
+  await setAiEngineConfig(withEngineFirst(parseAiEngineConfig(settings.aiEngine), engine, getAiEngineEnv(keys, settings.openAiBaseUrl), model));
   forgetAiProbe();
   return flashRedirect(
     AI_STEP,

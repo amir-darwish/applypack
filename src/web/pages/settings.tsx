@@ -84,8 +84,8 @@ export interface AiEngineRow {
   /** Family model ids for the selects; on a free-text engine, the suggestions its server listed. */
   options: string[];
   freeTextModels: boolean;
-  /** The OpenAI-compatible engine's server (TASKS S1): where calls go, whether it was set here, whether it is on this machine. */
-  server: { value: string; stored: boolean; local: boolean } | null;
+  /** A base-URL engine's server (TASKS S1, ADR 0057): where calls go, whether it was set here, whether it is on this machine. */
+  server: EngineServer | null;
   /** Whose money a call on this engine spends (ai-usage.ts:billingOf, ADR 0055). */
   billing: AiBilling;
   /** The .env variable this engine's key mirrors; null = login-only engine. */
@@ -94,6 +94,19 @@ export interface AiEngineRow {
   keySource: 'db' | 'env' | 'none';
   /** Last four characters of the stored key — never the key itself. */
   maskedKey: string;
+}
+
+export interface EngineServer {
+  /** The route the row posts to, and the .env variable a cleared address falls back to. */
+  action: string;
+  envVar: string;
+  label: string;
+  hint: string;
+  value: string;
+  stored: boolean;
+  local: boolean;
+  /** The local engine's context window: the stored choice and the ones offered. */
+  context?: { value: number; choices: readonly number[] };
 }
 
 /** Everything the Schedule section renders, resolved by the route (TASKS §16). */
@@ -1379,21 +1392,21 @@ const EngineKeyRow: FC<{ engine: AiEngineRow }> = ({ engine: e }) => {
  * proxy. Stored in the database like a key, so a local model needs no .env
  * edit; the address decides whether the key row matters at all.
  */
-const EngineServerRow: FC<{ server: NonNullable<AiEngineRow['server']> }> = ({ server }) => (
+const EngineServerRow: FC<{ server: EngineServer }> = ({ server }) => (
   <Card variant="subtle" class="mt-3">
     <div class="flex flex-wrap items-center gap-2">
-      <span class="text-label text-ink">Server address</span>
+      <span class="text-label text-ink">{server.label}</span>
       <Badge tone="neutral">{server.stored ? 'saved' : 'from .env'}</Badge>
       {server.local && <Badge tone="ok">on this machine · no key needed</Badge>}
       {server.stored && (
-        <ActionForm action="/settings/ai/openai-base" hidden={{ clear: '1' }} class="ml-auto">
-          <Button size="sm" variant="secondary" title="Forget this address and use OPENAI_BASE_URL from .env">
+        <ActionForm action={server.action} hidden={{ clear: '1' }} class="ml-auto">
+          <Button size="sm" variant="secondary" title={`Forget this address and use ${server.envVar} from .env`}>
             Use .env
           </Button>
         </ActionForm>
       )}
     </div>
-    <form method="post" action="/settings/ai/openai-base" class="mt-2.5 flex flex-wrap items-end gap-2">
+    <form method="post" action={server.action} class="mt-2.5 flex flex-wrap items-end gap-2">
       <Input
         type="text"
         inputmode="url"
@@ -1401,7 +1414,7 @@ const EngineServerRow: FC<{ server: NonNullable<AiEngineRow['server']> }> = ({ s
         required
         autocomplete="off"
         spellcheck="false"
-        aria-label="OpenAI-compatible server address"
+        aria-label={server.label}
         value={server.value}
         mono
         class="min-w-[16rem] flex-1"
@@ -1410,10 +1423,26 @@ const EngineServerRow: FC<{ server: NonNullable<AiEngineRow['server']> }> = ({ s
         Save
       </Button>
     </form>
-    <Hint class="mt-2">
-      Ollama answers at http://127.0.0.1:11434/v1, LM Studio at http://127.0.0.1:1234/v1 (from Docker:
-      host.docker.internal instead of 127.0.0.1). Test lists the models it runs.
-    </Hint>
+    <Hint class="mt-2">{server.hint}</Hint>
+    {server.context && (
+      <form method="post" action={server.action} class="mt-3 flex flex-wrap items-end gap-2">
+        <Field
+          label="Context window"
+          hint="Room for the prompt and the answer. A resume comparison wants 16k or more; each step takes more of the machine's memory."
+        >
+          <Select name="contextTokens" class="w-auto">
+            {server.context.choices.map((n) => (
+              <option value={String(n)} selected={n === server.context!.value}>
+                {`${n / 1024}k tokens`}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Button size="sm" variant="secondary">
+          Save window
+        </Button>
+      </form>
+    )}
   </Card>
 );
 

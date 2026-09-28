@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { cliFailure } from './ai-provider-parse';
+import { cliFailure, DEFAULT_LOCAL_CONTEXT_TOKENS } from './ai-provider-parse';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -13,7 +13,7 @@ import { SETTINGS_ID } from './settings';
 import { aiKeySource, parseAiKeys, resolveAiKey, type AiKeys, type AiKeySource } from './ai-keys';
 import { createCooldownTracker } from './ai-cooldown';
 import { recordAiCall } from './ai-ledger';
-import { listServerModels, LOCAL_LIST_TIMEOUT_MS } from './openai-models';
+import { listOllamaModels, listServerModels, LOCAL_LIST_TIMEOUT_MS } from './server-models';
 import { billingOf, isLocalUrl, type AiFeature, type BillingFacts } from './ai-usage';
 import {
   resolveAiEngine,
@@ -46,6 +46,7 @@ export function getAiEngineEnv(keys: AiKeys = {}, openAiBaseUrl: string | null =
     resumeModel: config.CLAUDE_MODEL_RESUME,
     coverModel: config.CLAUDE_MODEL_COVER,
     openAiModel: config.OPENAI_MODEL,
+    localModel: config.LOCAL_MODEL,
   };
 }
 
@@ -61,6 +62,8 @@ export interface AiCallRequest {
   role: AiRole;
   timeoutMs?: number;
   webTools?: boolean;
+  /** The caller parses the reply as JSON; the local engine holds the model to it (ADR 0057). */
+  json?: boolean;
   /** The last engine's one-line reason when no engine answers (#97) — same contract as AiRequest.onError. */
   onError?: (reason: string) => void;
 }
@@ -92,25 +95,39 @@ export interface AiRuntime {
 export async function getAiRuntime(): Promise<AiRuntime> {
   let raw: unknown = null;
   let keys: AiKeys = {};
-  let baseUrl: string | null = null;
+  let servers: EngineServers = NO_SERVERS;
   try {
     const row = await prisma.appSettings.findUnique({
       where: { id: SETTINGS_ID },
-      select: { aiEngine: true, aiKeys: true, openAiBaseUrl: true },
+      select: { aiEngine: true, aiKeys: true, openAiBaseUrl: true, localAiUrl: true, localContextTokens: true },
     });
     raw = row?.aiEngine ?? null;
     keys = parseAiKeys(row?.aiKeys ?? null);
-    baseUrl = row?.openAiBaseUrl ?? null;
+    if (row) servers = { openAiBaseUrl: row.openAiBaseUrl, localAiUrl: row.localAiUrl, localContextTokens: row.localContextTokens };
   } catch (err) {
     logger.warn({ err }, 'ai: settings read failed, using .env engine');
   }
-  const resolved = resolveAiEngine(raw, getAiEngineEnv(keys, baseUrl));
+  const resolved = resolveAiEngine(raw, getAiEngineEnv(keys, servers.openAiBaseUrl));
   return {
     chain: resolved.chain,
     skipped: resolved.skipped,
     modelFor: resolved.modelFor,
-    complete: (req) => completeWithFailover(resolved, keys, baseUrl, req),
+    complete: (req) => completeWithFailover(resolved, keys, servers, req),
   };
+}
+
+/** Where the two base-URL engines send their calls, as the AI tab set them; null = .env's. */
+export interface EngineServers {
+  openAiBaseUrl: string | null;
+  localAiUrl: string | null;
+  localContextTokens: number | null;
+}
+
+const NO_SERVERS: EngineServers = { openAiBaseUrl: null, localAiUrl: null, localContextTokens: null };
+
+/** The local engine's Ollama root: the one set on the AI tab, else OLLAMA_URL (ADR 0057). */
+export function localAiBase(stored: string | null): string {
+  return stored ?? config.OLLAMA_URL;
 }
 
 /** The OpenAI-compatible engine's server: the one set on the AI tab, else OPENAI_BASE_URL (TASKS S1). */
@@ -122,14 +139,20 @@ export function openAiBase(stored: string | null): string {
 async function completeWithFailover(
   engine: ResolvedAiEngine,
   keys: AiKeys,
-  baseUrl: string | null,
+  servers: EngineServers,
   req: AiCallRequest,
 ): Promise<AiCallResult | null> {
-  const billing = billingFacts(keys, baseUrl);
+  const billing = billingFacts(keys, servers.openAiBaseUrl);
   return runChain(
     engine,
     req,
-    { keyFor: (id) => resolveAiKey(id, keys), openAiBase: openAiBase(baseUrl), billingOf: (id) => billingOf(id, billing) },
+    {
+      keyFor: (id) => resolveAiKey(id, keys),
+      openAiBase: openAiBase(servers.openAiBaseUrl),
+      localBase: localAiBase(servers.localAiUrl),
+      localContextTokens: servers.localContextTokens ?? DEFAULT_LOCAL_CONTEXT_TOKENS,
+      billingOf: (id) => billingOf(id, billing),
+    },
     { providerFor: getAiProviderById, record: recordAiCall, cooldowns, now: Date.now },
   );
 }
@@ -159,15 +182,15 @@ export async function probeAiProviders(
   stored?: AiKeys,
 ): Promise<Record<AiProviderId, AiProviderStatus>> {
   if (probeCache && Date.now() - probeCache.at < PROBE_TTL_MS) return probeCache.statuses;
-  const [claude, gemini, codex, keys, baseUrl] = await Promise.all([
+  const [claude, gemini, codex, keys, servers] = await Promise.all([
     probeCliBin(config.CLAUDE_CODE_BIN),
     probeCliBin(config.GEMINI_CLI_BIN),
     probeCliBin(config.CODEX_CLI_BIN),
     stored ?? readAiKeys(),
-    readOpenAiBaseUrl(),
+    readServers(),
   ]);
   const from = (id: AiProviderId): AiKeySource => aiKeySource(id, keys);
-  const openAi = openAiBase(baseUrl);
+  const openAi = openAiBase(servers.openAiBaseUrl);
   const statuses: Record<AiProviderId, AiProviderStatus> = {
     anthropic_api:
       from('anthropic_api') === 'none'
@@ -184,6 +207,7 @@ export async function probeAiProviders(
           }
         : { ok: true, detail: `API key ${keyOrigin(from('openai_api'))} · ${baseUrlHost(openAi)}` },
     codex_cli: withCodexAuth(codex),
+    local_api: await ollamaStatus(localAiBase(servers.localAiUrl)),
   };
   probeCache = { at: Date.now(), statuses };
   return statuses;
@@ -226,12 +250,24 @@ async function localServerStatus(base: string, apiKey: string | undefined): Prom
   return { ok: true, detail: `local server · ${host} · ${count} — no key needed` };
 }
 
-async function readOpenAiBaseUrl(): Promise<string | null> {
+/** Ollama asked what it has pulled — on this machine by construction, so it costs a local request (ADR 0057). */
+async function ollamaStatus(root: string): Promise<AiProviderStatus> {
+  const host = baseUrlHost(root);
+  const listed = await listOllamaModels(root, LOCAL_LIST_TIMEOUT_MS);
+  if ('reason' in listed) return { ok: false, detail: `Ollama · ${listed.reason}` };
+  if (listed.models.length === 0) return { ok: false, detail: `Ollama · ${host} answers, but has no model yet — ollama pull one` };
+  return { ok: true, detail: `Ollama · ${host} · ${listed.models.length === 1 ? '1 model' : `${listed.models.length} models`} — free, on this machine` };
+}
+
+async function readServers(): Promise<EngineServers> {
   try {
-    const row = await prisma.appSettings.findUnique({ where: { id: SETTINGS_ID }, select: { openAiBaseUrl: true } });
-    return row?.openAiBaseUrl ?? null;
+    const row = await prisma.appSettings.findUnique({
+      where: { id: SETTINGS_ID },
+      select: { openAiBaseUrl: true, localAiUrl: true, localContextTokens: true },
+    });
+    return row ?? NO_SERVERS;
   } catch {
-    return null;
+    return NO_SERVERS;
   }
 }
 

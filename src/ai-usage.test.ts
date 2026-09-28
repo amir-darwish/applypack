@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addUsage, billingOf, checkOpenAiBaseUrl, count, featureName, hasUsage, isLocalUrl, NO_USAGE } from './ai-usage';
+import { addUsage, billingOf, checkLocalAiUrl, checkOpenAiBaseUrl, count, featureName, hasUsage, isLocalUrl, NO_USAGE } from './ai-usage';
 
 test('a count is what the vendor reported, or null', () => {
   assert.equal(count(1204), 1204);
@@ -26,6 +26,7 @@ test('whose money each engine spends', () => {
   assert.equal(billingOf('codex_cli', remote), 'plan');
   assert.equal(billingOf('gemini_cli', remote), 'plan');
   assert.equal(billingOf('gemini_cli', { ...remote, geminiKey: true }), 'billed');
+  assert.equal(billingOf('local_api', remote), 'local');
 });
 
 test('a local server is this machine or a private network, nothing that merely looks like one', () => {
@@ -59,4 +60,12 @@ test('a server address is http(s) without a key in it, and plain http only on th
   for (const bad of ['', 'localhost:11434/v1', 'ftp://127.0.0.1/v1', 'javascript:alert(1)', 'http://user:sk-1@127.0.0.1/v1', 'http://api.example.com/v1']) {
     assert.equal(checkOpenAiBaseUrl(bad).ok, false, bad);
   }
+});
+
+test("the local engine's address is Ollama's root, on this machine or the user's network", () => {
+  assert.deepEqual(checkLocalAiUrl('http://127.0.0.1:11434'), { ok: true, url: 'http://127.0.0.1:11434' });
+  assert.deepEqual(checkLocalAiUrl('http://127.0.0.1:11434/v1/'), { ok: true, url: 'http://127.0.0.1:11434' });
+  assert.deepEqual(checkLocalAiUrl('http://host.docker.internal:11434/api'), { ok: true, url: 'http://host.docker.internal:11434' });
+  assert.equal(checkLocalAiUrl('https://ollama.example.com').ok, false);
+  assert.equal(checkLocalAiUrl('localhost:11434').ok, false);
 });

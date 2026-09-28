@@ -21,6 +21,7 @@ const ENV: AiEngineEnv = {
   resumeModel: 'claude-opus-5',
   coverModel: '',
   openAiModel: '',
+  localModel: '',
 };
 
 const REQ: AiCallRequest = { system: 'S', user: 'U', maxTokens: 100, label: 'classifier', role: 'classifier', timeoutMs: 60_000 };
@@ -50,6 +51,8 @@ function harness(script: Partial<Record<AiProviderId, AiAttempt[]>>, opts: { now
   const ctx: ChainContext = {
     keyFor: (id) => opts.keys?.[id],
     openAiBase: 'http://127.0.0.1:11434/v1',
+    localBase: 'http://127.0.0.1:11434',
+    localContextTokens: 16_384,
     billingOf: (id) => (id === 'claude_code' ? 'plan' : 'billed'),
   };
   return { asked, rows, deps, ctx, cooldowns };
@@ -148,4 +151,28 @@ test('an engine that cannot be built is passed over, not fatal', async () => {
   const out = await runChain(engine, REQ, h.ctx, h.deps);
   assert.equal(out?.providerId, 'claude_code');
   assert.deepEqual(h.rows.map((r) => r.engine), ['claude_code']);
+});
+
+test('the local engine gets its server, its window, JSON, and three times the clock (ADR 0057)', async () => {
+  let clock = 0;
+  const engine = resolveAiEngine({ order: ['local_api', 'claude_code'], models: { local_api: { classifier: 'llama3.1:8b' } } }, ENV);
+  const h = harness({}, { now: () => clock });
+  h.deps.providerFor = (id) => ({
+    name: id,
+    complete: async (req) => {
+      h.asked.push({ id, req });
+      clock += req.timeoutMs ?? 0;
+      return id === 'claude_code' ? answer('ok') : failure('timeout');
+    },
+  });
+  const out = await runChain(engine, { ...REQ, json: true }, h.ctx, h.deps);
+  assert.equal(out?.providerId, 'claude_code');
+  const [local, cloud] = h.asked;
+  assert.equal(local?.req.baseUrl, 'http://127.0.0.1:11434');
+  assert.equal(local?.req.contextTokens, 16_384);
+  assert.equal(local?.req.json, true);
+  assert.equal(local?.req.timeoutMs, 180_000);
+  // The chain's deadline grew with it: the engine behind still gets its own minute.
+  assert.equal(cloud?.req.timeoutMs, 60_000);
+  assert.equal(cloud?.req.contextTokens, undefined);
 });
