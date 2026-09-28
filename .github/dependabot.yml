@@ -18,3 +18,5 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: '@prisma/client' # #284
         update-types: ["version-update:semver-major"]
+      - dependency-name: tailwindcss # #289
+        update-types: ["version-update:semver-major"]

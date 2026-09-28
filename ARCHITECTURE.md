@@ -226,6 +226,7 @@ src/
   init.ts                      ← boot: prisma migrate deploy (db push without migrations) + seed
                                  + first boot: a blank profile, alert targets from .env
   config.ts                    ← zod-validated env (worker + web); an empty DATABASE_URL reads the built-in database's db.json
+  env-load.ts                  ← .env into process.env, quietly (dotenv 18 prints a line per load otherwise); config.ts imports it first
   db-url.ts                    ← pure: a database URL for a client that must hold one connection (the fetch lock)
   logger.ts                    ← pino instance: JSON when NODE_ENV=production (Docker), pino-pretty otherwise
   db.ts                        ← PrismaClient singleton

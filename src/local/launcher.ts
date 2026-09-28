@@ -48,7 +48,7 @@ async function main(): Promise<void> {
     fail(`ApplyPack needs Node.js ${MIN_NODE_MAJOR} or newer, and this is ${process.versions.node}. Install the LTS from https://nodejs.org.`);
   }
   // Before the data folder is resolved: APPLYPACK_DATA_DIR may live in .env.
-  dotenv.config({ path: path.join(ROOT, '.env') });
+  dotenv.config({ path: path.join(ROOT, '.env'), quiet: true });
   const dataDir = path.resolve(dataDirFor(process.platform, process.env, os.homedir()));
   const paths = localPaths(dataDir);
 
