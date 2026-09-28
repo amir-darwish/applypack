@@ -37,6 +37,7 @@ import {
 import { findMute, listMutes, muteEmployer, unmuteEmployer } from '../../jobs/employer-store';
 import { roleLines, titleWordsOf, type TitleWords } from '../../watchlist/paste';
 import { listActiveProfiles } from '../../profiles';
+import { packOffers } from '../pack-offers';
 import { isBlankProfile } from '../../profile-guards';
 
 const FLASH_TTL_SECONDS = 5;
@@ -179,6 +180,7 @@ companiesRoute.get('/companies', async (c) => {
       watchlistRun={activeWatchlistRun()}
       packs={packs}
       suggestions={await currentSuggestions()}
+      fitPacks={await packOffers()}
       keyedUnlocked={unlockedSources(await getSourceKeys())}
       flash={flash}
       fetchingEnabled={settings.fetchingEnabled}
