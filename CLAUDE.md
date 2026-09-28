@@ -144,7 +144,10 @@
   and stops them in reverse. The launcher never imports `config.ts` or
   `db.ts` — the URL does not exist until it has started the database. The
   worker and the dashboard only call `child.ts` (`announceReady`,
-  `onLauncherStop`), a no-op without a launcher. `config.ts` fills an empty
+  `onLauncherStop`, `underLauncher`), a no-op without a launcher; the
+  dashboard's login entry (`web/login-item-io.ts` over the pure
+  `src/login-item.ts`) also reads the pure `data-dir.ts`. `snapshots.ts`
+  (pure) plans the daily copy the launcher takes before Postgres starts. `config.ts` fills an empty
   `DATABASE_URL` from `db.json`, so dev watchers and once-scripts find it.
 - `src/starter-packs/` is the curated-pack module: `catalog.json` (data),
   `catalog.ts` and `resolve.ts` are pure (tested), `probe.ts` calls
@@ -329,6 +332,10 @@ When the question is **"where does X live?"**, save yourself a `find`:
 | What each source cost in a tick (ms, status, count), and a walk over a subset | `SourceStat` in `src/jobs/cron-run.ts`, stamped by `fetchers/index.ts:runAllFetchers` into the `fetch` / `fetch-now` row's `bySource` (under **Details** on `/runs`, the last board's time on the progress line); `FetchWalkOptions.only` / `.places` are how the wizard's step 2 asks the aggregators alone, where the user says they work (docs/onboarding-sources.md §6) |
 | What runs on container boot | `src/init.ts` |
 | What `npm start` does (the built-in Postgres, the lock, start order, restarts, stop) | `src/local/launcher.ts` over `postgres.ts` (I/O) and the pure `data-dir.ts`, `db-state.ts`, `postgres-setup.ts`, `supervise.ts` (ADR 0054) |
+| Start ApplyPack when the user logs in (opt-in, the undo beside it) | `src/login-item.ts` (pure: the launchd agent, the `systemctl --user` unit, the Startup script — this checkout, this Node by its PATH name, the PATH now) → `web/login-item-io.ts` writes / removes it, only under the launcher (`local/child.ts:underLauncher`); Settings → General → **Start with this computer**, `POST /settings/login-item` (ADR 0054 addendum) |
+| The daily copy of the database a local install keeps | the launcher's `takeSnapshot` before Postgres starts, planned by `local/snapshots.ts` (one a day, `APPLYPACK_SNAPSHOTS` kept, 3 by default, 0 = none; `postmaster.pid` left out) into `snapshots/<date>/postgres` in the data folder |
+| Moving a Docker install into `npm start` | `npm run db:import -- dump.sql --yes` → `src/scripts/db-import.ts` over the pure `src/sql-dump.ts` (`splitSql` — strings, E-strings, dollar quotes, comments, psql's `\restrict` lines; `importPlan` — inserts and `setval` kept, `_prisma_migrations` never, COPY and schema refused); one transaction, `session_replication_role = replica`, refused while a worker runs; fixture `src/fixtures/pg-dump-data-only.sql` (pg_dump 16.15) |
+| How a CLI engine is started on Windows | `src/cli-command.ts:cliCommand` — an npm `.cmd` shim is read for its script (`shimScript`) and run as Node + script, a native `.exe` as itself; never `shell: true`, which would hand the prompt to cmd.exe. Used by the CLI provider and the engine probe |
 | Where a local install keeps its data, and how scripts find its database | `src/local/data-dir.ts:dataDirFor` → `db.json`, read by `config.ts:useBuiltInDatabaseWhenUnset` |
 | A generic RSS/Atom job feed as a source (atsToken = the feed URL) | `src/fetchers/feed.ts` (ADR 0036); the URL goes through `checkPostingUrl` on every tick, and an empty feed is `empty`, not a source |
 | A careers page with nothing machine-readable — "this page changed, have a look" | `src/watchlist/page-hash.ts` (pure: `normalisePageText` = stripHtml + collapse whitespace and NOTHING else — masking digits would erase "92 positions", which is the signal; `decideChange` holds the once-a-day rule) · `src/fetchers/career-page.ts` returns `[]` forever and stages through `watchlist/page-changes.ts` · after the walk `jobs/page-change-alerts.ts:recordPageChanges` writes a change as `Company.pendingContentHash`, and `deliverPageChanges` (top of the tick and after the walk, the held matches' rules) sends one grouped message and only THEN advances `lastContentHash`; a held change keeps no validator (`career-page.ts`), so a 304 cannot hide it |
@@ -877,7 +884,8 @@ Always:
 | Task | Command |
 | --- | --- |
 | Run ApplyPack without Docker | `npm start` (Ctrl+C or `npm run stop` to stop); for watchers `npm run db` + `npm run dev` + `npm run dev:web` |
-| Back up a local install | stop it, copy the data folder (`~/Library/Application Support/ApplyPack`, `%APPDATA%\ApplyPack`, `~/.local/share/applypack`) |
+| Back up a local install | automatic: `snapshots/<date>` in the data folder, the newest three; for a copy elsewhere stop it and copy the data folder (`~/Library/Application Support/ApplyPack`, `%APPDATA%\ApplyPack`, `~/.local/share/applypack`) |
+| Move a Docker install into `npm start` | on Docker: `docker compose exec -T postgres pg_dump -U jobhunter --data-only --inserts --column-inserts jobhunter > data.sql`; here, with only `npm run db` running: `npm run db:import -- data.sql --yes` |
 | Test the launcher on a scratch folder | `APPLYPACK_DATA_DIR=/tmp/ap WEB_PORT=4848 APPLYPACK_NO_OPEN=1 npm start` — never the live data folder |
 | Run one fetch tick now | UI: Overview → "Fetch now" (live progress, row on `/runs`; runs outside the schedule, and while paused stores the jobs unscored); or `docker compose exec app node dist/scripts/fetch-once.js`, which does the same without the dashboard and is recorded as a `fetch-now` run |
 | Run discovery probe now | `docker compose exec app node dist/scripts/discovery-once.js` |

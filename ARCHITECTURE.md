@@ -279,6 +279,9 @@ src/
   ai-json.ts                   ← askForJson: a call parsed by a schema, one retry unless the reply was cut off
   ai-usage.ts                  ← pure: what an attempt spent (AiUsage, NULL = not reported), the closed feature set, billingOf (ADR 0055),
                                  isLocalUrl + checkOpenAiBaseUrl (a server on this machine takes no key)
+  cli-command.ts               ← how a CLI engine is started: on Windows an npm .cmd shim becomes Node + its script, never a shell
+  login-item.ts                ← pure: the launchd agent / systemd user unit / Startup script that starts npm start at login
+  sql-dump.ts                  ← pure: a pg_dump --data-only --inserts file split into statements, and what an import runs
   server-models.ts             ← the models a server runs (GET {base}/models, Ollama's /api/tags), remembered for the
                                  fields' suggestions; findLocalServers asks Ollama's and LM Studio's default addresses
   ai-prices.ts                 ← pure: the dated price table (PRICES_AS_OF), costMicroUsd; an unknown model is not priced
@@ -294,9 +297,9 @@ src/
   local/                       ← npm start without Docker (ADR 0054)
     launcher.ts                ← the data folder's lock, then the database, the worker, the dashboard; stops in reverse
     postgres.ts                ← the built-in Postgres 16 through pg_ctl (I/O)
-    {data-dir,db-state,postgres-setup,supervise}.ts ← pure: the data folder, db.json, initdb and pg_ctl
-                                 arguments, the restart rules
-    child.ts                   ← announceReady / onLauncherStop for the worker and the dashboard (no-ops alone)
+    {data-dir,db-state,postgres-setup,supervise,snapshots}.ts ← pure: the data folder, db.json, initdb and pg_ctl
+                                 arguments, the restart rules, the daily snapshot's plan
+    child.ts                   ← announceReady / onLauncherStop / underLauncher for the worker and the dashboard (no-ops alone)
   watchlist/                   ← the company watchlist (ADR 0036)
     interval.ts                ← pure: check intervals, due-ness (dueCutoff), the ★ and the alert policy
     parse-input.ts             ← pure: the "one URL per line" textarea
@@ -489,6 +492,7 @@ src/
     rescore-screenings.ts       ← re-anchors and re-scores stored screening verdicts, no AI call
     resume-bench-once.ts        ← npm run bench:resume: the match prompt over the gold fixtures
     ai-spend-report.ts          ← npm run spend:report: the AI ledger per UTC day, tab-separated, beside the vendor's report
+    db-import.ts                ← npm run db:import: a Docker install's pg_dump --data-only --inserts into this one, in one transaction
     screen-bench-once.ts        ← npm run bench:screen: a gold folder through the screening path
     verify-brief-once.ts        ← npm run verify:compare: the compare pipeline against one stored row
     match-matrix-once.ts        ← npm run matrix:compare: resumes × postings, every invariant checked
@@ -525,6 +529,7 @@ src/
     job-pick.ts                 ← the jobs a candidate launcher offers (fit threshold, newest, ?job= kept)
     runs-summary.ts             ← a run's stats as facts in a fixed order, a reason as a sentence (pure) — what /runs shows instead of JSON
     schedule-view.ts            ← loadNextCheck + loadHeldLine: the "next check" and "waiting" lines the Overview and /settings share
+    login-item-io.ts            ← writes / removes the login entry (src/login-item.ts), only under the launcher
     held-line.ts                ← pure: the waiting line's words — how many, what holds them, the one place to change it
     stage-config.ts             ← pure: the board's columns (ADR 0025): parse, add / remove / move / rename
     stage-events.ts             ← pure: the JobStageEvent row of a stage move (ADR 0024)

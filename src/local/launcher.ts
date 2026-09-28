@@ -7,6 +7,7 @@ import { dataDirFor, localPaths } from './data-dir';
 import { LocalDatabaseError, commandLineOf, databaseAnswers, portIsFree, startLocalDatabase, type LocalDatabase } from './postgres';
 import { firstLinePid } from './postgres-setup';
 import { MAX_RESTARTS, isLauncherCommand, isLauncherMessage, restartDecision, type LauncherMessage } from './supervise';
+import { snapshotDay, snapshotPlan, snapshotSkips, snapshotsToKeep } from './snapshots';
 
 /*
  * `npm start` (ADR 0054): the built-in database, then the worker, then the
@@ -83,6 +84,7 @@ async function run(databaseOnly: boolean, dataDir: string, paths: Paths): Promis
 
   let database: LocalDatabase | null = null;
   if (!ownDatabase) {
+    if (!firstRun) takeSnapshot(paths);
     say(firstRun ? 'Creating the database (first run)…' : 'Starting the database…');
     try {
       database = await startLocalDatabase(dataDir);
@@ -174,6 +176,29 @@ async function run(databaseOnly: boolean, dataDir: string, paths: Paths): Promis
   say('  Stop: Ctrl+C here, or npm run stop in another terminal');
   say();
   if (firstRun && !databaseOnly) openBrowser(url);
+}
+
+/**
+ * Today's copy of the database folder, taken before Postgres starts (TASKS
+ * S6). A copy that fails is a warning: the start goes on without it.
+ */
+function takeSnapshot(paths: Paths): void {
+  const existing = fs.existsSync(paths.snapshots) ? fs.readdirSync(paths.snapshots) : [];
+  const today = snapshotDay(new Date());
+  const plan = snapshotPlan(existing, today, snapshotsToKeep(process.env.APPLYPACK_SNAPSHOTS));
+  if (plan.take) {
+    const target = path.join(paths.snapshots, today);
+    try {
+      fs.mkdirSync(paths.snapshots, { recursive: true, mode: 0o700 });
+      fs.cpSync(paths.pgdata, path.join(target, 'postgres'), { recursive: true, filter: (src) => !snapshotSkips(path.basename(src)) });
+      say(`Today's copy of the data: ${target}`);
+    } catch (err) {
+      fs.rmSync(target, { recursive: true, force: true });
+      say(`Today's copy of the data could not be made (${(err as Error).message}); starting without it.`);
+      return;
+    }
+  }
+  for (const day of plan.drop) fs.rmSync(path.join(paths.snapshots, day), { recursive: true, force: true });
 }
 
 /**

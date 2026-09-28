@@ -37,6 +37,7 @@ import {
 import type { AiProviderId } from './ai-engine';
 import { AI_KEY_ENV_VARS } from './ai-keys';
 import { createLimiter, type Limiter } from './concurrency';
+import { cliCommand } from './cli-command';
 
 /**
  * The single seam between the callers and whatever runs the AI (ADR 0013/0014).
@@ -486,7 +487,9 @@ class CliProvider implements AiProvider {
     const budgetMs = req.timeoutMs ?? CLI_TIMEOUT_MS;
     const deadline = Date.now() + budgetMs;
     for (let attempt = 0; ; attempt++) {
-      const run = execFileAsync(this.bin, args, {
+      // On Windows an npm shim runs as Node + its script, never through a shell (S8).
+      const command = cliCommand(this.bin);
+      const run = execFileAsync(command.file, [...command.prefix, ...args], {
         // A retry runs on what is left of the attempt's budget, not on a fresh one.
         timeout: Math.max(1, deadline - Date.now()),
         // A child past its budget is killed, not asked: execFile never

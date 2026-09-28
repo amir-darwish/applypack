@@ -2523,10 +2523,14 @@ options and measurements: [docs/local-install-plan.md](./local-install-plan.md).
       robots token. The wizard uses Ollama through it and LM Studio through
       the OpenAI-compatible engine. Stage C (a measured model table, a
       per-role preset) waits.
-- [ ] **`local-always-on`** (minor, later) — start at login; a dated
-      snapshot of the data folder on start; `npm run db:import` from Docker
-      (`pg_dump --inserts`); the Windows CLI engines (`.cmd` shims and
-      `execFile`).
+- [x] **`local-always-on`** (minor, v2.30.0, ADR 0054 addendum) — start at
+      login, opt-in from Settings → General with the undo beside it (a
+      launchd agent, a `systemctl --user` unit, a Startup script); a dated
+      snapshot of the database folder on the day's first start, three kept;
+      `npm run db:import` from a Docker dump (`--data-only --inserts
+      --column-inserts`, one transaction, the migration history never
+      copied); the Windows CLI engines through their npm shims, run as Node
+      + script and never through cmd.exe.
 - Parked: the pasted-line installer (plan §3.7) and a desktop app for
   Windows, macOS and Linux — the owner's future project, not a priority.
 

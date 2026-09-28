@@ -21,11 +21,13 @@ const READ_ELSEWHERE: Record<string, string> = {
   CLAUDE_CODE_OAUTH_TOKEN: "the claude_code child's environment (ai-provider-parse.ts)",
   [DATA_DIR_ENV]: 'the launcher, which reads .env itself (local/data-dir.ts)',
   APPLYPACK_NO_OPEN: 'the launcher (local/launcher.ts)',
+  APPLYPACK_SNAPSHOTS: 'the launcher (local/launcher.ts)',
 };
 
 /** Read off `process.env` and deliberately not in `.env.example`, with the reason. */
 const UNDOCUMENTED: Record<string, string> = {
   CI: 'set by the CI runner, never by a person',
+  PATH: "the system's own; the login entry keeps it so the CLI engines are found at login (web/login-item-io.ts)",
 };
 
 /** `KEY=value` or `# KEY=value`: a setting shown, set or commented out. */
