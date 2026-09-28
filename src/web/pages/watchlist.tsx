@@ -474,15 +474,27 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
                     </Button>
                   </ActionForm>
                 )}
-                <ActionForm action={`/companies/${r.id}/unwatch`}>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-label={`Unwatch ${r.name} — it stays in the hourly tick`}
+                {needsPaste(r) ? (
+                  // Nothing else reads this row, so leaving the watchlist is removing it.
+                  <ActionForm
+                    action={`/companies/${r.id}/delete`}
+                    confirm={`Remove ${r.name} from the watchlist? What you pasted from its page goes with it.`}
                   >
-                    Unwatch
-                  </Button>
-                </ActionForm>
+                    <Button size="sm" variant="ghost" aria-label={`Remove ${r.name} from the watchlist`}>
+                      Remove
+                    </Button>
+                  </ActionForm>
+                ) : (
+                  <ActionForm action={`/companies/${r.id}/unwatch`}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Unwatch ${r.name} — it stays in the hourly tick`}
+                    >
+                      Unwatch
+                    </Button>
+                  </ActionForm>
+                )}
               </div>
             </Td>
           </Tr>

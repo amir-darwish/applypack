@@ -127,7 +127,9 @@ companiesRoute.get('/companies', async (c) => {
   const settings = await getSettings();
   const paused = pausedFamilies(settings);
   const now = new Date();
-  const rows = companies.map((c) => ({
+  // A page drawn in the browser is a watchlist row only (TASKS N8): it is never
+  // fetched, so the source table would list it as a dead source forever.
+  const rows = companies.filter((c) => c.atsType !== AtsType.BROWSER_PAGE).map((c) => ({
     id: c.id,
     name: c.name,
     atsType: c.atsType,
@@ -557,11 +559,17 @@ companiesRoute.post('/companies/:id/delete', async (c) => {
   if (!Number.isFinite(id)) return c.text('Bad id', 400);
   const current = await prisma.company.findUnique({
     where: { id },
-    select: { name: true },
+    select: { name: true, atsType: true },
   });
   if (!current) return c.text('Not found', 404);
   await prisma.company.delete({ where: { id } });
-  return redirectWithFlash(c, 'ok', `Deleted "${current.name}" and its jobs.`);
+  return redirectWithFlash(
+    c,
+    'ok',
+    current.atsType === AtsType.BROWSER_PAGE
+      ? `Removed "${current.name}" from the watchlist.`
+      : `Deleted "${current.name}" and its jobs.`,
+  );
 });
 
 companiesRoute.post('/companies/new', async (c) => {
