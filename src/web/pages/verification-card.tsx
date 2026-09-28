@@ -3,7 +3,7 @@ import type { FC } from 'hono/jsx';
 import type { JobVerification } from '@prisma/client';
 import { ActionForm, Badge, Button, Card, Hint, MarkIcon, SectionTitle } from '../ui';
 import type { Tone } from '../format';
-import { formatRelative } from '../format';
+import { formatRelative, safeHref } from '../format';
 import { readEvidence, type VerificationEvidence } from '../../verification/prompts';
 import { LIVENESS_CODE_LABEL, type LivenessCode } from '../../verification/liveness';
 
@@ -165,17 +165,17 @@ export const VerificationCard: FC<VerificationCardProps> = ({
             </div>
           )}
 
-          {verification.postingUrl && (
+          {safeHref(verification.postingUrl) && (
             <div>
               <div class="mb-1.5 text-[13px] font-medium text-ink-muted">Company's own listing</div>
               <div class="flex flex-wrap items-center gap-2">
                 <a
-                  href={verification.postingUrl}
+                  href={safeHref(verification.postingUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   class="break-all font-mono text-xs text-accent-strong transition-colors duration-150 hover:text-accent-deep"
                 >
-                  {verification.postingUrl.replace(/^https?:\/\//, '').slice(0, 80)}
+                  {safeHref(verification.postingUrl)!.replace(/^https?:\/\//, '').slice(0, 80)}
                 </a>
                 {!run && (
                   <ActionForm action={`/jobs/${jobId}/description/refresh`}>
@@ -217,14 +217,14 @@ const EvidenceList: FC<{ items: VerificationEvidence[] }> = ({ items }) =>
             </div>
             <div class="min-w-0 text-sm text-ink">
               {e.finding}
-              {e.url && (
+              {safeHref(e.url) && (
                 <a
-                  href={e.url}
+                  href={safeHref(e.url)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   class="ml-2 break-all font-mono text-xs text-accent-strong transition-colors duration-150 hover:text-accent-deep"
                 >
-                  {e.url.replace(/^https?:\/\//, '').slice(0, 60)}
+                  {safeHref(e.url)!.replace(/^https?:\/\//, '').slice(0, 60)}
                 </a>
               )}
             </div>

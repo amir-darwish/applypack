@@ -21,7 +21,7 @@ import {
   type ButtonVariant,
 } from '../ui';
 import { intervalLabel } from '../../watchlist/interval';
-import { formatDate, formatRelative, formatSalary } from '../format';
+import { formatDate, formatRelative, formatSalary, safeHref } from '../format';
 import { AdzunaLabel, FranceTravailLine, JsonTree } from './attribution';
 import { formatUsdPerYear } from '../../currency';
 import { flagOf, placeLabel } from '../../countries';
@@ -549,8 +549,8 @@ const PageHeaderBlock: FC<{ job: JobDetail; primary: boolean }> = ({ job, primar
       <div class="flex shrink-0 flex-wrap items-center gap-3">
         <FitBadge score={job.fitScore} worded />
         <StatusBadge status={job.status} />
-        {job.url && (
-          <Button href={job.url} target="_blank" rel="noopener" size="sm" variant={primary ? 'primary' : 'secondary'}>
+        {safeHref(job.url) && (
+          <Button href={safeHref(job.url)!} target="_blank" rel="noopener" size="sm" variant={primary ? 'primary' : 'secondary'}>
             Open posting ↗
           </Button>
         )}

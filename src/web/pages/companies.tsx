@@ -23,7 +23,7 @@ import {
   Td,
   Tr,
 } from '../ui';
-import { formatRelative } from '../format';
+import { formatRelative, safeHref } from '../format';
 import { sourceFamily } from '../source-groups';
 import { sourceLabel } from '../source-names';
 import { companyDeleteConfirm, type CompanyDeleteImpact } from '../delete-confirm';
@@ -285,9 +285,9 @@ export const CompaniesPage: FC<CompaniesProps> = ({
                 <Tr>
                   <Td class="max-w-[14rem] font-medium text-ink">
                     <div class="truncate" title={c.name}>
-                      {c.careerUrl ? (
+                      {safeHref(c.careerUrl) ? (
                         <a
-                          href={c.careerUrl}
+                          href={safeHref(c.careerUrl)!}
                           target="_blank"
                           rel="noopener"
                           class="transition-colors duration-150 hover:text-accent-strong"

@@ -4,6 +4,7 @@ import { Layout } from '../layout';
 import { Button, Card, Hint, PageHeader } from '../ui';
 import { describeRefresh, type PreviewRow, type RefreshPlan } from '../../jobs/description-diff';
 import { jobHref } from '../job-tabs';
+import { safeHref } from '../format';
 
 /*
  * The confirmation behind "Refresh the description from the company's
@@ -40,9 +41,13 @@ export const DescriptionRefreshPage: FC<DescriptionRefreshProps> = ({ job, url, 
       <Card>
         <p class="text-sm leading-6 text-ink">
           The company's own listing,{' '}
-          <a href={url} target="_blank" rel="noopener noreferrer" class="break-all font-mono text-xs text-accent-strong hover:text-accent-deep">
-            {url.replace(/^https?:\/\//, '')}
-          </a>
+          {safeHref(url) ? (
+            <a href={safeHref(url)!} target="_blank" rel="noopener noreferrer" class="break-all font-mono text-xs text-accent-strong hover:text-accent-deep">
+              {url.replace(/^https?:\/\//, '')}
+            </a>
+          ) : (
+            <span class="break-all font-mono text-xs">{url}</span>
+          )}
           , reads {describeRefresh(plan)}
         </p>
         {!plan.mentionsTitle && (
