@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Screening bench (for maintainers):** the gold set has a tailoring pair
+  and the gates a person read, so `npm run bench:screen` prints both lines;
+  `--compare` reads the top three head to head twice and says how far the
+  two readings agree. Every real comparison logs the same agreement line.
+
 ## [2.35.0] — 2026-09-28
 
 ### Changed

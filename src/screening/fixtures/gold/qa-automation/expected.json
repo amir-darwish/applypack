@@ -1,0 +1,9 @@
+{
+  "01-olena-petrenko.md": { "auth-gold0": "pass", "lang-gold1": "pass", "year-gold2": "pass" },
+  "01-olena-petrenko.tailored.md": { "auth-gold0": "pass", "lang-gold1": "pass", "year-gold2": "pass" },
+  "02-marcus-ade-williams.txt": { "auth-gold0": "unknown", "lang-gold1": "pass", "year-gold2": "fail" },
+  "03-hanna-schmidt.md": { "auth-gold0": "unknown", "lang-gold1": "pass", "year-gold2": "pass" },
+  "04-ihor-bondar.txt": { "auth-gold0": "pass", "lang-gold1": "unknown", "year-gold2": "fail" },
+  "05-olena-petrenko-v2.md": { "auth-gold0": "pass", "lang-gold1": "pass", "year-gold2": "pass" },
+  "06-injection.txt": { "auth-gold0": "pass", "lang-gold1": "unknown", "year-gold2": "fail" }
+}

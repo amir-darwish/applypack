@@ -9,7 +9,17 @@ import { loadKeywordMatcher } from '../resume/keyword-matcher';
 import { extractResumeText } from '../resume/resume-text';
 import { anchorScreenReply } from '../screening/anchor';
 import { gateConfusion, kendallTau, parseRanking, precisionAtK, stability, type GateWord } from '../screening/bench';
-import { buildScreenPrompt, parseScreenResponse, SCREEN_MAX_TOKENS, SCREEN_TIMEOUT_MS } from '../screening/prompts';
+import {
+  buildComparePrompt,
+  buildScreenPrompt,
+  COMPARE_MAX_TOKENS,
+  COMPARE_TIMEOUT_MS,
+  parseCompareResponse,
+  parseScreenResponse,
+  SCREEN_MAX_TOKENS,
+  SCREEN_TIMEOUT_MS,
+} from '../screening/prompts';
+import { anchorCompareReply, comparisonView, readingsAgreement, secondOrder } from '../screening/comparison';
 import { findLeaks, redactApplicant } from '../screening/redact';
 import { readRubric } from '../screening/rubric';
 import { orderVerdicts, scoreScreening } from '../screening/score';
@@ -22,10 +32,14 @@ import { orderVerdicts, scoreScreening } from '../screening/score';
  * table's order against the human's (Kendall τ, precision@5), the score
  * movement between runs (stability), the redaction leak check, the
  * tailoring pairs, and the gate confusion when expected.json says what a
- * human read. Spends AI; hand-run, never CI.
+ * human read. With --compare, the first run's top three are read head to
+ * head twice, the second time in reverse (ADR 0051), and the line says how
+ * far the two readings agree (TASKS E10) — two more calls a set. Spends AI;
+ * hand-run, never CI.
  *
  *   npm run bench:screen                         # every set under src/screening/fixtures/gold
  *   npm run bench:screen -- --set qa-automation --runs 2 --out bench.json
+ *   npm run bench:screen -- --set qa-automation --compare
  */
 
 const GOLD = join(__dirname, '..', 'screening', 'fixtures', 'gold');
@@ -38,12 +52,19 @@ interface Run {
   leaks: Record<string, string[]>;
 }
 
+/** The head-to-head the bench reads with --compare: the table's top of the first run. */
+const COMPARE_TOP = 3;
+
 function flag(argv: string[], name: string): string | null {
   const i = argv.indexOf(name);
   return i === -1 ? null : (argv[i + 1] ?? null);
 }
 
-async function runSet(dir: string, runs: number): Promise<{ name: string; runs: Run[]; ranking: string[]; expected: Record<string, Record<string, GateWord>> | null }> {
+async function runSet(
+  dir: string,
+  runs: number,
+  compare: boolean,
+): Promise<{ name: string; runs: Run[]; ranking: string[]; expected: Record<string, Record<string, GateWord>> | null; agreement: ReturnType<typeof readingsAgreement> | null }> {
   const name = basename(dir);
   const posting = readFileSync(join(dir, 'posting.txt'), 'utf8');
   const rubric = readRubric(JSON.parse(readFileSync(join(dir, 'rubric.json'), 'utf8')));
@@ -92,7 +113,23 @@ async function runSet(dir: string, runs: number): Promise<{ name: string; runs: 
     run.order = orderVerdicts(verdicts).map((v) => v.file);
     out.push(run);
   }
-  return { name, runs: out, ranking, expected };
+  let agreement: ReturnType<typeof readingsAgreement> | null = null;
+  const top = (out[0]?.order ?? []).slice(0, COMPARE_TOP).map((f) => texts.find((t) => t.file === f)!);
+  if (compare && top.length >= 2) {
+    const shortlist = new Map(top.map((t) => [t.number, t.redacted]));
+    const reading = async (shown: typeof top) => {
+      const answer = await askForJson(
+        runtime,
+        { ...buildComparePrompt({ rubric, job, applicants: shown.map((t) => ({ number: t.number, text: t.redacted })) }), maxTokens: COMPARE_MAX_TOKENS, label: 'screening-bench', role: 'resume', timeoutMs: COMPARE_TIMEOUT_MS },
+        parseCompareResponse,
+        { set: name, compare: shown.map((t) => t.file) },
+      );
+      return answer ? { shown: shown.map((t) => t.number), reply: anchorCompareReply(answer.data, shortlist, rubric, matcher).reply } : null;
+    };
+    const [a, b] = await Promise.all([reading(top), reading(secondOrder(top))]);
+    if (a && b) agreement = readingsAgreement(comparisonView({ v: 1, readings: [a, b] }, rubric));
+  }
+  return { name, runs: out, ranking, expected, agreement };
 }
 
 function report(set: Awaited<ReturnType<typeof runSet>>): void {
@@ -121,6 +158,12 @@ function report(set: Awaited<ReturnType<typeof runSet>>): void {
     const g = gateConfusion(pairsG);
     lines.push(`  gates: ${g.agree}/${g.total} as the human read them${g.total > 0 ? ` (pass read as unknown: ${g.matrix.pass.unknown}, unknown read as pass: ${g.matrix.unknown.pass}, fail read as pass: ${g.matrix.fail.pass})` : ''}`);
   }
+  const a = set.agreement;
+  if (a) {
+    lines.push(
+      `  readings (top ${COMPARE_TOP}, twice): first place ${a.firstAgree ? 'agreed' : 'differed'}, order ${a.orderAgree ? 'agreed' : 'differed'}, ${a.criteriaDisagree} of ${a.criteriaAnswered} criteria disagree`,
+    );
+  }
   process.stdout.write(`${lines.join('\n')}\n`);
 }
 
@@ -135,7 +178,7 @@ async function main(): Promise<void> {
   if (sets.length === 0) throw new Error(`no gold set${only ? ` named ${only}` : ''} under ${GOLD}`);
   const results = [];
   for (const dir of sets) {
-    const set = await runSet(dir, runs);
+    const set = await runSet(dir, runs, argv.includes('--compare'));
     report(set);
     results.push(set);
   }

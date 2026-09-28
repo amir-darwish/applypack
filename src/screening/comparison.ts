@@ -159,6 +159,21 @@ export function comparisonView(stored: StoredComparison, rubric: Rubric): Compar
   };
 }
 
+/**
+ * How far the two readings agree (TASKS E10, ADR 0051's question: when they
+ * differ, is a third reading worth its call?). Logged on every comparison and
+ * printed by `bench:screen --compare`, so the rate is measured before anyone
+ * pays for a third.
+ */
+export function readingsAgreement(view: ComparisonView): { firstAgree: boolean; orderAgree: boolean; criteriaAnswered: number; criteriaDisagree: number } {
+  return {
+    firstAgree: view.firstAgree,
+    orderAgree: view.orderAgree,
+    criteriaAnswered: view.criteria.filter((c) => c.picks[0] !== null && c.picks[1] !== null).length,
+    criteriaDisagree: view.disagreements,
+  };
+}
+
 /** "№3 Hanna Schmidt" — the number always, the name when the person has one. */
 export function who(n: number, names: Map<number, string | null>): string {
   const name = names.get(n);
