@@ -92,7 +92,11 @@ export const AiSpendCard: FC<AiSpendProps> = ({ period, view, budgetCents, bille
                   {compact(r.tokensIn)} → {compact(r.tokensOut)}
                 </Td>
                 <Td class="whitespace-nowrap text-right tabular-nums" title={MONEY_TITLE[r.billing]}>
-                  {r.billing === 'local' ? 'free' : `${r.billing === 'plan' ? '≈ ' : ''}${formatUsd(r.micro)}`}
+                  {r.billing === 'local'
+                    ? 'free'
+                    : r.unpriced > 0 && r.micro === 0
+                      ? 'not priced'
+                      : `${r.billing === 'plan' ? '≈ ' : ''}${formatUsd(r.micro)}`}
                 </Td>
               </Tr>
             ))}
