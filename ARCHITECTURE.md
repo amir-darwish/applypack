@@ -298,6 +298,7 @@ src/
     parse-input.ts             ← pure: the "one URL per line" textarea
     scan.ts                    ← pure: board links, job-shaped feeds, bot-check wording
     page-hash.ts               ← pure: the change watch's text hash and its once-a-day rule
+    paste.ts                   ← pure: a pasted page drawn in the browser → its lines, what is new, the role lines (TASKS N8)
     verdict.ts                 ← pure: how a resolution reads on screen (progress lines, preview badges)
     resolve.ts                 ← the ladder (I/O injected; liveResolveIo touches the network)
     page-changes.ts            ← the careers pages that changed this tick, staged for jobs/page-change-alerts.ts
@@ -816,6 +817,9 @@ erDiagram
     String lastContentHash "the change watch"
     DateTime lastContentAlertAt
     String pendingContentHash "a change not reported yet"
+    String[] pastedLines "BROWSER_PAGE: the page's lines as last pasted (TASKS N8)"
+    String[] pastedNew "the lines new against the paste before"
+    DateTime pastedAt
   }
 
   Job {

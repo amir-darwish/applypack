@@ -49,7 +49,7 @@ gets a dated addendum at the end of the ADR.
 - [0033 — A search says where its candidate lives; the model decides whether a posting is open to them](./0033-residence-and-relocation.md)
 - [0034 — A vendor's own licence governs keyed access, and the vendor's terms are code](./0034-keyed-sources.md)
 - [0035 — Many installs, one set of boards: spread the tick, shuffle the walk, revalidate](./0035-many-installs-one-set-of-boards.md)
-- [0036 — Watched companies are checked by reading what a site publishes for machines, never by rendering it](./0036-watchlist-reads-published-data-only.md)
+- [0036 — Watched companies are checked by reading what a site publishes for machines, never by rendering it](./0036-watchlist-reads-published-data-only.md) — *addendum 2026-09-28: a page drawn in the browser is pasted*
 - [0037 — Suggestions carry replacement text; the fact gate decides what is applicable](./0037-suggestions-carry-replacement-text-gated-in-code.md) — *extended by 0042; amended by 0044*
 - [0038 — Save patches the user's .docx in place; text-only versions are the fallback](./0038-save-patches-the-users-docx-in-place.md) *(supersedes the text-only consequence of 0010)* — *extended by 0039*
 - [0039 — A resume that cannot be patched is re-typeset from JSON Resume, in the user's own typography](./0039-clean-render-from-json-resume.md) *(extends 0038)*

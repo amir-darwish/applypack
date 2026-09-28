@@ -113,8 +113,9 @@
 - `src/watchlist/` is the company-watchlist module (ADR 0036): `interval.ts`
   (intervals, due-ness, the ★ and the alert policy), `parse-input.ts` (the
   textarea), `scan.ts` (what a careers page publishes), `page-hash.ts` (the
-  change watch: what the hash ignores, and the once-a-day rule) are pure and
-  tested;
+  change watch: what the hash ignores, and the once-a-day rule), `paste.ts`
+  (a page drawn in the browser, pasted by the user: its lines, what is new,
+  the lines a search would take — TASKS N8) are pure and tested;
   `resolve.ts` is the ladder with its I/O injected, so the ladder itself is
   tested on recorded answers and only `liveResolveIo()` touches the network.
   Every `ats` verdict is confirmed by `probeAts` before it is offered — a URL
@@ -477,6 +478,7 @@ When the question is **"how does the user toggle / configure X?"**:
 | Paste an AI key without touching `.env` | `/settings` AI engine tab → the key row on each engine card, or step 1 of `/welcome` (ADR 0027) |
 | Add / remove tracked company | `/companies` → **Add sources** → **Add one company** (probed before save); Delete sits on the company's row. The table is the first thing on the page |
 | Watch specific companies (paste a list of career-page URLs) | `/companies` → **Add sources** → "Watch specific companies": one URL per line (optionally `Name — URL`), Resolve these → a progress page → a preview showing what each URL resolved to → pick the interval and the alert policy for the batch → Add. Watched rows go in switched ON |
+| Watch a company whose careers page draws its jobs in the browser (a loading shell) | paste it like any other; the preview says "Needs a browser" and adds it to the watchlist unchecked (`BROWSER_PAGE`, never active). Open the page, select all, copy, and paste it into the row's box under **Pages drawn in the browser**: the flash and the box say what is new since the last paste and which lines look like roles your searches want. No AI; nothing is stored as a job (ADR 0036 addendum 2026-09-28) |
 | Watch a company whose careers page publishes no board and no feed | paste it like any other; the preview says "Change watch". The row says *Page changes* and *watching* instead of a posting count, costs no AI, and alerts at most once a day with the link |
 | Change how often a watched company is checked, or what it alerts about | `/companies` → "Watchlist" → the row's two selects (Every hour / Once a day / Once a week; Every posting / Matches only). "Check now" makes it due on the next tick; "Unwatch" keeps the company and drops the star |
 | See only postings from watched companies | `/jobs` → **Filters** → Show → "★ Watched"; ★ also sits before the company name on the list and the job page |
