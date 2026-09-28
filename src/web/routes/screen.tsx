@@ -564,7 +564,7 @@ screenRoute.post('/screen/:id/applicants/:aid/release', async (c) => {
   return flashRedirect(
     back,
     'ok',
-    `№${applicant.number} will be scored as the redacted text reads now${started ? ' — scoring has started' : rubricEmpty ? ' — add criteria, then press Score' : ''}. The leak check's finding stays on this scorecard.`,
+    `№${applicant.number} will be scored as the redacted text reads now${started ? ' — scoring has started' : rubricEmpty ? ' — add criteria, then press Score' : ''}. Its scorecard shows the leak check's finding beside the result.`,
   );
 });
 

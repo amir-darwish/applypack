@@ -70,3 +70,19 @@ no protected-group data by design).
 - The "Delete with files" button is "Delete screening" now. It removes the
   screening, the uploaded copies and every verdict from the database, and
   leaves the user's own files on disk (`src/web/pages/screen-detail.tsx`).
+
+## Addendum (2026-09-28): religion, health, and a leak waits for a person
+
+- **Religion and health are redacted too** (TASKS E5, the plan's Q8): the
+  special-category data a DACH or Polish CV still states in its personal
+  block. Only in the shape of a field — "Konfession: …", "Stan zdrowia: …",
+  "Disability: …" — plus a bare faith on a birth or family line, the way a
+  bare demonym is citizenship there. The words alone name products, domains
+  and employers ("Health tech", "Christian Dior"), and they stay.
+- **A leak holds the applicant back** (TASKS E4, Q6). The leak check used to
+  run and log while the text went to the model anyway, which broke the
+  promise this ADR makes. An applicant it flags is now stored as `held`: no
+  queue reads it, the table groups it as "Held for a look", and its scorecard
+  names what kind of thing leaked (never the value) beside the redacted text.
+  **Score it anyway** releases it: the person has read what the model would
+  read.

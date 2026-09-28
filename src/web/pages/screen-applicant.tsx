@@ -391,7 +391,9 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
       <div class="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <details>
-            <summary class="cursor-pointer text-sm font-semibold text-ink">Text the model read (redacted)</summary>
+            <summary class="cursor-pointer text-sm font-semibold text-ink">
+              {applicant.status === 'held' ? 'Text a model would read (redacted)' : 'Text the model read (redacted)'}
+            </summary>
             <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-[13px] leading-5 text-ink">{applicant.redactedText}</pre>
           </details>
         </Card>
