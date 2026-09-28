@@ -1,3 +1,4 @@
+import { evidenceFor } from './evidence';
 import { canonicalTerm, DENIED_NOTE, UNSURE_NOTE } from './facts';
 import { withTableAliases } from './keyword-aliases';
 import type { KeywordMatcher } from './keyword-matcher';
@@ -179,6 +180,8 @@ export function addKeyword(
     ...row,
     status: found ? 'present' : 'ask_user',
     note: found ? 'added by you — already in this resume' : 'added by you — confirm whether you have it',
+    // Graded like every row the analysis wrote, or the stored score and the live ring would part (score v6).
+    evidence: evidenceFor(row, ctx.resumeText, ctx.matcher),
     ...(inPosting ? {} : { unanchored: true }),
   };
   return { ok: true, keywords: [...keywords, added], term: added.term, removed: false };

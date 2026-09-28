@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { annotateEvidence, evidenceFor, isTermList, segmentAt } from './evidence';
+import { annotateEvidence, evidenceFor, isTermList, segmentAt, withEvidence } from './evidence';
 import { readKeywords, type MatchKeyword } from './prompts';
 import type { KeywordMatcher } from './keyword-matcher';
 
@@ -76,4 +76,11 @@ test('annotateEvidence stamps every keyword and counts the invisible ones', asyn
   const out = annotateEvidence([kw('Docker'), kw('AWS'), kw('Redis'), kw('Kubernetes')], RESUME, await matcher());
   assert.deepEqual(out.keywords.map((k) => k.evidence), ['listed', 'measured', 'described', 'absent']);
   assert.equal(out.listedOnly, 1, 'Docker is named and never shown');
+});
+
+test('withEvidence grades only the rows that have no grade yet', async () => {
+  const graded = { ...kw('Docker'), evidence: 'measured' as const };
+  const out = withEvidence([graded, kw('Laravel'), kw('Kubernetes')], RESUME, await matcher());
+  assert.equal(out[0], graded, 'the analysis read this one already');
+  assert.deepEqual(out.map((k) => k.evidence), ['measured', 'described', 'absent']);
 });

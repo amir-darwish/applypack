@@ -7,6 +7,7 @@ import { logger } from '../logger';
 import { readAnswers, upsertAnswer, type ReviewAnswer } from './answers';
 import { readFrameReason, type FrameReason } from './keyword-frame';
 import { loadKeywordMatcher } from './keyword-matcher';
+import { withEvidence } from './evidence';
 import { effectiveKeywords } from './keyword-overrides';
 import type { JsonResume } from './json-resume';
 import { readMatchEvidence, readMatchMode, storedBreakdown, type MatchEvidence, withSuggestionsMode, type MatchMode } from './match-mode';
@@ -547,11 +548,14 @@ export async function rescoreMatchKeywords<T>(
     // every keyword edit dragged the score down and "reset" never came back to
     // where it started.
     const flags = countableFlags(match.redFlags, keywords, matcher);
-    const next = scoreMatch(effectiveKeywords(keywords), breakdown.alignment, flags.counted.length);
+    // Score v6 reads each row's evidence grade; a row written before the grade
+    // existed gets it here, off the text this comparison judged (ADR 0058).
+    const graded = match.resumeText === '' ? keywords : withEvidence(keywords, match.resumeText, matcher);
+    const next = scoreMatch(effectiveKeywords(graded), breakdown.alignment, flags.counted.length);
     await tx.resumeMatch.update({
       where: { id },
       data: {
-        keywords: keywords as Prisma.InputJsonValue,
+        keywords: graded as Prisma.InputJsonValue,
         breakdown: storedBreakdown(next, {
           // Read off the locked row, not off the caller's older copy: a
           // re-score changes the number, never what the row is.

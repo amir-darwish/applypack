@@ -63,24 +63,26 @@ test('first glance names the weak places, not the strong ones', () => {
   assert.equal(find(lines.scored, 'First glance')?.text, 'title and recent role could be sharper');
 });
 
-test('shown at work is the line the formula does not count', () => {
-  const lines = scoreLines(
-    input({
-      keywords: [
-        kw({ term: 'PHP', evidence: 'measured' }),
-        kw({ term: 'MySQL', evidence: 'described' }),
-        kw({ term: 'Git', evidence: 'listed' }),
-      ],
-    }),
-  );
-  const shown = find(lines.diagnostic, 'Shown at work');
+test('shown at work made the number since v6, and says what a listed term earns', () => {
+  const keywords = [
+    kw({ term: 'PHP', evidence: 'measured' }),
+    kw({ term: 'MySQL', evidence: 'described' }),
+    kw({ term: 'Git', evidence: 'listed' }),
+  ];
+  const lines = scoreLines(input({ keywords }));
+  const shown = find(lines.scored, 'Shown at work');
   assert.equal(shown?.text, '2 of 3 in a bullet · 1 named only in a list');
-  assert.match(shown?.title ?? '', /Named and never shown: Git/);
+  assert.match(shown?.title ?? '', /Named and never shown: Git\. .* Each earns 85% of its credit here/);
+  assert.equal(find(lines.diagnostic, 'Shown at work'), undefined);
+  // A row scored before v6 did not count it, and its page says so.
+  const older = scoreLines(input({ keywords, breakdown: { ...scoreMatch(keywords, STRONG, 0), v: 5 } }));
+  assert.equal(find(older.diagnostic, 'Shown at work')?.text, '2 of 3 in a bullet · 1 named only in a list');
+  assert.doesNotMatch(find(older.diagnostic, 'Shown at work')?.title ?? '', /earns/);
 });
 
 test('a row written before evidence existed simply has no such line', () => {
   const lines = scoreLines(input({ keywords: [kw({ term: 'PHP' })] }));
-  assert.equal(find(lines.diagnostic, 'Shown at work'), undefined);
+  assert.equal(find([...lines.scored, ...lines.diagnostic], 'Shown at work'), undefined);
 });
 
 test('gates the score never touched get their own line', () => {
