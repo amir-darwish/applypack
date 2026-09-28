@@ -2408,7 +2408,7 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
-- [x] **`ui-finish`** (minor, parts 1–3 v2.36.0 … v2.38.0) — the 2026-09 plan's W9.
+- [x] **`ui-finish`** (minor, parts 1–4 v2.36.0 … v2.39.0) — the 2026-09 plan's W9.
       U4 `ui.tsx:Notice` replaces ten hand-rolled tone banners; U5 the jobs
       list, the Comparisons card and the board use `Empty`; U6 a failed run
       reads as a sentence (`runs-summary.ts:failedRunLine` over
@@ -2447,6 +2447,25 @@ release-discipline skill, a docs/site block does not.
         ATS column). The screen-reader pass stays with the owner (O7).
       - Left for part 4: U1–U3 (the Hint + More and one-surface passes, the
         type ladder) and U19's long hints with them.
+
+      **v2.39.0 (part 4):**
+      - U1 / U19: the Hint + More pass on the resume page, the targeted
+        view, the screening page and the render page. One sentence stays
+        in sight and the rest folds under How this works; what the
+        redesign plan's §8 keeps visible stays (a cost, what a failed gate
+        means, that the clean version changes nothing, why a word does not
+        count). Helper words at 1440 px: `/resumes/1` 179 → 143, the
+        targeted view 136 → 113, `/screen/1` 253 → 178, the render page
+        197 → 180. None of these pages nests a card in a card.
+      - U2 had been done: every settings section is a flat part of one
+        surface, one card per tab.
+      - U3: one class per step. `text-note` (13/400) joins the ladder;
+        334 raw sizes became `text-note` / `text-meta`, the headings
+        `text-entity` / `text-label`, the hand-rolled table headers the
+        label step. A computed-style diff of 27 pages before and after
+        showed only those. `type-ladder.test.ts` keeps it so.
+      - #318: `/static/*` is revalidated on every load, so a browser no
+        longer runs last release's module against this release's page.
 
 - [x] **`screening-fixes`** (minor, parts 1–2 v2.34.0 … v2.35.0) — the 2026-09 plan's
       W8. E1 had shipped in v2.19.0 (a skill's "within N months" in its

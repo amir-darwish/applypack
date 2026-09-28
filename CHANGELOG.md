@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.39.0] — 2026-09-28
+
+### Changed
+- **Less to read before you act.** The resume page, the Tailor resume
+  editor, the screening page and the clean-version page keep one sentence of
+  help in sight; the rest folds under "How this works". Costs, what a failed
+  gate means and what a save changes stay visible.
+- **One type scale.** Headings, notes and small print use the same few sizes
+  on every page, and the ApplyPack name in the sidebar is one step larger.
+
+### Fixed
+- **A browser no longer runs last release's scripts after an upgrade.** The
+  dashboard's scripts and stylesheet are checked on every load (#318).
+
 ## [2.38.0] — 2026-09-28
 
 ### Changed
