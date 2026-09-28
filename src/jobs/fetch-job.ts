@@ -1,7 +1,14 @@
 import { logger } from '../logger';
 import { prisma } from '../db';
 import { runAllFetchers, type FetchWalkOptions, type SourceProgress } from '../fetchers';
-import { beginConditionalTick, commitConditionalCache, tickStoredEverything } from '../fetchers/conditional';
+import {
+  beginConditionalTick,
+  commitConditionalCache,
+  hydrateConditionalCache,
+  needsHydration,
+  tickStoredEverything,
+  type Entry as ValidatorEntry,
+} from '../fetchers/conditional';
 import { beginPageChangeTick } from '../watchlist/page-changes';
 import { deliverPageChanges, recordPageChanges } from './page-change-alerts';
 import { syncFranceTravail, type MirrorStats } from './france-travail-sync';
@@ -126,8 +133,13 @@ async function fetchUnderLock(opts: FetchJobOptions): Promise<{ stats: CronStats
   // minute and which failed is otherwise recorded nowhere.
   const bySource: SourceStat[] = [];
   // Validators learned below are staged, not live, until the jobs they came
-  // with are stored (docs/scale-plan.md §4).
+  // with are stored (docs/scale-plan.md §4). A process's first tick takes the
+  // ones the rows kept, so a restart is not a full read of every source (S31).
   beginConditionalTick();
+  if (needsHydration()) {
+    const rows = await prisma.company.findMany({ select: { id: true, validator: true } });
+    logger.info({ validators: hydrateConditionalCache(rows) }, 'fetch-job: validators taken from the rows');
+  }
   // A careers page that changed is staged by its fetcher during the walk and
   // reported after it (TASKS §17 stage C); anything a previous run staged and
   // never delivered is dropped here.
@@ -213,7 +225,7 @@ async function fetchUnderLock(opts: FetchJobOptions): Promise<{ stats: CronStats
   // Only now may this tick's validators be sent, and only if it stored
   // everything it fetched — see tickStoredEverything for why each counter
   // costs us a full re-read next tick instead of a skipped posting.
-  if (tickStoredEverything(inner)) commitConditionalCache();
+  if (tickStoredEverything(inner)) await keepValidators(commitConditionalCache());
 
   const durationMs = Date.now() - started;
   const stats: CronStats = {
@@ -268,4 +280,19 @@ function mirrorStats(m: MirrorStats): CronStats {
 /** One `profile` line for the run row, whatever the number of searches. */
 function searchNames(profiles: Profile[]): string {
   return profiles.map((p) => p.name).join(' · ');
+}
+
+/**
+ * TASKS S31: what a commit promoted goes onto the rows, for the next process
+ * and for the other one. Never allowed to break the tick — a row that misses
+ * it costs one full read after the next restart, which is where we started.
+ */
+async function keepValidators(promoted: Map<number, ValidatorEntry>): Promise<void> {
+  try {
+    for (const [id, entry] of promoted) {
+      await prisma.company.updateMany({ where: { id }, data: { validator: { ...entry } } });
+    }
+  } catch (err) {
+    logger.warn({ err }, 'fetch-job: validators not kept on the rows');
+  }
 }
