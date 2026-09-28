@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.22.0] — 2026-09-28
+
+### Fixed
+- **The two-stage classifier paid for the same "no" every hour.** A posting
+  its short prefilter turned away was never stored, so the next tick met it
+  as new and asked again, for as long as it stayed on its feed. It is now
+  stored as dismissed, unscored, with the prefilter's reason, and counted as
+  a duplicate from then on. "Save & re-classify" still reads it. (#290)
+
+### Added
+- **"Not sure"** beside "I have it" and "I don't" on a comparison's
+  questions. The question stops coming back, nothing is claimed in the
+  resume, and the AI is never told "no". Confirmed facts on /resumes lists
+  it, with "I do have it" for later.
+- **The version you run** is in the sidebar. Settings → General → Updates
+  can also check for a newer release: off by default, one request a week to
+  GitHub, and it never updates anything. When one is out, the sidebar says
+  so and the settings give the commands.
+
 ## [2.21.0] — 2026-09-28
 
 ### Added
@@ -4131,6 +4150,7 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.22.0]: https://github.com/applypack/applypack/compare/v2.21.0...v2.22.0
 [2.21.0]: https://github.com/applypack/applypack/compare/v2.20.0...v2.21.0
 [2.20.0]: https://github.com/applypack/applypack/compare/v2.19.1...v2.20.0
 [2.19.1]: https://github.com/applypack/applypack/compare/v2.19.0...v2.19.1

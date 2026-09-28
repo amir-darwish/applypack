@@ -2356,6 +2356,17 @@ release-discipline skill, a docs/site block does not.
       per-posting line for the first scoring (the posting does not exist
       yet), a CSV of the ledger.
 
+- [ ] **`small-wins`** (minor, several tags) — the 2026-09 plan's stage A
+      remainder. **2026-09-28, v2.22.0:** #290 (a two_stage prefilter "no"
+      is stored DISMISSED with its reason, so the next tick does not pay
+      for it again), N5 (a third answer, **Not sure**, stops a fact
+      question without claiming or denying anything), N9 (the version in
+      the sidebar; an update check, off by default, one GitHub request a
+      week). Next: N6 company mute + re-apply cooldown (needs a
+      `Job.employer` column — aggregators keep the employer only inside
+      the description), N7 board export, N11 the Overview's next-three
+      card, N8 `needsBrowser` + paste-the-page.
+
 ### 20.4 Owner items
 
 - GitHub About → the package description; social preview from

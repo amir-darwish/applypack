@@ -100,7 +100,10 @@ one query per batch      the batch's (companyId, externalId) pairs already store
 classifyJob(input, profiles[], mode)   ONE call for every running search, on the engine's
    │                                   classifier model (Haiku 4.5 by default on the Claude engines)
    ├─ mode='single':    the full prompt only
-   └─ mode='two_stage': a short prefilter first, the full prompt only on yes
+   └─ mode='two_stage': a short prefilter first, the full prompt only on yes;
+                                       a no is stored DISMISSED, unscored, with the prefilter's
+                                       reason as its summary — the next tick meets it as a
+                                       duplicate instead of paying the prefilter again
    ↓
 {salary_min, salary_max, salary_currency, salary_period, location,
  scores: [{profile_id, fit_score, location_match, tech_match, …}]}
@@ -259,6 +262,7 @@ clause at the start of the affected job/handler. The toggles live on
 | `disabledSources` (String[])     | `[]`     | Skip whole AtsType families in runAllFetchers (and the monthly HN pull, for HN_HIRING); a switched-off family is never called quiet |
 | `employerMode`                   | false    | Employer mode (ADR 0049): the Screening menu item and every `/screen` route exist only while on; the worker never reads it |
 | `screeningRetentionDays`         | 90       | How long a screening keeps its applicant files and verdicts before the weekly cleanup deletes it (ADR 0048) |
+| `updateCheck`                    | false    | Off: ApplyPack never asks anyone about itself. On: one request a week (the cleanup job, and once when turned on) to GitHub's latest-release API; the sidebar says "vX.Y.Z is out" and Settings → General → Updates gives the commands. It never updates anything |
 | `aiBudgetCents`                  | NULL     | A monthly ceiling on billed AI money: one line to the alert chats at 80 % and at 100 %, once each per UTC month (`aiBudgetAlerted` holds the last one sent). NULL = no budget. Nothing is ever stopped (ADR 0055) |
 
 ## Application tracking
