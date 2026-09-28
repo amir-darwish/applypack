@@ -20,6 +20,11 @@ describe('verdictLabel', () => {
     assert.equal(verdictLabel({ kind: 'feed', url: 'u', items: 1, via: 'u' }), 'RSS feed · 1 entry');
   });
 
+  it('labels a page drawn in the browser, and says what to do with it', () => {
+    assert.equal(verdictLabel({ kind: 'needsBrowser', url: 'u' }), 'Needs a browser');
+    assert.match(verdictLine({ kind: 'needsBrowser', url: 'u' }), /paste the page/);
+  });
+
   it('labels the two verdicts that found nothing', () => {
     assert.equal(verdictLabel({ kind: 'watchOnly', reason: 'x' }), 'Nothing machine-readable');
     assert.equal(verdictLabel({ kind: 'refused', reason: 'x' }), 'Refused');

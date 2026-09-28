@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AtsType } from '@prisma/client';
-import { describeCount, groupSources, sourceFamily } from './source-groups';
+import { describeCount, fetchedSource, groupSources, sourceFamily } from './source-groups';
 
-const ALL = Object.values(AtsType).filter((t) => t !== AtsType.MANUAL);
+const ALL = Object.values(AtsType).filter(fetchedSource);
 
 test('every source kind lands in exactly one of the three groups', () => {
   const groups = groupSources(ALL, {}, []);
@@ -12,6 +12,8 @@ test('every source kind lands in exactly one of the three groups', () => {
   assert.deepEqual(groups.map((g) => g.family), ['vendor', 'aggregator', 'own']);
   assert.equal(groups.find((g) => g.family === 'vendor')?.pills.length, 12);
   assert.equal(groups.find((g) => g.family === 'own')?.pills.length, 2);
+  // A pasted job and a page the user pastes have no switch.
+  assert.equal(fetchedSource('MANUAL') || fetchedSource('BROWSER_PAGE'), false);
 });
 
 test('pills sort by label, not by enum value, and case does not split the order', () => {

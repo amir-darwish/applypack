@@ -358,5 +358,9 @@ export async function fetchOne(
     case AtsType.MANUAL:
       // Pasted by hand on /jobs/new — nothing to fetch (and the row is inactive).
       return [];
+    case AtsType.BROWSER_PAGE:
+      // A page drawn in the browser (TASKS N8): nothing a fetch can read, and
+      // the row is never active. The user pastes the page instead.
+      return [];
   }
 }

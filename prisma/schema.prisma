@@ -51,6 +51,11 @@ enum AtsType {
   // says "this changed, have a look", which is what a person checking daily
   // actually does (ADR 0036).
   CAREER_PAGE
+  // A careers page that draws its jobs in the browser: the HTML is a loading
+  // shell with no board, no feed and almost no text (TASKS N8). atsToken is
+  // the page URL. The row is watched and never active — the tick has nothing
+  // to read — and the user pastes the page's text to see what changed.
+  BROWSER_PAGE
   // Phase 8.2: pasted by hand on /jobs/new. One inactive Company row per
   // employer; runAllFetchers never touches it.
   MANUAL
@@ -132,6 +137,13 @@ model Company {
   // row because the page may not be read again at an hour that may send it
   // (a weekly check, a 304), and sent from the top of the fetch tick.
   pendingContentHash String?
+
+  // TASKS N8 — BROWSER_PAGE rows: the lines of the page's text as the user
+  // last pasted it (watchlist/paste.ts), the lines that were new against the
+  // paste before, and when. Nothing reads them but the watchlist row.
+  pastedLines String[]  @default([])
+  pastedNew   String[]  @default([])
+  pastedAt    DateTime?
 
   @@unique([atsType, atsToken])
   @@index([active, nextCheckAt])

@@ -39,6 +39,7 @@ const SOURCE_NAMES: Record<string, string> = {
   DJINNI: 'Djinni',
   FEED: 'RSS/Atom feed',
   CAREER_PAGE: 'Careers page (change watch)',
+  BROWSER_PAGE: 'Careers page (needs a browser)',
   MANUAL: 'Manual',
 };
 

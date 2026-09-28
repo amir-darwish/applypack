@@ -15,7 +15,16 @@ const VENDORS = new Set([
   'BREEZY', 'BAMBOOHR', 'PINPOINT', 'RIPPLING', 'PERSONIO', 'TEAMTAILOR',
 ]);
 /** Not vendors at all: the user's own feeds and the careers pages they watch (ADR 0036). */
-const OWN = new Set(['FEED', 'CAREER_PAGE']);
+const OWN = new Set(['FEED', 'CAREER_PAGE', 'BROWSER_PAGE']);
+
+/**
+ * A kind the tick fetches, so a pill on the Sources grid can switch it off.
+ * A pasted job (MANUAL) and a page drawn in the browser (BROWSER_PAGE, which
+ * the user pastes — TASKS N8) are rows, not sources.
+ */
+export function fetchedSource(atsType: string): boolean {
+  return atsType !== 'MANUAL' && atsType !== 'BROWSER_PAGE';
+}
 
 export function sourceFamily(atsType: string): SourceFamily {
   if (VENDORS.has(atsType)) return 'vendor';

@@ -97,7 +97,7 @@ import {
   type SourceKeyField,
   type SourceKeys,
 } from '../../source-keys';
-import { groupSources, type SourceCount } from '../source-groups';
+import { groupSources, type SourceCount, fetchedSource } from '../source-groups';
 import { testAiEngine } from '../ai-test';
 import {
   blankProfileInput,
@@ -323,7 +323,7 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
     disabledSources: settings.disabledSources,
     hnParserEnabled: settings.hnParserEnabled,
     sourceGroups: groupSources(
-      Object.values(AtsType).filter((t) => t !== AtsType.MANUAL),
+      Object.values(AtsType).filter(fetchedSource),
       sourceCounts,
       KEYED_SOURCES.filter((s) => !sourceUnlocked(s, keys)),
     ),
@@ -948,8 +948,8 @@ settingsRoute.post('/settings/sources', async (c) => {
         ? [form.enabled]
         : []
   ).filter((v): v is string => typeof v === 'string');
-  // MANUAL is not a fetchable source — keep it out of disabledSources.
-  const allSources = Object.values(AtsType).filter((s) => s !== AtsType.MANUAL) as string[];
+  // Rows the tick never fetches have no switch — keep them out of disabledSources.
+  const allSources = Object.values(AtsType).filter(fetchedSource) as string[];
   // disabledSources = everything NOT in the submitted "enabled" set.
   const disabled = allSources.filter((s) => !enabled.includes(s));
   await setDisabledSources(disabled);

@@ -114,7 +114,7 @@ describe('rung 3 — the page links to a board', () => {
   it('falls through when the linked board does not resolve', async () => {
     const stub = io({ pages: page('<a href="https://job-boards.greenhouse.io/ghost">Role</a>') });
     const r = await resolveCompanyUrl(paste('https://www.netlify.com/careers/'), stub);
-    assert.equal(r.resolution.kind, 'watchOnly');
+    assert.equal(r.resolution.kind, 'needsBrowser');
   });
 
   it('names the row from the host when the user gave no name', async () => {
@@ -165,7 +165,7 @@ describe('rung 4 — a feed', () => {
       },
     });
     const r = await resolveCompanyUrl(paste('https://acme.com/careers'), stub);
-    assert.equal(r.resolution.kind, 'watchOnly');
+    assert.equal(r.resolution.kind, 'needsBrowser');
     assert.equal(stub.asked.includes('https://acme.com/rss.xml'), false);
   });
 
@@ -181,7 +181,7 @@ describe('rung 4 — a feed', () => {
         'https://acme.com/careers/feed': { status: 200, body: RSS(0) },
       },
     });
-    assert.equal((await resolveCompanyUrl(paste('https://acme.com/careers'), stub)).resolution.kind, 'watchOnly');
+    assert.equal((await resolveCompanyUrl(paste('https://acme.com/careers'), stub)).resolution.kind, 'needsBrowser');
   });
 
   it('tries the well-known job paths when nothing was declared', async () => {
@@ -205,7 +205,7 @@ describe('rung 4 — a feed', () => {
         'https://acme.com/jobs.rss': { status: 200, body: '<!DOCTYPE html><h1>Not found</h1>' },
       },
     });
-    assert.equal((await resolveCompanyUrl(paste('https://acme.com/careers'), stub)).resolution.kind, 'watchOnly');
+    assert.equal((await resolveCompanyUrl(paste('https://acme.com/careers'), stub)).resolution.kind, 'needsBrowser');
   });
 
   // A declared href is content from a page we just fetched, so it is
@@ -223,7 +223,7 @@ describe('rung 4 — a feed', () => {
       },
     });
     const r = await resolveCompanyUrl(paste('https://acme.com/careers'), stub);
-    assert.equal(r.resolution.kind, 'watchOnly');
+    assert.equal(r.resolution.kind, 'needsBrowser');
     assert.equal(stub.asked.includes('http://169.254.169.254/jobs.rss'), false);
   });
 
@@ -250,7 +250,7 @@ describe('rung 4 — a feed', () => {
         'https://acme.com/jobs.rss': { status: 200, url: 'http://10.0.0.5/jobs.rss', body: RSS(9) },
       },
     });
-    assert.equal((await resolveCompanyUrl(paste('https://acme.com/careers'), stub)).resolution.kind, 'watchOnly');
+    assert.equal((await resolveCompanyUrl(paste('https://acme.com/careers'), stub)).resolution.kind, 'needsBrowser');
   });
 
   it('spends at most MAX_HOST_REQUESTS on the site', async () => {
@@ -275,13 +275,14 @@ describe('rung 5 — the change watch', () => {
   });
 
   // Hashing a loading shell reports the shell, not the careers page.
-  it('refuses to watch a page with almost no text', async () => {
+  // TASKS N8: a loading shell is a page drawn in the browser. Hashing it would
+  // report the shell, so it is offered for the paste box instead.
+  it('offers a page with almost no text for pasting, not for a change watch', async () => {
     const stub = io({
       pages: { ...robots, 'https://acme.com/careers': { status: 200, body: '<div id="root"></div>' } },
     });
     const r = await resolveCompanyUrl(paste('https://acme.com/careers'), stub, CLAUDE);
-    assert.equal(r.resolution.kind, 'watchOnly');
-    assert.match((r.resolution as { reason: string }).reason, /needs JavaScript/);
+    assert.deepEqual(r.resolution, { kind: 'needsBrowser', url: 'https://acme.com/careers' });
   });
 
   // An embed-only board is a different problem, and saying "we will watch the
