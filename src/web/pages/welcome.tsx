@@ -110,6 +110,8 @@ export interface WelcomeProps {
     seniority: string[];
     resumes: { id: number; name: string }[];
     draft: ProfileDraftCard | null;
+    /** What reading the resume costs, in one sentence (web/cost-hint.ts). */
+    scanCost: string;
   };
   /** The boards that fit where the searches hunt, with their state here (#148). */
   sources: { suggestions: SourceSuggestion[]; packs: PackOffer[] };
@@ -121,6 +123,8 @@ export interface WelcomeProps {
     /** Stored-unscored jobs that fit the profile's words — what one more "Score" press would take. */
     waiting: number;
     runningRunId: string | null;
+    /** What one scoring call costs, in one sentence (web/cost-hint.ts). */
+    scoreCost: string;
   };
   flash?: FlashMessage | null;
 }
@@ -547,8 +551,8 @@ const ProfileStep: FC<WelcomeProps> = ({ profile, steps }) => {
       ) : (
         <>
           <p data-ui="hint" class="text-sm text-ink-muted">
-            Choose your resume: one AI call reads your tools and roles in about half a minute.
-            ApplyPack is built for software engineering roles.
+            Choose your resume: one AI call reads your tools and roles in about half a minute.{' '}
+            {profile.scanCost} ApplyPack is built for software engineering roles.
           </p>
           <form
             method="post"
@@ -746,7 +750,7 @@ const MatchesStep: FC<WelcomeProps> = (p) => {
             <p data-ui="hint" class="mt-3 text-[13px] leading-5 text-ink-faint">
               {matches.waiting.toLocaleString()} more stored jobs mention your words and are still
               unscored — score the next {SCORE_BATCH} whenever you like, or let the hourly watch
-              score new ones as they arrive.
+              score new ones as they arrive. {matches.scoreCost}
             </p>
           )}
           <div class="mt-4 flex flex-wrap items-center gap-2">
@@ -758,7 +762,7 @@ const MatchesStep: FC<WelcomeProps> = (p) => {
           <p data-ui="hint" class="text-sm text-ink-muted">
             The AI scores the {SCORE_BATCH} stored jobs that match you best; jobs that mention none
             of your tools or role words are set aside for free. Seconds per job on an API engine, up
-            to half a minute on a CLI one; press again for the next {SCORE_BATCH}.
+            to half a minute on a CLI one; press again for the next {SCORE_BATCH}. {matches.scoreCost}
           </p>
           {matches.waiting === 0 && (
             <p class="mt-2 text-[13px] leading-5 text-warn">

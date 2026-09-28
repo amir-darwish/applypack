@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import { Hono } from 'hono';
-import { JobStatus } from '@prisma/client';
+import { JobStatus, type Prisma } from '@prisma/client';
 import { prisma } from '../../db';
 import { clearFlashCookie, parseFlashCookie } from '../flash';
 import { activeFetchRun } from '../fetch-runs';
@@ -21,6 +21,9 @@ async function watchedSummary(): Promise<{ companies: number; newJobs: number }>
 import { loadHeldLine, loadNextCheck } from '../schedule-view';
 import { withoutMuted } from '../../employer';
 import { mutedKeys } from '../../jobs/employer-store';
+import { getActiveProfile } from '../../profiles';
+import { nextThings, type NextThing } from '../next-things';
+import { spendHint } from '../cost-hint';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RECENT_LIMIT = 8;
@@ -95,9 +98,42 @@ overviewRoute.get('/', async (c) => {
       funnelWeek={(await loadFunnel()).week}
       fetchRun={activeFetchRun()}
       finishSetup={currentStep(facts) !== null}
+      next={await loadNextThings(unmuted)}
       flash={parseFlashCookie(c.req.header('cookie'))}
     />,
     200,
     { 'Set-Cookie': clearFlashCookie() },
   );
 });
+
+/**
+ * TASKS N11: the loop the product is for, until the user has walked it once.
+ * The steady state — any comparison stored — costs one count; the page
+ * refreshes every 30 seconds.
+ */
+async function loadNextThings(unmuted: Prisma.JobWhereInput): Promise<NextThing[] | null> {
+  const comparisons = await prisma.resumeMatch.count();
+  if (comparisons > 0) return null;
+  const profile = await getActiveProfile();
+  const top = await prisma.job.findFirst({
+    // A "best match" under the search's own floor would be a word for nothing.
+    where: {
+      status: { in: [JobStatus.NEW, JobStatus.ALERTED, JobStatus.SAVED] },
+      fitScore: { gte: profile?.minFitScore ?? 0 },
+      ...unmuted,
+    },
+    orderBy: [{ fitScore: 'desc' }, { fetchedAt: 'desc' }],
+    select: { id: true, title: true, employer: true, fitScore: true, company: { select: { name: true } } },
+  });
+  if (top === null || top.fitScore === null) return null;
+  const [resumes, compareCost] = await Promise.all([
+    prisma.resume.count({ where: { hidden: false } }),
+    spendHint('resume-match'),
+  ]);
+  return nextThings({
+    top: { id: top.id, title: top.title, company: top.employer ?? top.company.name, fitScore: top.fitScore },
+    comparisons,
+    resumes,
+    compareCost,
+  });
+}

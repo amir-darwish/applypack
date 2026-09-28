@@ -291,6 +291,16 @@ export function costHintText(typical: { micro: number; billing: AiBilling } | nu
     : `Usually ${money} a call, billed per token (the middle of your recent calls).`;
 }
 
+/**
+ * Before any call is on record: what kind of money the next one spends, from
+ * the engine that answers first. No figure is guessed — an estimate made up
+ * without a single measured call would be the number people quote back.
+ */
+export function billingHint(billing: AiBilling): string {
+  if (billing === 'local') return 'Runs on your local model: free.';
+  return billing === 'plan' ? 'Your plan covers it.' : 'Billed per token on your API key.';
+}
+
 /** "$0.12 billed · ≈ $0.30 covered by your plan" — the Details row on a posting; null when nothing was recorded for it. */
 export function jobSpendText(spend: Partial<Record<AiBilling, number>> | null): string | null {
   if (!spend) return null;

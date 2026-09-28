@@ -254,6 +254,7 @@ src/
   funnel.ts                    ← pure: the search funnel — the tick counters it keeps, the stages, the reasons in words
   employer.ts                  ← pure: who hires — employerKey (one key for two spellings), hiringKey, the mute /
                                  re-apply gate (ADR 0056)
+  csv.ts                       ← pure: csvCell / csvTable — the BOM, CRLF and the formula guard every export shares
   fingerprint.ts               ← SimHash of a JD body + cross-listing search, pure (ADR 0018)
   apply-link.ts                ← pure: flags an apply link nobody can apply through (ADR 0023)
   countries.{json,ts}          ← the gazetteer: 86 countries, cities, region groups; lookups (pure, ADR 0031)
@@ -528,6 +529,9 @@ src/
     source-names.ts             ← sourceLabel: human names for AtsType values
     source-suggestions.ts       ← the token-driven feeds the running searches call for, with their state here
     welcome-steps.ts            ← pure first-run wizard rules (steps from data, score-run summary)
+    next-things.ts              ← pure: the Overview's "Next: three things" until the first comparison (TASKS N11)
+    cost-hint.ts                ← spendHint: the ledger's median for a feature, else what kind of money the first engine spends
+    applications-export.ts      ← pure: the applications board as CSV and Markdown (TASKS N7)
     welcome-facts.ts            ← loads what the wizard and the Overview chip derive from
     ai-test.ts                  ← one live engine call — Settings Test button + wizard step 1
     fetch-now.ts                ← beginFetchNow: "Fetch now" from /runs, the Overview and the wizard

@@ -14,7 +14,7 @@ import {
 } from '../stage-config';
 import type { StageTimeLine } from '../stage-time';
 
-interface ApplicationCard {
+export interface ApplicationCard {
   id: number;
   title: string;
   companyName: string;
@@ -165,9 +165,22 @@ export const ApplicationsPage: FC<ApplicationsProps> = ({
         }
         actions={
           applicationTrackingEnabled ? (
-            <Button href="/settings?tab=general#stages" variant="ghost" size="sm">
-              Edit columns
-            </Button>
+            <div class="flex flex-wrap items-center gap-2">
+              {/* TASKS N7: the board as a file, for the spreadsheet people keep anyway. */}
+              {activeCount + closedCount > 0 && (
+                <>
+                  <Button href="/applications/export.csv" variant="secondary" size="sm" title="Every application, one row each">
+                    CSV
+                  </Button>
+                  <Button href="/applications/export.md" variant="secondary" size="sm" title="Every application, by column">
+                    Markdown
+                  </Button>
+                </>
+              )}
+              <Button href="/settings?tab=general#stages" variant="ghost" size="sm">
+                Edit columns
+              </Button>
+            </div>
           ) : undefined
         }
       />

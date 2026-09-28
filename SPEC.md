@@ -292,6 +292,13 @@ then say "applied with Senior Backend v3"
 leaves the snapshot; rows applied before the feature stay NULL and render as
 they always did.
 
+**The board as a file.** `/applications` → CSV or Markdown
+(`web/applications-export.ts`, pure): every job holding a stage, in column
+order, with its company, applied date, the day it entered its column, fit,
+the resume it went out with, the recruiter, the notes and the link. Dates
+are days in the dashboard's time zone, and a cell that would run as a
+spreadsheet formula is written as text (`csv.ts`).
+
 ## Discovery
 
 When `discoveryEnabled=true`, the monthly HN parser scans each comment for

@@ -202,7 +202,9 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({
       />
       {/* The committed Tailwind build and the bundled Inter (npm run css):
           nothing on a dashboard page is fetched from a third party (2.7.0). */}
-      <link rel="stylesheet" href="/static/tailwind.css" />
+      {/* Versioned, so a browser that kept the old sheet takes the new one after an upgrade:
+          a class a release added would otherwise have no rule until its cache let go. */}
+      <link rel="stylesheet" href={`/static/tailwind.css?v=${APP_VERSION}`} />
       <style dangerouslySetInnerHTML={{ __html: TOKENS_CSS }} />
     </head>
     <body class="bg-surface font-sans text-sm text-ink antialiased">
