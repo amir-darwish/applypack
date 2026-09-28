@@ -2382,7 +2382,7 @@ release-discipline skill, a docs/site block does not.
       which lines a search would take (ADR 0036 addendum). The renderer
       the feature-gap analysis scoped stays a later stage with its own ADR.
 
-- [ ] **`fetcher-edges`** (minor, two tags) — the 2026-09 plan's W5d (audit
+- [x] **`fetcher-edges`** (minor, two tags) — the 2026-09 plan's W5d (audit
       FETCH-5 and the ADR 0035 trigger). **2026-09-28, v2.26.0:**
       - Workable reads every page (`nextPage` → `token`, cap 5). SmartRecruiters
         and Rippling log a board longer than what is read, and the Rippling
@@ -2398,9 +2398,15 @@ release-discipline skill, a docs/site block does not.
       - `web/format.ts:safeHref` makes every outside URL a link only when it
         is http(s).
 
-      Next: S13 (a job that vanished from a complete board is marked
-      expired), S23 (Check now fetches that company now), S26 (the packs on
-      "Sources for your searches"), S31 (validators on the Company row).
+      **v2.27.0:**
+      - S13: a stored row a whole board listing no longer carries reads as
+        *Closed* (`liveness = expired`, `api_delisted`), behind ADR 0019's
+        completeness gate.
+      - S23: Check now reads that company now, with progress.
+      - S26: the starter packs that fit the searches sit on "Sources for your
+        searches".
+      - S31: the conditional-request validators live on the Company row, so a
+        restart is not a full read (ADR 0035 addendum).
 
 ### 20.4 Owner items
 

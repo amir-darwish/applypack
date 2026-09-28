@@ -14,11 +14,11 @@ import { saveJobScores } from './score-store';
 import { storedPlace } from './classify-existing';
 import { mergeAiLocation } from './location-merge';
 import { rankByProfileFit, SCORE_BATCH, type ScorableJob } from './score-pick';
-
-export { SCORE_BATCH };
 import type { CronStats } from './cron-run';
 import { withoutMuted } from '../employer';
 import { mutedKeys } from './employer-store';
+
+export { SCORE_BATCH };
 
 const RECLASSIFY_BATCH_SIZE = 50;
 

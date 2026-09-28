@@ -123,3 +123,29 @@ truncation can never masquerade as vanishing.
 silence threshold on the real distribution the way F3's constants were
 re-measured. Or SmartRecruiters' Posting API starts answering again, which
 would also un-break ADR 0016's rung-1 check for that vendor.
+
+## Addendum (2026-09-28): the gate is in, and the vanish signal with it
+
+The deferred item above landed in 2.27.0 (TASKS S13) behind the gate this
+record wrote down:
+
+- **List completeness.** A fetcher says its read was whole
+  (`fetchers/listing.ts:listedInFull`) only when it can prove it:
+  - Greenhouse's `meta.total` equals the rows;
+  - Lever and Ashby list every open posting by contract;
+  - Workable's pages ran out on their own, not at the cap and not on a
+    failure;
+  - SmartRecruiters' `totalFound` fits its one page.
+
+  Every other source never says it, and no aggregator ever does.
+- **`status = ok`.** The walk compares only after a read with rows in it,
+  never on `empty` (gotcha 13: an empty 200 is not proof of anything), and
+  never on a 304.
+
+What it writes is ADR 0016's own vocabulary. A row the whole listing no
+longer carries becomes `liveness = expired` with `api_delisted`. A row this
+rule took down becomes `active` / `api_ok` again when it returns. An
+`expired` a verification found is never touched. The job page and the list
+say *Closed*. Measured live on a Greenhouse board: a row the board never
+carried was delisted on the first full read, a returned one was relisted,
+and a 304 compared nothing.

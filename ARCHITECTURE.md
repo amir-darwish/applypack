@@ -411,6 +411,8 @@ src/
     fetch-context.ts           ← pure: searchPlaces, the union of the running searches' places (FetchContext)
     source-order.ts            ← pure: seeded shuffle of the walk + politeDelayMs (ADR 0035)
     conditional.ts             ← ETag / Last-Modified per source; a 304 returns no jobs (ADR 0035)
+    listing.ts                 ← which reads were whole: a fetcher that can prove it says listedInFull (TASKS S13)
+    delisted.ts                ← pure: delistPlan — the rows a whole listing dropped, and the ones it took down that returned
     source-health.ts           ← pure: error → status, failure streak, quiet / silent (ADR 0019)
     {dates,xml-text}.ts        ← pure: safeDate for feed dates; rss-parser custom fields
     {greenhouse,lever,ashby}.ts ← per-company JSON fetchers
@@ -531,6 +533,7 @@ src/
     source-suggestions.ts       ← the token-driven feeds the running searches call for, with their state here
     welcome-steps.ts            ← pure first-run wizard rules (steps from data, score-run summary)
     next-things.ts              ← pure: the Overview's "Next: three things" until the first comparison (TASKS N11)
+    pack-offers.ts              ← the starter packs that fit the running searches, for the wizard and /companies (TASKS S26)
     cost-hint.ts                ← spendHint: the ledger's median for a feature, else what kind of money the first engine spends
     applications-export.ts      ← pure: the applications board as CSV and Markdown (TASKS N7)
     welcome-facts.ts            ← loads what the wizard and the Overview chip derive from
@@ -817,6 +820,8 @@ erDiagram
     String lastContentHash "the change watch"
     DateTime lastContentAlertAt
     String pendingContentHash "a change not reported yet"
+    Json validator "the last committed read's validators, kept across restarts (TASKS S31)"
+    Int crawlDelayMs "a user-added site's own Crawl-delay (ADR 0035)"
     String[] pastedLines "BROWSER_PAGE: the page's lines as last pasted (TASKS N8)"
     String[] pastedNew "the lines new against the paste before"
     DateTime pastedAt

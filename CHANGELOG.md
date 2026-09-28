@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.27.0] — 2026-09-28
+
+### Added
+- **A posting taken down from its company's board reads "Closed".** When
+  ApplyPack can tell it read a board's whole list (Greenhouse, Lever, Ashby,
+  Workable, SmartRecruiters), a stored posting missing from it is marked
+  closed on the job page and in the list. It is marked open again if it
+  returns. A list that might be cut short never closes anything.
+- **"Check now" on a watched company checks it now,** with the same progress
+  page as Fetch now, and says what it found.
+- **The starter packs that fit your searches** now appear on Companies →
+  Sources for your searches as well as in the setup wizard, with one Preview.
+
+### Changed
+- **A restart no longer re-downloads every board.** The "has this feed
+  changed?" answers are kept with each source, so an `npm start` install that
+  restarts with the laptop asks politely from its first check.
+
 ## [2.26.0] — 2026-09-28
 
 ### Fixed
