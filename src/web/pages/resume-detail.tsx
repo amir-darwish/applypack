@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmAction,
   Empty,
   Field,
   FitBadge,
@@ -110,14 +111,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
                 </Button>
               </ActionForm>
             )}
-            <ActionForm
-              action={`/resumes/${resume.id}/delete`}
-              confirm={deleteConfirm(resume.name, deleteImpact)}
-            >
-              <Button variant="danger" size="sm">
-                Delete
-              </Button>
-            </ActionForm>
+            <ConfirmAction action={`/resumes/${resume.id}/delete`} label="Delete" confirm={deleteConfirm(resume.name, deleteImpact)} />
           </div>
         }
       >

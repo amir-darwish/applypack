@@ -6,6 +6,7 @@ import {
   ActionForm,
   Button,
   Card,
+  ConfirmAction,
   Empty,
   Flash,
   Hint,
@@ -64,14 +65,13 @@ export const DiscoveryPage: FC<DiscoveryProps> = ({
               enabled={hnParserEnabled}
               action="/discovery/hn-parser-toggle"
               extra={
-                <ActionForm
+                <ConfirmAction
                   action="/discovery/hn-run"
+                  label="Run now"
+                  variant="violet"
+                  disabled={!hnParserEnabled}
                   confirm="Pull the latest HN Who-is-hiring thread now? Takes 1-2 minutes and spends AI credit."
-                >
-                  <Button size="sm" variant="violet" disabled={!hnParserEnabled}>
-                    Run now
-                  </Button>
-                </ActionForm>
+                />
               }
               more="The first pull (on the 1st of the month, or Run now) adds the thread as a source; from then on the hourly fetch reads it with the others, so new comments arrive through the month. It runs to 300–500 comments; the structured ones go through the same filter → classify → alert pipeline as any posting. Many small startups post only there. Switching the source off on Settings → Sources stops it too."
             >
@@ -181,14 +181,7 @@ const CandidateTable: FC<{ rows: CompanyCandidate[]; actions?: boolean }> = ({
                         Ignore
                       </Button>
                     </ActionForm>
-                    <ActionForm
-                      action={`/discovery/${c.id}/delete`}
-                      confirm="Delete this candidate permanently?"
-                    >
-                      <Button size="sm" variant="danger">
-                        Delete
-                      </Button>
-                    </ActionForm>
+                    <ConfirmAction action={`/discovery/${c.id}/delete`} label="Delete" confirm="Delete this candidate permanently?" />
                   </div>
                 </Td>
               )}

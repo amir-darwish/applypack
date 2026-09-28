@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   Code,
+  ConfirmAction,
   Disclosure,
   Empty,
   Field,
@@ -375,15 +376,13 @@ export const CompaniesPage: FC<CompaniesProps> = ({
                     </ActionForm>
                   </Td>
                   <Td>
-                    <ActionForm
+                    <ConfirmAction
                       action={`/companies/${c.id}/delete`}
+                      label="Delete"
+                      ariaLabel={`Delete ${c.name}`}
                       confirm={companyDeleteConfirm(c.name, c.deleteImpact)}
                       class="flex justify-end"
-                    >
-                      <Button size="sm" variant="danger">
-                        Delete
-                      </Button>
-                    </ActionForm>
+                    />
                   </Td>
                 </Tr>
               ))}

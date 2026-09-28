@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmAction,
   Empty,
   FILE_INPUT_CLASS,
   Flash,
@@ -106,14 +107,11 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                 Keep {retentionDays} more days
               </Button>
             </ActionForm>
-            <ActionForm
+            <ConfirmAction
               action={`/screen/${screening.id}/delete`}
+              label="Delete screening"
               confirm="Delete this screening? It removes the screening, the uploaded copies of the resumes and every verdict from the database. Your files on disk are not touched. This cannot be undone."
-            >
-              <Button variant="danger" size="sm">
-                Delete screening
-              </Button>
-            </ActionForm>
+            />
           </div>
         }
       >

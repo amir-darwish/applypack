@@ -5,6 +5,7 @@ import { fitTone, fitWord, formatDate, formatRelative, statusLabel, statusTone, 
 import type { FlashKind, FlashMessage } from './flash';
 import { hideCellsClass, hideHeaderClass, type HideBelow } from './table-hide';
 import { TOKENS, hex } from './tokens';
+import { hashShortId } from '../text-utils';
 
 /*
  * Shared primitives. Every page composes these instead of writing raw
@@ -742,6 +743,69 @@ const BUTTON_SIZE = {
   lg: 'px-4 py-2 text-sm',
 } as const;
 
+function buttonClass(variant: ButtonVariant, size: keyof typeof BUTTON_SIZE, extra = ''): string {
+  return `inline-flex min-h-[32px] cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]} ${extra}`;
+}
+
+/**
+ * A POST that deserves a second look — a delete, a spend — behind one more
+ * press that needs no JavaScript (TASKS U8). The first press opens a native
+ * popover (`popovertarget`) saying what will happen, with the real button in
+ * it: the popover sits in the top layer, so a table's scroll box cannot clip
+ * it, and Escape or a click outside closes it. `confirm()` in an onsubmit did
+ * nothing without a script, and the delete went through.
+ */
+export const ConfirmAction: FC<{
+  action: string;
+  /** What the first button says. */
+  label: string;
+  /** What will happen, in one or two sentences. */
+  confirm: string;
+  /** The real button's words; the label when omitted. */
+  yes?: string;
+  variant?: ButtonVariant;
+  size?: keyof typeof BUTTON_SIZE;
+  hidden?: Record<string, string | number>;
+  /** On a wrapper around the button — alignment in a cell or a row. */
+  class?: string;
+  /** For a label that needs more than its words ("Delete" on a row). */
+  ariaLabel?: string;
+  disabled?: boolean;
+}> = ({ action, label, confirm, yes, variant = 'danger', size = 'sm', hidden, class: extra, ariaLabel, disabled }) => {
+  // The same action with the same fields is the same question, so one id per question on a page.
+  const id = `confirm-${hashShortId(`${action}\n${label}\n${JSON.stringify(hidden ?? {})}`)}`;
+  const parts = disabled ? (
+    <button type="button" class={buttonClass(variant, size)} disabled>
+      {label}
+    </button>
+  ) : (
+    <>
+      <button type="button" popovertarget={id} class={buttonClass(variant, size)} aria-label={ariaLabel}>
+        {label}
+      </button>
+      <div
+        id={id}
+        popover="auto"
+        role="dialog"
+        aria-label={ariaLabel ?? label}
+        class="m-auto w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-surface-raised p-4 text-left text-[13px] leading-5 text-ink shadow-lg backdrop:bg-[rgb(0_0_0/0.15)]"
+      >
+        <p>{confirm}</p>
+        <form method="post" action={action} class="mt-3 flex justify-end gap-2">
+          {hidden && Object.entries(hidden).map(([k, v]) => <input type="hidden" name={k} value={String(v)} />)}
+          <Button type="button" variant="secondary" size="sm" popovertarget={id} popovertargetaction="hide" autofocus>
+            Cancel
+          </Button>
+          <Button variant={variant === 'ghost' ? 'danger' : variant} size="sm">
+            {yes ?? label}
+          </Button>
+        </form>
+      </div>
+    </>
+  );
+  return extra ? <div class={extra}>{parts}</div> : parts;
+};
+
 export const Button: FC<
   PropsWithChildren<
     Record<string, unknown> & {
@@ -751,7 +815,7 @@ export const Button: FC<
     }
   >
 > = ({ children, variant = 'primary', size = 'md', href, class: className = '', ...rest }) => {
-  const cls = `inline-flex min-h-[32px] cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]} ${className}`;
+  const cls = buttonClass(variant, size, className as string);
   if (href) {
     return (
       <a href={href} class={cls} {...rest}>
@@ -788,22 +852,14 @@ export const SUBMIT_ONCE =
 export const ActionForm: FC<
   PropsWithChildren<{
     action: string;
-    confirm?: string;
     hidden?: Record<string, string | number>;
     class?: string;
     /** Disable the buttons once pressed — for POSTs that start an AI run. */
     once?: boolean;
   }>
-> = ({ action, confirm, hidden, children, class: className = '', once }) => (
-  <form
-    method="post"
-    action={action}
-    class={`flex ${className}`}
-    onsubmit={
-      [confirm ? `if(!confirm(${JSON.stringify(confirm)}))return false;` : '', once ? SUBMIT_ONCE : '']
-        .join('') || undefined
-    }
-  >
+> = ({ action, hidden, children, class: className = '', once }) => (
+  // A POST that wants a second look is ConfirmAction's, which needs no script (TASKS U8).
+  <form method="post" action={action} class={`flex ${className}`} onsubmit={once ? SUBMIT_ONCE : undefined}>
     {hidden &&
       Object.entries(hidden).map(([k, v]) => <input type="hidden" name={k} value={String(v)} />)}
     {children}
