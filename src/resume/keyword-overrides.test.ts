@@ -128,6 +128,18 @@ test('an added term reads its status from the resume, never from a guess', async
   assert.equal(missing.keywords.at(-1)?.status, 'ask_user', 'not in the resume — a question, not a claim');
 });
 
+test('an added term is graded for evidence like every analysed row (score v6)', async () => {
+  const inSentence = addKeyword(LIST, { term: 'Docker', requirement: 'must' }, await context());
+  assert.ok(inSentence.ok);
+  assert.equal(inSentence.keywords.at(-1)?.evidence, 'described');
+  const onList = addKeyword([], { term: 'Docker', requirement: 'must' }, await context('Skills: PHP, Docker, Redis'));
+  assert.ok(onList.ok);
+  assert.equal(onList.keywords.at(-1)?.evidence, 'listed');
+  const absent = addKeyword(LIST, { term: 'Kafka', requirement: 'must' }, await context());
+  assert.ok(absent.ok);
+  assert.equal(absent.keywords.at(-1)?.evidence, 'absent');
+});
+
 test('an added term the posting never mentions is flagged unanchored', async () => {
   const r = addKeyword(LIST, { term: 'Kubernetes', requirement: 'nice' }, await context());
   assert.ok(r.ok);

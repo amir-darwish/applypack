@@ -16,10 +16,13 @@ import type { MatchKeyword } from './prompts';
  * A recruiter reads them completely differently, and until now the product had
  * no way to tell them apart: `status: present` covered both.
  *
- * It is read by the page (so a keyword can say where it lives) and by the
- * suggestion rules, whose REQUIRED COVERAGE floor already wanted to know which
- * must-level terms live only in a skills list. It does NOT feed the score —
- * one scoring change at a time, and this one wants measuring first.
+ * It is read by the page (so a keyword can say where it lives), by the
+ * suggestion rules, whose REQUIRED COVERAGE floor wants to know which
+ * must-level terms live only in a skills list, and since score v6 by the
+ * formula: a present term only listed earns `SCORING.listedCredit` (ADR 0058).
+ *
+ * MIRROR: src/web/public/evidence.mjs grades for the live ring — change one,
+ * change the other; src/web/evidence.test.ts holds them equal.
  *
  * Pure: the matcher and the text arrive as arguments.
  */
@@ -110,6 +113,19 @@ export interface EvidenceReport {
   keywords: MatchKeyword[];
   /** How many of the wanted terms live only on a list of terms — the "invisible skills" count. */
   listedOnly: number;
+}
+
+/**
+ * Grades only the rows that carry no grade — a comparison stored before score
+ * v6 (ADR 0058) meets the formula that reads it. A graded row is the analysis's
+ * own reading of the same text and stays as it is.
+ */
+export function withEvidence(
+  keywords: MatchKeyword[],
+  resumeText: string,
+  matcher: Pick<KeywordMatcher, 'findTerm'>,
+): MatchKeyword[] {
+  return keywords.map((k) => (k.evidence === undefined ? { ...k, evidence: evidenceFor(k, resumeText, matcher) } : k));
 }
 
 /** Stamps `evidence` on every keyword the resume shows. */

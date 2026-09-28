@@ -116,6 +116,7 @@ of truth when the two disagree.
 - 0055 Every AI attempt is a ledger row, and a bill, a plan and a local model are never added together *(extends 0007)*
 - 0056 A company can be muted, and a company applied to can rest, before any AI reads its postings
 - 0057 A model on this machine is an engine of its own, and it is held to its window *(extends 0013/0014)*
+- 0058 How strongly the text shows a term counts, a little (score v6) *(amends 0012/0045)*
 
 Check a proposal against these before touching process layout, sources,
 scheduling, profiles, how the AI is called, the resume score or employer

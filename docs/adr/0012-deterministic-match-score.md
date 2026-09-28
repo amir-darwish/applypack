@@ -102,3 +102,12 @@ and 2 of the inflation analysis (TASKS R1, R2):
   candidate confirmed. Writing the word in lifts it, so the ceiling does not
   move. `SCORING.version` 5, on both sides of the parity test.
 
+
+## Addendum (2026-09-28): how strongly the text shows a term (score v6)
+
+A present term the text shows only on a list of terms — a skills line, a
+stack line — earns 0.85 of its credit, and in a sentence about work it earns
+all of it. The grade is `evidence.ts`'s, read off the text, and the browser
+grades the same way (`public/evidence.mjs`). Measured on 31 stored comparisons
+before choosing: median −2, worst −5. It never touches the primary-stack cap
+or the ceiling. `SCORING.version` 6; see ADR 0058.

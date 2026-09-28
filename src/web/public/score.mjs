@@ -8,10 +8,12 @@
  */
 
 export const SCORING = {
-  version: 5,
+  version: 6,
   keywordMax: 60,
   requirementWeight: { must: 3, preferred: 2, nice: 1, context: 0 },
   statusCredit: { present: 1, add: 0.5, ask_user: 0, cannot_claim: 0 },
+  // v6 (ADR 0058): a written term the text shows only on a list of terms.
+  listedCredit: 0.85,
   // "Has it" for the primary cap — see score.ts. `add` counts: the cap asks
   // whether the candidate has the core stack, not whether the word is typed.
   primaryCovered: ['present', 'add'],
@@ -171,7 +173,7 @@ export function entriesFromLive(rows) {
     return {
       requirement: r.requirement ?? 'preferred',
       primary,
-      credit: written ? 1 : has ? 0.5 : 0,
+      credit: written ? (r.evidence === 'listed' ? SCORING.listedCredit : 1) : has ? 0.5 : 0,
       primaryHit: primary && has && !borrowed,
       primaryWritten: primary && written,
       ceilCredit: has ? 1 : 0,

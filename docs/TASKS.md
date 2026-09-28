@@ -2408,7 +2408,7 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
-- [x] **`resume-honesty`** (minor, part 1 v2.31.0) — the 2026-09 plan's
+- [x] **`resume-honesty`** (minor, parts 1–3 v2.31.0 … v2.33.0) — the 2026-09 plan's
       W7. R1: a one-off file is judged on its text alone unless it is the
       person's own (a checkbox on both launchers, or the same text as a saved
       resume); R2: a skill only another resume backs keeps half credit but
@@ -2430,6 +2430,15 @@ release-discipline skill, a docs/site block does not.
         nothing stored.
       - R5: `bench:resume` has a hedged-stack fixture (brief first, then the
         match). R6: the red-team cases in `skill-normalization.test.ts`.
+
+      **v2.33.0 (part 3, ADR 0058):**
+      - R7: score v6 — a present term the text shows only on a list earns
+        0.85 of its credit (measured on 31 stored comparisons: median −2,
+        worst −5); the live ring grades with `public/evidence.mjs`, its
+        parity-tested mirror; the cap and the ceiling are untouched.
+      - R8: each present term shows its years at work and how long ago the
+        last role naming it ended (`resume/usage.ts`), amber past 36 months;
+        shown, not scored.
 
 - [x] **`ai-provider-hardening`** (patch, v2.28.1) — the 2026-09 plan's AI-4
       rest (H40–H46; H44 had shipped). A refused key or sign-in is its own

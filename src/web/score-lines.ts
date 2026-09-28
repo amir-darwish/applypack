@@ -1,7 +1,7 @@
 import { effectiveRequirement } from '../resume/keyword-overrides';
 import type { MatchAction, MatchHardRequirement, MatchKeyword } from '../resume/prompts';
 import { clipWords } from '../text-utils';
-import type { MatchAlignment, ScoreBreakdown } from '../resume/score';
+import { SCORING, type MatchAlignment, type ScoreBreakdown } from '../resume/score';
 
 /*
  * The five sentences behind the number (docs/score-lines-plan.md).
@@ -9,10 +9,11 @@ import type { MatchAlignment, ScoreBreakdown } from '../resume/score';
  * What this replaces said what the arithmetic did — "Keywords 60/60 ·
  * Alignment 40/40" — which is the size of a weighted pool nobody outside the
  * code knows about. A candidate is not asking how the sum was done; they are
- * asking what it decided about them. Three of these lines are the score, two
- * are not and still decide whether to send the thing: a live 100/100 sat above
- * "3 suggested edits · 5 removals", one unconfirmed hard requirement, and the
- * model's own verdict that the resume undersold itself.
+ * asking what it decided about them. Four of these lines are the score since
+ * v6 (ADR 0058 moved "Shown at work" in; a row scored before stays as it was
+ * scored), one is not and still decides whether to send the thing: a live
+ * 100/100 sat above "3 suggested edits · 5 removals", one unconfirmed hard
+ * requirement, and the model's own verdict that the resume undersold itself.
  *
  * Fractions and words, never invented percentages: the variance fixture
  * measured a ±5 spread on a stable pair, so "Requirements 76%" would claim a
@@ -32,9 +33,9 @@ export interface ScoreLine {
 }
 
 export interface ScoreLines {
-  /** The three that made the number. */
+  /** The lines that made the number. */
   scored: ScoreLine[];
-  /** The two the formula does not count, and that still decide whether to send it. */
+  /** The ones the formula does not count, and that still decide whether to send it. */
   diagnostic: ScoreLine[];
 }
 
@@ -46,12 +47,16 @@ export interface LinesInput {
 
 const GRADES = ['title', 'summary', 'recent role'] as const;
 
+/** Score v6 counts a term shown only in a list at `listedCredit` (ADR 0058); an older row did not. */
+const EVIDENCE_SCORED_FROM = 6;
+
 export function scoreLines(input: LinesInput): ScoreLines {
+  const shown = shownAtWorkLine(input);
+  const counted = input.breakdown.v >= EVIDENCE_SCORED_FROM;
+  const present = (lines: (ScoreLine | null)[]) => lines.filter((l): l is ScoreLine => l !== null);
   return {
-    scored: [requirementsLine(input), coreStackLine(input), firstGlanceLine(input)].filter(
-      (l): l is ScoreLine => l !== null,
-    ),
-    diagnostic: [shownAtWorkLine(input), toConfirmLine(input)].filter((l): l is ScoreLine => l !== null),
+    scored: present([requirementsLine(input), coreStackLine(input), firstGlanceLine(input), counted ? shown : null]),
+    diagnostic: present([counted ? null : shown, toConfirmLine(input)]),
   };
 }
 
@@ -113,11 +118,11 @@ function firstGlanceLine({ breakdown }: LinesInput): ScoreLine | null {
 }
 
 /**
- * The line the formula does not count. A term named on a skills line and one
- * shown inside a bullet with a number read completely differently to a human,
- * and nothing measured the difference before `evidence` (v1.70.0).
+ * A term named on a skills line and one shown inside a bullet with a number
+ * read completely differently to a human, and nothing measured the difference
+ * before `evidence` (v1.70.0). Since v6 the score does too, a little.
  */
-function shownAtWorkLine({ keywords }: LinesInput): ScoreLine | null {
+function shownAtWorkLine({ breakdown, keywords }: LinesInput): ScoreLine | null {
   const wanted = keywords.filter(
     (k) => k.status === 'present' && effectiveRequirement(k) !== 'context' && k.evidence !== undefined,
   );
@@ -130,7 +135,11 @@ function shownAtWorkLine({ keywords }: LinesInput): ScoreLine | null {
     label: 'Shown at work',
     text: `${wanted.length - listed.length} of ${wanted.length} in a bullet · ${listed.length} named only in a list`,
     tone: 'warn',
-    title: `Named and never shown: ${listed.map((k) => k.term).join(', ')}. A skills line proves nothing to a human reader.`,
+    title:
+      `Named and never shown: ${listed.map((k) => k.term).join(', ')}. A skills line proves nothing to a human reader.` +
+      (breakdown.v >= EVIDENCE_SCORED_FROM
+        ? ` Each earns ${Math.round(SCORING.listedCredit * 100)}% of its credit here; a bullet about the work you did with it earns the rest.`
+        : ''),
   };
 }
 
@@ -264,8 +273,8 @@ export function mainAdvice({ breakdown, keywords, hard, actions }: AdviceInput):
   const unbacked = musts.find((k) => k.status === 'ask_user' || k.status === 'cannot_claim');
   if (unbacked) return `${unbacked.term} is a must here and nothing backs it yet — confirm it where it is true.`;
 
-  // Named on a skills line and never shown at work: the score counts it in
-  // full, a human reads it as a claim with nothing behind it (evidence.ts).
+  // Named on a skills line and never shown at work: the score discounts it a
+  // little (v6), a human reads it as a claim with nothing behind it (evidence.ts).
   const listed = musts.filter((k) => k.status === 'present' && k.evidence === 'listed');
   const first = listed[0];
   if (first) {

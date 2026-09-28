@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { EvidenceLevel } from './evidence';
 
 /*
  * Deterministic match score (ADR 0012). The model judges FACTS — per-keyword
@@ -27,12 +28,22 @@ export interface MatchAlignment {
 
 export const SCORING = {
   /** v4: either/or requirement groups count once (ADR 0044). */
-  version: 5,
+  version: 6,
   /** Keyword coverage: up to 60 points, weighted by how hard the posting wants each term. */
   keywordMax: 60,
   requirementWeight: { must: 3, preferred: 2, nice: 1, context: 0 } as Record<RequirementLevel, number>,
   /** Credit per AI status: evidenced-but-unwritten counts half, unverified counts zero. */
   statusCredit: { present: 1, add: 0.5, ask_user: 0, cannot_claim: 0 } as Record<KeywordStatus, number>,
+  /**
+   * v6 (ADR 0058): a written term the text shows only on a list of terms —
+   * a skills line, a stack line — earns this much of a present term's credit;
+   * inside a sentence about work it earns all of it (evidence.ts). Measured on
+   * 31 stored comparisons before choosing: median −2, worst −5. It never
+   * touches the primary-stack cap (the candidate HAS the term) or the ceiling
+   * (writing the work it was used for is the edit that lifts it). A keyword
+   * graded before v6 carries no grade and keeps full credit.
+   */
+  listedCredit: 0.85,
   /**
    * Statuses that mean "this candidate HAS it", which is the only question the
    * primary-stack cap asks. `add` is in it because `add` is defined as the
@@ -287,6 +298,8 @@ export interface ScoredKeyword {
   group?: string | null;
   /** Another of the candidate's resumes evidences it (facts.ts:annotateElsewhere). */
   elsewhere?: string | null;
+  /** How strongly the text shows it (evidence.ts); absent on a row graded before v6. */
+  evidence?: EvidenceLevel;
 }
 
 /**
@@ -304,7 +317,7 @@ export function entriesFromKeywords(
     return {
       requirement: k.requirement,
       primary,
-      credit: SCORING.statusCredit[k.status] ?? 0,
+      credit: k.status === 'present' && k.evidence === 'listed' ? SCORING.listedCredit : SCORING.statusCredit[k.status] ?? 0,
       primaryHit: SCORING.primaryCovered.includes(k.status) && !borrowed,
       primaryWritten: k.status === 'present',
       ceilCredit: claimable ? 1 : 0,
