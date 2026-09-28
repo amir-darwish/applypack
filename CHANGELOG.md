@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.28.1] — 2026-09-28
+
+### Fixed
+- **A refused API key was tried first on every call.** A key or a sign-in
+  the vendor turns away now moves the call to the next engine at once, and
+  that engine is left alone for ten minutes or until you paste a new key.
+  The message says "the key was refused" and where to fix it.
+- **Retries followed the vendor's rules only partly.** A rate limit or an
+  overloaded server gets one more try after the wait the server asks for,
+  when that is ten seconds or less. A used-up plan or quota is not retried,
+  and the Anthropic library no longer waits on its own for as long as a
+  server says, on top of that.
+- **A rate-limited Claude CLI call was never retried,** because the CLI
+  exits with an error code. It is now judged by what it printed.
+- **Stopping ApplyPack left a CLI call running** on your plan until its
+  timeout. The worker and the dashboard now end it as they stop.
+- **The Gemini and Codex CLIs could wait on an open input** until the call
+  timed out; their input is closed as they start. A prompt that opened with
+  a dash would have been read as an option by either CLI.
+
 ## [2.28.0] — 2026-09-28
 
 ### Added

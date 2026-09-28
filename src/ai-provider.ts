@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { execFile } from 'node:child_process';
+import { execFile, type ChildProcess } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { promisify } from 'node:util';
 import { config } from './config';
@@ -14,13 +14,18 @@ import {
   buildCodexCliArgs,
   buildGeminiCliArgs,
   CLI_PROVIDER_ENV_KEYS,
+  cliRetryable,
   cliThinkingCap,
   cliFailure,
   describeAiFailure,
+  failureKind,
+  failureOutcome,
   parseClaudeCodeOutput,
   parseCodexCliOutput,
   parseGeminiCliOutput,
   parseOpenAiChatResponse,
+  refusedReason,
+  retryWait,
   webToolsDirectOnly,
   type CliOutcome,
 } from './ai-provider-parse';
@@ -93,8 +98,6 @@ export interface AiProvider {
 
 const failed = (outcome: AiOutcome, spend: AiSpend | null = null): AiAttempt => ({ text: null, outcome, spend });
 
-const RATE_LIMIT_RETRY_DELAY_MS = 2_000;
-const MAX_ATTEMPTS = 2;
 // Server-side web tools pause after ~10 tool calls (stop_reason pause_turn);
 // re-sending the turn resumes them. Cap the resumes so a search spiral ends.
 const MAX_PAUSE_TURN_RESUMES = 5;
@@ -131,7 +134,10 @@ class AnthropicApiProvider implements AiProvider {
   private cached: { key: string; client: Anthropic } | null = null;
 
   private clientFor(key: string): Anthropic {
-    if (this.cached?.key !== key) this.cached = { key, client: new Anthropic({ apiKey: key }) };
+    // The SDK's own retries (two, waiting whatever Retry-After says, uncapped)
+    // ran under the chain's deadline and on top of ours; the loop below owns
+    // them now (H41).
+    if (this.cached?.key !== key) this.cached = { key, client: new Anthropic({ apiKey: key, maxRetries: 0 }) };
     return this.cached.client;
   }
 
@@ -145,29 +151,29 @@ class AnthropicApiProvider implements AiProvider {
     // What the requests of this call spent so far: a web-search turn resumed
     // and then refused was still billed for the turns before it.
     const tally: { spend: AiSpend | null } = { spend: null };
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const deadline = Date.now() + (req.timeoutMs ?? CLI_TIMEOUT_MS);
+    for (let attempt = 0; ; attempt++) {
       try {
         return await this.run(req, this.clientFor(key), tally);
       } catch (err) {
         const status = err instanceof Anthropic.APIError ? err.status : undefined;
-        if (status === 429 && attempt < MAX_ATTEMPTS - 1) {
-          logger.warn({ label: req.label }, 'ai: rate-limited, retrying');
-          await sleep(RATE_LIMIT_RETRY_DELAY_MS);
+        const reason = status ? `HTTP ${status}: ${errorReason(err)}` : errorReason(err);
+        const timedOut = err instanceof Anthropic.APIConnectionTimeoutError;
+        // A dropped connection is worth the retry a rate limit gets; a timeout already spent the budget.
+        const kind = err instanceof Anthropic.APIConnectionError && !timedOut ? 'transient' : failureKind(status, errorReason(err));
+        const headers = err instanceof Anthropic.APIError ? err.headers : undefined;
+        const wait = attempt === 0 && kind === 'transient' ? retryWait((n) => headers?.get(n), deadline - Date.now(), Date.now()) : null;
+        if (wait !== null) {
+          logger.warn({ label: req.label, status, waitMs: wait }, 'ai: request failed, one more try');
+          await sleep(wait);
           continue;
         }
         logger.error({ err, status, label: req.label }, 'ai: request failed');
-        req.onError?.(
-          describeAiFailure(status ? `HTTP ${status}: ${errorReason(err)}` : errorReason(err)),
-        );
+        req.onError?.(describeAiFailure(kind === 'auth' ? refusedReason(reason, 'key') : reason));
         // The request that failed is not billed; the ones before it were.
-        return failed(
-          status === 429 ? 'rate_limited' : err instanceof Anthropic.APIConnectionTimeoutError ? 'timeout' : 'error',
-          tally.spend,
-        );
+        return failed(timedOut ? 'timeout' : failureOutcome(kind), tally.spend);
       }
     }
-    req.onError?.('rate-limited on every attempt');
-    return failed('rate_limited', tally.spend);
   }
 
   /** A reply the API billed and the caller cannot use: logged and reported as the thrown errors are. */
@@ -284,9 +290,11 @@ class OpenAiApiProvider implements AiProvider {
         : { max_tokens: req.maxTokens }),
       ...(reasoning ? { reasoning_effort: 'low' } : {}),
     });
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const deadline = Date.now() + (req.timeoutMs ?? CLI_TIMEOUT_MS);
+    for (let attempt = 0; ; attempt++) {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), req.timeoutMs ?? CLI_TIMEOUT_MS);
+      // A retry runs on what is left of the attempt's budget, not on a fresh one.
+      const timer = setTimeout(() => ctrl.abort(), Math.max(1, deadline - Date.now()));
       try {
         const resp = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
@@ -300,18 +308,21 @@ class OpenAiApiProvider implements AiProvider {
         const raw = await resp.text();
         const out = parseOpenAiChatResponse(raw);
         if (out.text !== null) return { text: out.text, outcome: 'ok', spend: out.spend ?? null };
-        const rateLimited = out.rateLimited || resp.status === 429;
-        if (rateLimited && attempt < MAX_ATTEMPTS - 1) {
-          logger.warn({ label: req.label }, 'ai: openai rate-limited, retrying');
-          await sleep(RATE_LIMIT_RETRY_DELAY_MS);
+        const reason = `HTTP ${resp.status}: ${out.error ?? 'no reply text'}`;
+        // A reply that parsed (cut off, filtered, empty) is judged by its outcome; the status speaks for the rest.
+        const kind = out.outcome ? 'other' : failureKind(resp.status, out.error ?? '');
+        const wait = attempt === 0 && kind === 'transient' ? retryWait((n) => resp.headers.get(n), deadline - Date.now(), Date.now()) : null;
+        if (wait !== null) {
+          logger.warn({ label: req.label, status: resp.status, waitMs: wait }, 'ai: openai request failed, one more try');
+          await sleep(wait);
           continue;
         }
         logger.error(
           { label: req.label, status: resp.status, error: out.error, model },
           'ai: openai request failed',
         );
-        req.onError?.(describeAiFailure(`HTTP ${resp.status}: ${out.error ?? 'no reply text'}`));
-        return failed(out.outcome ?? (rateLimited ? 'rate_limited' : 'error'), out.spend ?? null);
+        req.onError?.(describeAiFailure(kind === 'auth' ? refusedReason(reason, 'key') : reason));
+        return failed(out.outcome ?? failureOutcome(kind), out.spend ?? null);
       } catch (err) {
         logger.error({ err, label: req.label, model }, 'ai: openai request failed');
         req.onError?.(describeAiFailure(errorReason(err)));
@@ -320,8 +331,6 @@ class OpenAiApiProvider implements AiProvider {
         clearTimeout(timer);
       }
     }
-    req.onError?.('rate-limited on every attempt');
-    return failed('rate_limited');
   }
 }
 
@@ -339,7 +348,30 @@ interface CliSpec {
   thinkingCap?: boolean;
 }
 
-/** Headless-CLI backend: spawn, parse JSON stdout, one retry on rate limit. */
+/**
+ * CLI children in flight, and whether new ones are refused. A process on its
+ * way out ends them (H43): orphaned, a CLI ran on to its timeout on the
+ * user's plan, for an answer nobody would read.
+ */
+const liveChildren = new Set<ChildProcess>();
+let stopping = false;
+
+/** Kills every CLI child in flight and refuses new ones; the count, for the shutdown log. */
+export function stopCliChildren(): number {
+  stopping = true;
+  const killed = liveChildren.size;
+  for (const child of liveChildren) {
+    child.kill('SIGKILL');
+    // A process the CLI started itself would hold our end of the pipes open,
+    // and the call with them: closed here, the call ends now.
+    child.stdout?.destroy();
+    child.stderr?.destroy();
+  }
+  liveChildren.clear();
+  return killed;
+}
+
+/** Headless-CLI backend: spawn, parse JSON stdout, one retry on a rate limit or an overloaded server. */
 class CliProvider implements AiProvider {
   constructor(
     readonly name: string,
@@ -348,39 +380,66 @@ class CliProvider implements AiProvider {
   ) {}
 
   async complete(req: AiRequest): Promise<AiAttempt> {
+    if (stopping) {
+      req.onError?.('ApplyPack is shutting down');
+      return failed('error');
+    }
     const args = this.spec.buildArgs({
       system: req.system,
       user: req.user,
       model: req.model ?? this.spec.defaultModel,
       webTools: req.webTools,
     });
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      let stdout: string;
+    const budgetMs = req.timeoutMs ?? CLI_TIMEOUT_MS;
+    const deadline = Date.now() + budgetMs;
+    for (let attempt = 0; ; attempt++) {
+      const run = execFileAsync(this.bin, args, {
+        // A retry runs on what is left of the attempt's budget, not on a fresh one.
+        timeout: Math.max(1, deadline - Date.now()),
+        // A child past its budget is killed, not asked: execFile never
+        // escalates past SIGTERM, and a CLI that traps it would hold the
+        // tick past every deadline (AI-2). The CLIs keep no state to flush.
+        killSignal: 'SIGKILL',
+        maxBuffer: CLI_MAX_BUFFER,
+        cwd: this.spec.cwd,
+        env: buildCliEnv(this.spec.envKeys, this.envSource(req)),
+      });
+      // Nothing is ever written to a CLI's stdin. Closed at once, a CLI that
+      // reads it when it is not a terminal (Codex, the Gemini CLI) meets its
+      // end instead of waiting on it until the timeout.
+      run.child.stdin?.end();
+      liveChildren.add(run.child);
+      let result: { stdout: string } | { err: unknown };
       try {
-        ({ stdout } = await execFileAsync(this.bin, args, {
-          timeout: req.timeoutMs ?? CLI_TIMEOUT_MS,
-          // A child past its budget is killed, not asked: execFile never
-          // escalates past SIGTERM, and a CLI that traps it would hold the
-          // tick past every deadline (AI-2). The CLIs keep no state to flush.
-          killSignal: 'SIGKILL',
-          maxBuffer: CLI_MAX_BUFFER,
-          cwd: this.spec.cwd,
-          env: buildCliEnv(this.spec.envKeys, this.envSource(req)),
-        }));
+        result = { stdout: (await run).stdout };
       } catch (err) {
+        result = { err };
+      } finally {
+        liveChildren.delete(run.child);
+      }
+      if ('err' in result) {
+        if (stopping) {
+          req.onError?.('stopped: ApplyPack is shutting down');
+          return failed('error');
+        }
         // execFile puts the whole command line — prompt included — in
         // err.message, so neither the log line nor the flash may carry `err`:
         // the reason is read off stderr, the exit code and the signal.
-        const failure = cliFailure(err, req.timeoutMs ?? CLI_TIMEOUT_MS);
-        logger.error({ label: req.label, provider: this.name, ...failure.log }, 'ai: cli process failed');
-        req.onError?.(describeAiFailure(`${this.bin}: ${failure.reason}`));
+        const failure = cliFailure(result.err, budgetMs);
         // A CLI that exits non-zero may still have printed its result, usage
-        // included (Claude Code does): what it spent is read off that.
-        const e = err as { killed?: unknown; stdout?: unknown };
+        // included (Claude Code does — a rate limit too): what it spent, and
+        // whether one more try is worth it, is read off that.
+        const e = result.err as { killed?: unknown; stdout?: unknown };
         const printed = typeof e.stdout === 'string' && e.stdout.trim() ? this.spec.parse(e.stdout) : null;
-        return failed(e.killed === true ? 'timeout' : (printed?.outcome ?? 'error'), printed?.spend ?? null);
+        if (e.killed !== true && printed && (await this.waitedToRetry(req, printed, attempt, deadline))) continue;
+        logger.error({ label: req.label, provider: this.name, ...failure.log }, 'ai: cli process failed');
+        const refused = printed?.outcome === 'unauthorized' || failureKind(null, failure.reason) === 'auth';
+        // The CLI's own sentence, when it printed one, says more than its exit code.
+        const reason = printed?.error ?? `${this.bin}: ${failure.reason}`;
+        req.onError?.(describeAiFailure(refused ? refusedReason(reason, 'sign-in') : reason));
+        return failed(e.killed === true ? 'timeout' : refused ? 'unauthorized' : (printed?.outcome ?? 'error'), printed?.spend ?? null);
       }
-      const parsedOut = this.spec.parse(stdout);
+      const parsedOut = this.spec.parse(result.stdout);
       // An empty reply is a failure to fail over from, not a text to parse.
       const out =
         parsedOut.text !== null && parsedOut.text.trim().length === 0
@@ -390,21 +449,28 @@ class CliProvider implements AiProvider {
         logger.info({ label: req.label, provider: this.name, model: req.model, ...out.usage }, 'ai: reply');
         return { text: out.text, outcome: 'ok', spend: out.spend ?? null };
       }
-      if (out.rateLimited && attempt < MAX_ATTEMPTS - 1) {
-        logger.warn({ label: req.label, provider: this.name }, 'ai: cli rate-limited, retrying');
-        await sleep(RATE_LIMIT_RETRY_DELAY_MS);
-        continue;
-      }
+      if (await this.waitedToRetry(req, out, attempt, deadline)) continue;
       logger.error(
         { label: req.label, provider: this.name, error: out.error, rateLimited: out.rateLimited },
         'ai: cli returned an error',
       );
-      req.onError?.(describeAiFailure(out.error ?? 'the CLI returned no text'));
+      const reason = out.error ?? 'the CLI returned no text';
+      req.onError?.(describeAiFailure(out.outcome === 'unauthorized' ? refusedReason(reason, 'sign-in') : reason));
       const outcome = parsedOut.text !== null ? 'empty' : (out.outcome ?? (out.rateLimited ? 'rate_limited' : 'error'));
       return failed(outcome, out.spend ?? null);
     }
-    req.onError?.('rate-limited on every attempt');
-    return failed('rate_limited');
+  }
+
+  /**
+   * The one retry a CLI gets, for a limit that clears in seconds (H41). A CLI
+   * names no wait, so it is the default one; true when it waited.
+   */
+  private async waitedToRetry(req: AiRequest, out: CliOutcome, attempt: number, deadline: number): Promise<boolean> {
+    const wait = attempt === 0 && cliRetryable(out) ? retryWait(() => null, deadline - Date.now(), Date.now()) : null;
+    if (wait === null) return false;
+    logger.warn({ label: req.label, provider: this.name, waitMs: wait }, 'ai: cli rate-limited, one more try');
+    await sleep(wait);
+    return true;
   }
 
   /**

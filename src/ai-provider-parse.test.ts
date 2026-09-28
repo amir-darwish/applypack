@@ -10,9 +10,14 @@ import {
   buildGeminiCliArgs,
   CLI_PROVIDER_ENV_KEYS,
   CLI_THINKING_CAP_ENV,
+  cliRetryable,
   cliThinkingCap,
   describeAiFailure,
+  failureKind,
+  failureOutcome,
   parseClaudeCodeOutput,
+  refusedReason,
+  retryWait,
   webToolsDirectOnly,
   parseCodexCliOutput,
   parseGeminiCliOutput,
@@ -109,12 +114,12 @@ test('buildGeminiCliArgs prepends system text and gates web tools', () => {
   assert.deepEqual(plain, [
     '--output-format', 'json',
     '--model', 'gemini-2.5-flash',
-    '--prompt', 'S\n\nU',
+    '--prompt=S\n\nU',
   ]);
 
   const web = buildGeminiCliArgs({ ...base, webTools: true });
   assert.ok(web.includes('google_web_search') && web.includes('web_fetch'));
-  assert.equal(web[web.length - 1], 'S\n\nU');
+  assert.equal(web[web.length - 1], '--prompt=S\n\nU');
 });
 
 test('codex JSONL: last agent message wins, both event shapes covered', () => {
@@ -150,7 +155,7 @@ test('buildCodexCliArgs: read-only sandbox, optional model and search', () => {
   const base = { system: 'S', user: 'U', model: '' };
   const plain = buildCodexCliArgs(base);
   assert.deepEqual(plain, [
-    'exec', '--json', '--skip-git-repo-check', '--sandbox', 'read-only', 'S\n\nU',
+    'exec', '--json', '--skip-git-repo-check', '--sandbox', 'read-only', '--', 'S\n\nU',
   ]);
   const full = buildCodexCliArgs({ ...base, model: 'gpt-5.1', webTools: true });
   assert.ok(full.includes('--model') && full.includes('gpt-5.1') && full.includes('--search'));
@@ -233,6 +238,84 @@ test('option parsing ends before the prompt, which carries untrusted text', () =
   const args = buildClaudeCodeArgs({ system: 'S', user: '--anything-at-all', model: 'm' });
   assert.equal(args.at(-1), '--anything-at-all');
   assert.equal(args.at(-2), '--');
+});
+
+test('a prompt opening with a dash stays one value on the Gemini and Codex CLIs too (H46)', () => {
+  // Measured on gemini 0.46.0: `--prompt "--- x"` exits "Not enough arguments
+  // following: prompt"; `--prompt=--- x` reaches the auth check.
+  const gemini = buildGeminiCliArgs({ system: '--- S', user: 'U', model: '' });
+  assert.equal(gemini.at(-1), '--prompt=--- S\n\nU');
+  assert.ok(!gemini.includes('--prompt'));
+  // Codex's PROMPT is a clap positional without allow_hyphen_values.
+  const codex = buildCodexCliArgs({ system: '--- S', user: 'U', model: '' });
+  assert.deepEqual(codex.slice(-2), ['--', '--- S\n\nU']);
+});
+
+test('a refused key, a spent allowance and a busy server are three different failures (H40, H41)', () => {
+  assert.equal(failureKind(401, 'invalid x-api-key'), 'auth');
+  assert.equal(failureKind(403, 'permission denied'), 'auth');
+  assert.equal(failureKind(null, 'Invalid API key · Please run /login'), 'auth');
+  assert.equal(failureKind(null, 'Please set an Auth method in your settings.json'), 'auth');
+  assert.equal(failureKind(null, 'OAuth token has expired'), 'auth');
+  assert.equal(failureKind(429, 'You exceeded your current quota'), 'quota');
+  assert.equal(failureKind(null, "You've hit your usage limit. Resets at 5pm."), 'quota');
+  assert.equal(failureKind(429, 'Rate limit reached for requests'), 'transient');
+  assert.equal(failureKind(529, 'Overloaded'), 'transient');
+  assert.equal(failureKind(503, 'Service Unavailable'), 'transient');
+  assert.equal(failureKind(400, 'Your credit balance is too low to access the API.'), 'other');
+  assert.equal(failureKind(404, 'model not found'), 'other');
+  assert.deepEqual(['auth', 'quota', 'transient', 'other'].map((k) => failureOutcome(k as never)), [
+    'unauthorized',
+    'rate_limited',
+    'rate_limited',
+    'error',
+  ]);
+  assert.equal(
+    refusedReason('HTTP 401: invalid x-api-key', 'key'),
+    'the key was refused (HTTP 401: invalid x-api-key) — paste a new one on Settings → AI engine',
+  );
+});
+
+test('one more try waits what the server asks, when that is short and the budget has room (H41)', () => {
+  const now = Date.parse('2026-09-28T10:00:00Z');
+  const headers = (h: Record<string, string>) => (name: string) => h[name] ?? null;
+  assert.equal(retryWait(headers({}), 60_000, now), 2_000);
+  assert.equal(retryWait(headers({ 'retry-after': '3' }), 60_000, now), 3_000);
+  assert.equal(retryWait(headers({ 'retry-after-ms': '1500', 'retry-after': '9' }), 60_000, now), 1_500);
+  assert.equal(retryWait(headers({ 'retry-after': 'Mon, 28 Sep 2026 10:00:04 GMT' }), 60_000, now), 4_000);
+  // Past the cap the next engine answers sooner; with no room left the retry would only time out.
+  assert.equal(retryWait(headers({ 'retry-after': '60' }), 600_000, now), null);
+  assert.equal(retryWait(headers({}), 6_000, now), null);
+});
+
+test('a CLI retries a rate limit, never a spent plan or a refused sign-in', () => {
+  const limited = parseClaudeCodeOutput(
+    JSON.stringify({ type: 'result', subtype: 'error', is_error: true, result: 'API Error: 429 rate_limit_error', api_error_status: 429 }),
+  );
+  assert.equal(cliRetryable(limited), true);
+  const spent = parseClaudeCodeOutput(
+    JSON.stringify({ type: 'result', subtype: 'error', is_error: true, result: "You've hit your usage limit. Resets at 5pm." }),
+  );
+  assert.equal(spent.rateLimited, true);
+  assert.equal(cliRetryable(spent), false);
+  const refused = parseClaudeCodeOutput(
+    JSON.stringify({ type: 'result', subtype: 'error', is_error: true, result: 'Invalid API key · Please run /login', api_error_status: 401 }),
+  );
+  assert.equal(refused.outcome, 'unauthorized');
+  assert.equal(refused.rateLimited, false);
+  assert.equal(cliRetryable(refused), false);
+});
+
+test('each CLI names a refused sign-in as one', () => {
+  const gemini = parseGeminiCliOutput(
+    JSON.stringify({ error: { type: 'Error', message: 'Please set an Auth method in your settings.json', code: 41 } }),
+  );
+  assert.equal(gemini.outcome, 'unauthorized');
+  assert.equal(gemini.rateLimited, false);
+  const codex = parseCodexCliOutput('{"type":"error","message":"unexpected status 401 Unauthorized"}');
+  assert.equal(codex.outcome, 'unauthorized');
+  // The rest keep the outcome they had.
+  assert.equal(parseCodexCliOutput('{"type":"error","message":"You have hit your usage limit."}').outcome, undefined);
 });
 
 test('describeAiFailure keeps the API sentence on one line, without its full stop', () => {

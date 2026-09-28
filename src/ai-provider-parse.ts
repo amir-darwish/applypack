@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { AiProviderId } from './ai-engine';
 import { addUsage, count, NO_USAGE, type AiOutcome, type AiSpend, type AiUsage } from './ai-usage';
+import { retryAfterMs } from './http';
 import { maskToken } from './text-utils';
 
 /** The Messages API's `usage` block, as the API and the Claude Code CLI report it. */
@@ -81,6 +82,69 @@ export interface CliOutcome {
 const RATE_LIMIT_STATUS = 429;
 const RATE_LIMIT_PATTERN = /rate.?limit|usage limit|overloaded|resource.?exhausted|quota/i;
 
+/*
+ * How a failed call failed, read the same way on every path (H40, H41):
+ *  - `auth`: the vendor turned the key or the sign-in away. Never retried;
+ *    the chain moves on at once and leaves the engine alone until the
+ *    credential changes (ai-cooldown.ts).
+ *  - `quota`: a plan's or a key's allowance is used up. It does not clear in
+ *    seconds, so it is not retried either.
+ *  - `transient`: a rate limit, an overloaded or failing server. One more try
+ *    after the wait the server asks for, when that wait is short.
+ */
+export type FailureKind = 'auth' | 'quota' | 'transient' | 'other';
+
+const AUTH_STATUS = new Set([401, 403]);
+// The sentences a CLI prints for a refused sign-in carry no status code.
+const AUTH_PATTERN =
+  /invalid.{0,16}(api.?key|token|credential)|incorrect api key|unauthori[sz]ed|authentication (failed|error|required)|not logged in|please run \/login|log ?in again|(oauth|access) token.{0,24}(expired|revoked|invalid)|set an auth method/i;
+const QUOTA_PATTERN = /usage limit|quota|resource.?exhausted/i;
+const TRANSIENT_STATUS = new Set([RATE_LIMIT_STATUS, 500, 502, 503, 504, 529]);
+const TRANSIENT_PATTERN = /rate.?limit|overloaded|too many requests/i;
+
+export function failureKind(status: number | null | undefined, message: string): FailureKind {
+  if ((status != null && AUTH_STATUS.has(status)) || AUTH_PATTERN.test(message)) return 'auth';
+  if (QUOTA_PATTERN.test(message)) return 'quota';
+  if ((status != null && TRANSIENT_STATUS.has(status)) || TRANSIENT_PATTERN.test(message)) return 'transient';
+  return 'other';
+}
+
+/** The ledger's word for a failure of that kind. */
+export function failureOutcome(kind: FailureKind): AiOutcome {
+  return kind === 'auth' ? 'unauthorized' : kind === 'other' ? 'error' : 'rate_limited';
+}
+
+/** The flash's sentence for a refused credential: what happened, and the one place to fix it. */
+export function refusedReason(detail: string, what: 'key' | 'sign-in'): string {
+  const fix = what === 'key' ? 'paste a new one on Settings → AI engine' : 'sign in again, or paste a token on Settings → AI engine';
+  return `the ${what} was refused (${detail}) — ${fix}`;
+}
+
+/** The longest wait a vendor may ask for before one more try; a longer one goes to the next engine. */
+const MAX_RETRY_WAIT_MS = 10_000;
+/** The wait when the vendor names none. */
+const DEFAULT_RETRY_WAIT_MS = 2_000;
+/** A retry has to leave this much of the attempt's budget for the call itself. */
+const MIN_RETRY_BUDGET_MS = 5_000;
+
+/**
+ * How long to wait before the one retry a transient failure gets, or null
+ * for none: the server's own `retry-after-ms` / `Retry-After` when it sends
+ * one, else two seconds — as long as that is short and the budget still has
+ * room for the call after it.
+ */
+export function retryWait(header: (name: string) => string | null | undefined, remainingMs: number, now: number): number | null {
+  const ms = Number(header('retry-after-ms'));
+  const asked = Number.isFinite(ms) && ms > 0 ? ms : retryAfterMs(header('retry-after') ?? null, now);
+  const wait = asked ?? DEFAULT_RETRY_WAIT_MS;
+  return wait <= MAX_RETRY_WAIT_MS && remainingMs - wait >= MIN_RETRY_BUDGET_MS ? wait : null;
+}
+
+/** A CLI failure worth the one retry: a rate limit or an overloaded server, not a spent allowance or a refused sign-in. */
+export function cliRetryable(out: CliOutcome): boolean {
+  return out.rateLimited && failureKind(null, out.error ?? '') === 'transient';
+}
+
 const MAX_FAILURE_REASON = 200;
 /*
  * Anything shaped like a credential. A CLI writes whatever it likes to
@@ -115,11 +179,6 @@ export function anthropicMaxTokens(answerTokens: number): number {
   return Math.min(answerTokens + ANTHROPIC_THINKING_HEADROOM_TOKENS, ANTHROPIC_NONSTREAMING_MAX_TOKENS);
 }
 
-/**
- * One-line, browser-safe rendering of a provider failure: masks credentials,
- * collapses whitespace and caps the length. ADR 0027 keeps keys out of the
- * browser, and that must not depend on what a CLI happened to print.
- */
 /**
  * The 2026-02-09 web tools filter their results through code execution, and
  * that needs programmatic tool calling — Opus 4.6+, Sonnet 4.6+ and their
@@ -161,6 +220,11 @@ export function cliFailure(
   return { reason: 'failed with no output', log };
 }
 
+/**
+ * One-line, browser-safe rendering of a provider failure: masks credentials,
+ * collapses whitespace and caps the length. ADR 0027 keeps keys out of the
+ * browser, and that must not depend on what a CLI happened to print.
+ */
 export function describeAiFailure(reason: string): string {
   const oneLine = reason.replace(/\s+/g, ' ').trim();
   if (oneLine.length === 0) return 'no reason reported';
@@ -193,9 +257,10 @@ export function parseClaudeCodeOutput(raw: string): CliOutcome {
   };
   if (r.is_error || r.subtype !== 'success') {
     const message = r.result ?? r.subtype;
-    const rateLimited =
-      r.api_error_status === RATE_LIMIT_STATUS || RATE_LIMIT_PATTERN.test(message);
-    const outcome: AiOutcome = rateLimited ? 'rate_limited' : /max.?output.?tokens/i.test(message) ? 'cut_off' : 'error';
+    const kind = failureKind(r.api_error_status, message);
+    const rateLimited = kind !== 'auth' && (r.api_error_status === RATE_LIMIT_STATUS || RATE_LIMIT_PATTERN.test(message));
+    const outcome: AiOutcome =
+      kind === 'auth' ? 'unauthorized' : rateLimited ? 'rate_limited' : /max.?output.?tokens/i.test(message) ? 'cut_off' : 'error';
     return { text: null, rateLimited, error: `claude-code: ${message}`, spend, outcome };
   }
   return {
@@ -342,9 +407,16 @@ export function parseGeminiCliOutput(raw: string): CliOutcome {
   const r = parsed.data;
   const spend = geminiSpend(r.stats?.models);
   if (r.error) {
-    const rateLimited =
-      r.error.code === RATE_LIMIT_STATUS || RATE_LIMIT_PATTERN.test(r.error.message);
-    return { text: null, rateLimited, error: `gemini-cli: ${r.error.message}`, ...(spend && { spend }) };
+    const status = typeof r.error.code === 'number' ? r.error.code : null;
+    const kind = failureKind(status, r.error.message);
+    const rateLimited = kind !== 'auth' && (status === RATE_LIMIT_STATUS || RATE_LIMIT_PATTERN.test(r.error.message));
+    return {
+      text: null,
+      rateLimited,
+      error: `gemini-cli: ${r.error.message}`,
+      ...(kind === 'auth' && { outcome: 'unauthorized' as const }),
+      ...(spend && { spend }),
+    };
   }
   if (typeof r.response === 'string') {
     return { text: r.response, rateLimited: false, error: null, ...(spend && { spend }) };
@@ -391,7 +463,10 @@ export function buildGeminiCliArgs(req: {
     '--output-format', 'json',
     ...(req.model ? ['--model', req.model] : []),
     ...tools,
-    '--prompt', `${req.system}\n\n${req.user}`,
+    // One argument, not two: yargs reads a separate value that opens with "-"
+    // as the next flag and exits "Not enough arguments following: prompt"
+    // (measured on 0.46.0). The `=` form keeps any text the value.
+    `--prompt=${req.system}\n\n${req.user}`,
   ];
 }
 
@@ -415,6 +490,10 @@ export function buildCodexCliArgs(req: {
     '--sandbox', 'read-only',
     ...(req.model ? ['--model', req.model] : []),
     ...(req.webTools ? ['--search'] : []),
+    // PROMPT is a plain clap positional (no allow_hyphen_values): text opening
+    // with "-" would be read as a flag, so option parsing ends first — as for
+    // claude_code (gotcha 14).
+    '--',
     `${req.system}\n\n${req.user}`,
   ];
 }
@@ -472,7 +551,14 @@ export function parseCodexCliOutput(raw: string): CliOutcome {
   const spend = usage ? { spend: { usage, model: null, reportedUsd: null } } : {};
   if (text !== null) return { text, rateLimited: false, error: null, ...spend };
   if (error !== null) {
-    return { text: null, rateLimited: RATE_LIMIT_PATTERN.test(error), error: `codex: ${error}`, ...spend };
+    const auth = failureKind(null, error) === 'auth';
+    return {
+      text: null,
+      rateLimited: !auth && RATE_LIMIT_PATTERN.test(error),
+      error: `codex: ${error}`,
+      ...(auth && { outcome: 'unauthorized' as const }),
+      ...spend,
+    };
   }
   return { text: null, rateLimited: false, error: 'codex: no agent message in output', ...spend };
 }

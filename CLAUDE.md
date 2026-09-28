@@ -340,8 +340,10 @@ When the question is **"where does X live?"**, save yourself a `find`:
 | Where to add a new profile field | `prisma/schema.prisma:Profile` → `ProfileInput` + `blankProfileInput()` in `src/profiles.ts` (the compiler then names every construction site) → `ProfileFormSchema` + the save route in `src/web/routes/settings.tsx` → the editor in `src/web/pages/settings.tsx` |
 | The Claude system prompt | `src/classifier.ts:buildSystemPrompt` |
 | Fence markers, the untrusted directive, the forged-marker sanitiser | `src/prompt-fence.ts` (pure, ADR 0022); guard `src/prompt-fence-registry.test.ts` |
-| Which AI engines run (priority chain + per-engine models, auto-failover) | `src/ai-runtime.ts:getAiRuntime().complete({role})` + pure chain merge in `src/ai-engine.ts` (ADR 0013/0014); UI on `/settings` → "AI engine" tab. A card reads `aiEngineCard`: enabled means in `aiEngineOrder` (stored, or `AI_PROVIDER` alone), not in `chain`, which drops a skipped engine and holds the `lastResort` nobody enabled; `toggleAiEngine` is what Enable / Disable store |
+| Which AI engines run (priority chain + per-engine models, auto-failover) | `src/ai-runtime.ts:getAiRuntime().complete({role})` → the loop `src/ai-failover.ts:runChain` (its backends, ledger, cooldowns and clock injected, so it is tested) + pure chain merge in `src/ai-engine.ts` (ADR 0013/0014); UI on `/settings` → "AI engine" tab. A card reads `aiEngineCard`: enabled means in `aiEngineOrder` (stored, or `AI_PROVIDER` alone), not in `chain`, which drops a skipped engine and holds the `lastResort` nobody enabled; `toggleAiEngine` is what Enable / Disable store |
 | Adding a new AI backend | `src/ai-provider.ts` (`CliProvider` spec or fetch class) + `AI_PROVIDER_IDS`/labels/options in `src/ai-engine.ts` + probe in `src/ai-runtime.ts` + `AI_KEY_ENV_VARS` in `src/ai-keys.ts` if it takes a key; its parser reports `spend` (usage, resolved model, the vendor's own figure) from a recorded output, its models get dated rows in `src/ai-prices.ts` (`ai-prices.test.ts` fails a picker model with no price), and `ai-usage.ts:billingOf` says whose money it spends (ADR 0055) |
+| Why a failed AI call is retried, failed over at once, or its engine left alone for ten minutes | `src/ai-provider-parse.ts:failureKind` reads a status and a message the same way on every path — `auth` (a refused key or sign-in: never retried, outcome `unauthorized`, the engine skipped until the credential changes — `refused` in `ai-cooldown.ts:createCooldownTracker`, keyed by a fingerprint), `quota` (a spent plan or allowance: not retried), `transient` (a rate limit, an overloaded server: ONE more try after `retryWait` — the server's `retry-after-ms` / `Retry-After` up to 10 s, else 2 s, only with budget left). The Anthropic SDK's own retries are off (`maxRetries: 0`): they waited any Retry-After, uncapped, under the chain's deadline. A CLI that exits non-zero on a rate limit is judged by what it printed (`cliRetryable`) |
+| What happens to a CLI call when the worker or the dashboard stops | `src/ai-provider.ts:stopCliChildren` — both shutdowns call it first: every CLI child in flight is killed (its pipes closed, so the call ends now) and new ones are refused; orphaned, a CLI ran on to its timeout on the user's plan |
 | Why a `max_tokens` budget is the ANSWER's size (thinking headroom), and why a cut-off reply is not retried | `src/ai-provider-parse.ts:anthropicMaxTokens` (pure, gotcha 16) + the `stop_reason` branch in `ai-provider.ts`; `src/ai-json.ts:askForJson` is the one parse-and-retry loop every resume call and the ghost-job check go through, and `text-utils.ts:jsonFailure` tells "cut off" from "not JSON" |
 | Per-engine API keys (DB-first, `.env` fallback, masking) | `src/ai-keys.ts` (pure, ADR 0027) + `settings.ts:getAiKeys/setAiKey`; resolved in `ai-runtime.ts`, spent as `AiRequest.apiKey` |
 | How users set up each engine (local + Docker) | `docs/ai-engines.md` |
@@ -713,8 +715,15 @@ Two fixes, both kept:
   (gotcha 12), `--- … ---` has a flag shape. `===` is inert to both.
 
 `gemini_cli` passes the prompt as a flag *value* and `codex_cli` as a
-positional that begins with our system text, so neither is exposed — and
-neither was changed, because neither could be tested from here.
+positional that begins with our system text, so neither was exposed. Both
+were closed anyway on 2026-09-28 (H46): on gemini 0.46.0, `--prompt "--- x"`
+exits *"Not enough arguments following: prompt"* — yargs reads a separate
+value that opens with `-` as the next flag — so the value rides as
+`--prompt=…`, which keeps any text one argument; Codex's `PROMPT` is a plain
+clap positional (no `allow_hyphen_values`), so `--` goes before it as it does
+for Claude. Every CLI child also gets its stdin closed at spawn: Codex and the
+Gemini CLI read stdin when it is not a terminal, and an open pipe would hold
+them until the timeout.
 
 ### 15. Node's `fetch` sabotages conditional requests unless you set Cache-Control
 

@@ -129,3 +129,20 @@ changed, because neither could be tested from here.
   keyword frame (`src/resume/keyword-frame.ts:planKeywordFrame`) read
   `PROMPT_VERSION` back. A bump makes stored comparisons unreusable and
   rebuilds their keyword frames.
+
+## Addendum (2026-09-28): the separator on the other two CLIs
+
+"The `--` separator is verified for `claude_code` only" is closed (TASKS H46):
+
+- `gemini_cli`, measured on 0.46.0 with no credentials (so nothing was
+  spent): `--prompt "--- BEGIN UNTRUSTED x"` exits *"Not enough arguments
+  following: prompt"*, and `--prompt="--- BEGIN UNTRUSTED x"` reaches the
+  auth check. `buildGeminiCliArgs` sends the one-argument form.
+- `codex_cli`: its `exec` command declares `PROMPT` as a plain clap
+  positional, without `allow_hyphen_values`, so a prompt opening with `-`
+  would be read as a flag. `buildCodexCliArgs` puts `--` before it. Not run
+  here: the CLI is not installed on this machine.
+
+Neither prompt opens with a dash today — both begin with our system text —
+so this closes a door that was shut by accident, as the Claude one was.
+

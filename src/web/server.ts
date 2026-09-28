@@ -4,6 +4,7 @@ import { logger } from '../logger';
 import { prisma } from '../db';
 import { app } from './app';
 import { announceReady, onLauncherStop } from '../local/child';
+import { stopCliChildren } from '../ai-provider';
 
 const server = serve(
   {
@@ -21,7 +22,8 @@ const server = serve(
 );
 
 async function shutdown(signal: string): Promise<void> {
-  logger.info({ signal }, 'web: shutting down');
+  // A comparison's CLI call in flight would otherwise run on, orphaned, to its timeout (H43).
+  logger.info({ signal, cliChildren: stopCliChildren() }, 'web: shutting down');
   server.close(() => {
     void prisma.$disconnect().finally(() => process.exit(0));
   });

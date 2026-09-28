@@ -7,7 +7,8 @@ import { promisify } from 'node:util';
 import { config } from './config';
 import { logger } from './logger';
 import { prisma } from './db';
-import { getAiProviderById, type AiProvider } from './ai-provider';
+import { getAiProviderById } from './ai-provider';
+import { runChain } from './ai-failover';
 import { SETTINGS_ID } from './settings';
 import { aiKeySource, parseAiKeys, resolveAiKey, type AiKeys, type AiKeySource } from './ai-keys';
 import { createCooldownTracker } from './ai-cooldown';
@@ -15,7 +16,6 @@ import { recordAiCall } from './ai-ledger';
 import { listServerModels, LOCAL_LIST_TIMEOUT_MS } from './openai-models';
 import { billingOf, isLocalUrl, type AiFeature, type BillingFacts } from './ai-usage';
 import {
-  PROVIDER_WEB_TOOLS,
   resolveAiEngine,
   type AiEngineEnv,
   type AiProviderId,
@@ -24,15 +24,6 @@ import {
 } from './ai-engine';
 
 const execFileAsync = promisify(execFile);
-
-// Chain guards (docs/ai-engine-improvements.md item 2): at most this many
-// engines per logical call, inside a deadline of FACTOR × the per-attempt
-// timeout — a 3-CLI verify chain must not become a 30-minute wait.
-const MAX_ENGINE_SWITCHES = 3;
-const CHAIN_DEADLINE_FACTOR = 2;
-const MIN_REMAINING_MS = 5_000;
-// Mirrors the provider-internal CLI default timeout.
-const DEFAULT_ATTEMPT_TIMEOUT_MS = 180_000;
 
 const cooldowns = createCooldownTracker();
 
@@ -127,91 +118,20 @@ export function openAiBase(stored: string | null): string {
   return stored ?? config.OPENAI_BASE_URL;
 }
 
+/** The chain with this process's backends, ledger and cooldowns (ai-failover.ts). */
 async function completeWithFailover(
   engine: ResolvedAiEngine,
   keys: AiKeys,
   baseUrl: string | null,
   req: AiCallRequest,
 ): Promise<AiCallResult | null> {
-  // Verification asks for web tools — prefer engines that have them, but a
-  // tool-less engine is still better than no answer at all.
-  const capable = req.webTools
-    ? engine.chain.filter((id) => PROVIDER_WEB_TOOLS[id])
-    : engine.chain;
-  const chain = capable.length > 0 ? capable : engine.chain;
-  // Engines in cooldown are skipped — unless that would leave nothing to try.
-  const hot = chain.filter((id) => cooldowns.blockedUntil(id) === null);
-  if (hot.length > 0 && hot.length < chain.length) {
-    logger.debug(
-      { cooling: chain.filter((id) => !hot.includes(id)), label: req.label },
-      'ai: engines in cooldown, skipped',
-    );
-  }
-  const tryList = (hot.length > 0 ? hot : chain).slice(0, MAX_ENGINE_SWITCHES);
-  const perAttemptMs = req.timeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
   const billing = billingFacts(keys, baseUrl);
-  const deadline = Date.now() + perAttemptMs * CHAIN_DEADLINE_FACTOR;
-  for (let i = 0; i < tryList.length; i++) {
-    const id = tryList[i]!;
-    const remainingMs = deadline - Date.now();
-    if (i > 0 && remainingMs < MIN_REMAINING_MS) {
-      logger.warn({ tried: tryList.slice(0, i), label: req.label }, 'ai: chain deadline reached');
-      break;
-    }
-    let provider: AiProvider;
-    try {
-      provider = getAiProviderById(id);
-    } catch (err) {
-      logger.warn({ err, provider: id }, 'ai: engine not constructible, skipping');
-      continue;
-    }
-    const model = engine.modelFor(id, req.role);
-    const started = Date.now();
-    const attempt = await provider.complete({
-      system: req.system,
-      user: req.user,
-      maxTokens: req.maxTokens,
-      label: req.label,
-      model,
-      timeoutMs: Math.min(perAttemptMs, remainingMs),
-      webTools: req.webTools,
-      apiKey: resolveAiKey(id, keys),
-      ...(id === 'openai_api' && { baseUrl: openAiBase(baseUrl) }),
-      onError: req.onError,
-    });
-    const viaFallback = id !== engine.chain[0];
-    // Every attempt, the failed ones too: a cut-off reply was billed (ADR 0055).
-    await recordAiCall({
-      at: new Date(started),
-      durationMs: Date.now() - started,
-      engine: id,
-      model,
-      feature: req.label,
-      outcome: attempt.outcome,
-      spend: attempt.spend,
-      viaFallback,
-      billing: billingOf(id, billing),
-      jobId: req.subject?.jobId,
-      resumeId: req.subject?.resumeId,
-    });
-    const text = attempt.text;
-    if (text !== null) {
-      cooldowns.success(id);
-      if (viaFallback) {
-        logger.warn(
-          { served: id, primary: engine.chain[0], label: req.label },
-          'ai: served by fallback engine',
-        );
-      }
-      return { text, providerId: id, model, viaFallback };
-    }
-    cooldowns.failure(id);
-    if (i < tryList.length - 1) {
-      logger.warn({ failed: id, next: tryList[i + 1], label: req.label }, 'ai: engine failed, trying next');
-    }
-  }
-  logger.error({ chain: tryList, label: req.label }, 'ai: every engine in the chain failed');
-  return null;
+  return runChain(
+    engine,
+    req,
+    { keyFor: (id) => resolveAiKey(id, keys), openAiBase: openAiBase(baseUrl), billingOf: (id) => billingOf(id, billing) },
+    { providerFor: getAiProviderById, record: recordAiCall, cooldowns, now: Date.now },
+  );
 }
 
 /** What decides whose money an engine spends, from this host's settings (ai-usage.ts:billingOf). */

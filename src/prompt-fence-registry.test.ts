@@ -43,6 +43,7 @@ const PROMPT_MODULES: Record<string, Record<string, unknown>> = {
 const KNOWN_CALL_SITES: Record<string, string> = {
   'ai-provider.ts': 'the seam itself',
   'ai-runtime.ts': 'the chain that drives the seam',
+  'ai-failover.ts': 'the failover loop the chain runs — its callers bring the prompt',
   'ai-json.ts': 'the parse-and-retry wrapper over the seam — its callers bring the prompt',
   'classifier.ts': 'buildClassifyPrompt',
   'classifier-prefilter.ts': 'buildPrefilterPrompt',
