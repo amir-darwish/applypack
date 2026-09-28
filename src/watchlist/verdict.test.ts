@@ -16,8 +16,8 @@ describe('verdictLabel', () => {
   });
 
   it('counts feed entries', () => {
-    assert.equal(verdictLabel({ kind: 'feed', url: 'u', items: 12, via: 'u' }), 'RSS feed · 12 entries');
-    assert.equal(verdictLabel({ kind: 'feed', url: 'u', items: 1, via: 'u' }), 'RSS feed · 1 entry');
+    assert.equal(verdictLabel({ kind: 'feed', url: 'u', items: 12, via: 'u', crawlDelayMs: null }), 'RSS feed · 12 entries');
+    assert.equal(verdictLabel({ kind: 'feed', url: 'u', items: 1, via: 'u', crawlDelayMs: null }), 'RSS feed · 1 entry');
   });
 
   it('labels a page drawn in the browser, and says what to do with it', () => {

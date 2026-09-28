@@ -68,6 +68,8 @@ export interface RobotsGroup {
   /** Lower-cased user-agent values this group addresses. */
   agents: string[];
   rules: Rule[];
+  /** `Crawl-delay`, in seconds, when the group states one (not RFC 9309; honoured by crawlDelayMs). */
+  crawlDelayS?: number;
 }
 
 export interface Robots {
@@ -86,10 +88,10 @@ export interface Robots {
  * rules that follow them; a rule line starts a new group's body, so a second
  * `User-agent` after a rule begins a new group (RFC 9309 §2.2.1).
  *
- * Everything unrecognised — `Sitemap`, `Crawl-delay`, `Host`, junk — is
- * skipped rather than guessed at. `Crawl-delay` is not read here on purpose:
- * pacing lives in `fetchers/source-order.ts`, where one hand-checked entry is
- * still the honest state (ADR 0035).
+ * Everything unrecognised — `Sitemap`, `Host`, junk — is skipped rather than
+ * guessed at. `Crawl-delay` is not in RFC 9309 but is kept on its group:
+ * the watchlist reads it for the rows it adds on any host (`crawlDelayMs`,
+ * ADR 0035's trigger).
  */
 export function parseRobots(text: string): Robots {
   const groups: RobotsGroup[] = [];
@@ -124,6 +126,14 @@ export function parseRobots(text: string): Robots {
       }
       continue;
     }
+    if (field === 'crawl-delay') {
+      const seconds = Number(value);
+      if (current !== null && Number.isFinite(seconds) && seconds >= 0) {
+        collectingAgents = false;
+        current.crawlDelayS = seconds;
+      }
+      continue;
+    }
     if (field !== 'allow' && field !== 'disallow') continue;
     // A rule before any user-agent line addresses nobody; the RFC says to
     // ignore it, and so does every major implementation.
@@ -136,6 +146,21 @@ export function parseRobots(text: string): Robots {
     current.rules.push({ allow: field === 'allow', pattern: value });
   }
   return { groups, signals };
+}
+
+/** A site asking for more than this between requests is asked of us no longer than this: the walk waits once per row. */
+const MAX_CRAWL_DELAY_MS = 30_000;
+
+/**
+ * The `Crawl-delay` the group that binds this token states, in milliseconds
+ * and capped; null when it states none. The same group choice as the rules:
+ * the token's own groups, else `*`.
+ */
+export function crawlDelayMs(robots: Robots, token: string): number | null {
+  const own = robots.groups.filter((g) => g.agents.includes(token));
+  const groups = own.length > 0 ? own : robots.groups.filter((g) => g.agents.includes('*'));
+  const delays = groups.flatMap((g) => (g.crawlDelayS === undefined ? [] : [g.crawlDelayS]));
+  return delays.length === 0 ? null : Math.min(MAX_CRAWL_DELAY_MS, Math.round(Math.max(...delays) * 1000));
 }
 
 /**

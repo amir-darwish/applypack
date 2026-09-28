@@ -133,6 +133,7 @@ watchlistRoute.post('/companies/watchlist/add', async (c) => {
       alertPolicy: parsed.data.alertPolicy,
       // NULL = due on the next tick, which is what "watch this" means.
       nextCheckAt: null,
+      ...(source.crawlDelayMs !== undefined && { crawlDelayMs: source.crawlDelayMs }),
     };
     // A board already in the rotation (seeded, or from a pack) is UPDATED, not
     // skipped: the user has just said they want to watch that company, and
@@ -265,13 +266,15 @@ watchlistRoute.post('/companies/:id/paste', async (c) => {
   );
 });
 
-/** The (atsType, atsToken) a confirmed resolution becomes, or null. */
-function sourceOf(r: ResolvedCompany): { atsType: AtsType; atsToken: string } | null {
+/** The (atsType, atsToken) a confirmed resolution becomes — with the site's own pacing for a row on its host — or null. */
+function sourceOf(r: ResolvedCompany): { atsType: AtsType; atsToken: string; crawlDelayMs?: number | null } | null {
   if (r.resolution.kind === 'ats') return { atsType: r.resolution.atsType, atsToken: r.resolution.atsToken };
-  if (r.resolution.kind === 'feed') return { atsType: AtsType.FEED, atsToken: r.resolution.url };
+  if (r.resolution.kind === 'feed') return { atsType: AtsType.FEED, atsToken: r.resolution.url, crawlDelayMs: r.resolution.crawlDelayMs };
   // The last rungs: no postings, just "this page changed" (ADR 0036), or a
   // page drawn in the browser that the user pastes (TASKS N8).
-  if (r.resolution.kind === 'changeWatch') return { atsType: AtsType.CAREER_PAGE, atsToken: r.resolution.url };
+  if (r.resolution.kind === 'changeWatch') {
+    return { atsType: AtsType.CAREER_PAGE, atsToken: r.resolution.url, crawlDelayMs: r.resolution.crawlDelayMs };
+  }
   if (r.resolution.kind === 'needsBrowser') return { atsType: AtsType.BROWSER_PAGE, atsToken: r.resolution.url };
   return null;
 }

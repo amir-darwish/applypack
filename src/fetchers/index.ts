@@ -213,7 +213,7 @@ export async function runAllFetchers(
     onSource?.({ company: company.name, status, count, done, total: due.length, durationMs });
     // Back off in proportion to what we just spent of the board's: a feed we
     // did not download does not earn the same second as one we did.
-    await sleep(politeDelayMs(status, company.atsType));
+    await sleep(politeDelayMs(status, company.atsType, company.crawlDelayMs ?? null));
   }
 
   return out;

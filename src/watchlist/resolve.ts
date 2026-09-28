@@ -6,7 +6,7 @@ import { aiCrawlerTokens, bindingProviders, resolveAiEngine } from '../ai-engine
 import { getAiEngineEnv } from '../ai-runtime';
 import { extractAtsToken } from '../text-utils';
 import { checkPostingUrl, fetchPublicUrl } from '../jobs/posting-url';
-import { bindingTokens, robotsAllows } from '../robots';
+import { bindingTokens, crawlDelayMs, OUR_TOKEN, parseRobots, robotsAllows } from '../robots';
 import { looksLikeFeed } from '../fetchers/feed';
 import { boardHints, declaredJobFeeds, looksLikeChallenge, wellKnownFeeds } from './scan';
 import { MIN_WATCHABLE_CHARS, normalisePageText } from './page-hash';
@@ -54,9 +54,10 @@ const FETCH_TIMEOUT_MS = 12_000;
 
 export type Resolution =
   | { kind: 'ats'; atsType: AtsType; atsToken: string; jobs: number; via: string }
-  | { kind: 'feed'; url: string; items: number; via: string }
+  /** `crawlDelayMs`: the site's own pacing for us, when the feed lives on the site whose robots.txt said so. */
+  | { kind: 'feed'; url: string; items: number; via: string; crawlDelayMs: number | null }
   /** No board and no feed, but readable prose — the change watch can hash it. */
-  | { kind: 'changeWatch'; url: string; chars: number }
+  | { kind: 'changeWatch'; url: string; chars: number; crawlDelayMs: number | null }
   /** Almost no text and nothing machine-readable: the page draws its jobs in the browser. */
   | { kind: 'needsBrowser'; url: string }
   | { kind: 'watchOnly'; reason: string }
@@ -123,6 +124,8 @@ export async function resolveCompanyUrl(
   requests++;
   const robots = robotsAllows(robotsAnswer.status, robotsAnswer.body, target.pathname, tokens);
   if (!robots.allowed) return { ...base, resolution: { kind: 'refused', reason: robots.reason }, requests };
+  // The pacing the site asks of our own client, kept for the rows that will read this host (ADR 0035).
+  const crawlDelay = robotsAnswer.status === 200 ? crawlDelayMs(parseRobots(robotsAnswer.body), OUR_TOKEN) : null;
 
   const page = await io.get(target.toString());
   requests++;
@@ -175,7 +178,8 @@ export async function resolveCompanyUrl(
     if (answer.status !== 200 || !checkPostingUrl(answer.url).ok || !looksLikeFeed(answer.body)) continue;
     const items = countEntries(answer.body);
     if (items === 0) continue;
-    return { ...named, resolution: { kind: 'feed', url, items, via: url }, requests };
+    const sameSite = new URL(url).origin === target.origin;
+    return { ...named, resolution: { kind: 'feed', url, items, via: url, crawlDelayMs: sameSite ? crawlDelay : null }, requests };
   }
 
   // Rung 5. A bot check is reported as itself, because the answer to it is
@@ -193,7 +197,7 @@ export async function resolveCompanyUrl(
   if (boardMiss !== null) return { ...named, resolution: { kind: 'watchOnly', reason: boardMiss }, requests };
   const chars = normalisePageText(page.body).length;
   if (chars >= MIN_WATCHABLE_CHARS) {
-    return { ...named, resolution: { kind: 'changeWatch', url: page.url, chars }, requests };
+    return { ...named, resolution: { kind: 'changeWatch', url: page.url, chars, crawlDelayMs: crawlDelay }, requests };
   }
   return { ...named, resolution: { kind: 'needsBrowser', url: page.url }, requests };
 }

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { OUR_TOKEN, bindingTokens, isAllowed, parseRobots, pathMatches, robotsAllows } from './robots';
+import { OUR_TOKEN, bindingTokens, crawlDelayMs, isAllowed, parseRobots, pathMatches, robotsAllows } from './robots';
 import { aiCrawlerTokens } from './ai-engine';
 
 /** An install running Claude, which is what the .env default is. */
@@ -267,5 +267,26 @@ describe('robotsAllows — the HTTP answer', () => {
 
   it('an HTML error page served as robots.txt forbids nothing rather than everything', () => {
     assert.equal(robotsAllows(200, '<!DOCTYPE html><h1>Not found</h1>', '/careers', CLAUDE).allowed, true);
+  });
+});
+
+describe('crawlDelayMs — the pacing a site asks of our token', () => {
+  it('reads our own group, else the wildcard, and never both', () => {
+    assert.equal(crawlDelayMs(parseRobots('User-agent: *\nCrawl-delay: 2\nDisallow: /admin'), OUR_TOKEN), 2_000);
+    assert.equal(crawlDelayMs(parseRobots('User-agent: *\nCrawl-delay: 5\n\nUser-agent: applypack\nCrawl-delay: 0.5'), OUR_TOKEN), 500);
+    assert.equal(crawlDelayMs(parseRobots('User-agent: applypack\nDisallow: /x\n\nUser-agent: *\nCrawl-delay: 5'), OUR_TOKEN), null);
+  });
+
+  it('caps an unreasonable delay, and ignores one that is not a number', () => {
+    assert.equal(crawlDelayMs(parseRobots('User-agent: *\nCrawl-delay: 3600'), OUR_TOKEN), 30_000);
+    assert.equal(crawlDelayMs(parseRobots('User-agent: *\nCrawl-delay: soon'), OUR_TOKEN), null);
+    assert.equal(crawlDelayMs(parseRobots('Crawl-delay: 9\nUser-agent: *\nDisallow:'), OUR_TOKEN), null);
+    assert.equal(crawlDelayMs(parseRobots(''), OUR_TOKEN), null);
+  });
+
+  it('keeps the agent lines of a group together when the delay comes first', () => {
+    const r = parseRobots('User-agent: a\nCrawl-delay: 1\nDisallow: /x\nUser-agent: b\nDisallow: /y');
+    assert.equal(r.groups.length, 2);
+    assert.equal(r.groups[0]?.crawlDelayS, 1);
   });
 });
