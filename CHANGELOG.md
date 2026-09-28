@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.37.0] — 2026-09-28
+
+### Changed
+- **One name for each thing.**
+  - The menu's "Compare" is now **Tailor resume**, the name the editor
+    already had. "Compare" is the button that runs one comparison.
+  - The Settings tab that holds your searches is now **Searches** (links
+    with `?tab=profile` still work).
+  - The match card's ceiling line reads "editing can reach a match of 92",
+    because "fit" is the search's number, not the resume's.
+  - DESIGN.md has the list of words.
+
 ## [2.36.0] — 2026-09-28
 
 ### Changed

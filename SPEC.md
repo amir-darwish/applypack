@@ -231,7 +231,7 @@ thresholds and the alert target sit in a collapsed "Advanced" block. It
 opens itself when notes, on-site cities or priority rules are set; a
 threshold or a target alone does not open it.
 
-**Fill from a resume** (ADR 0015): the Profile tab can prefill
+**Fill from a resume** (ADR 0015): the Searches tab can prefill
 `stackRequired` (from `Resume.primarySkills`), `stackNiceToHave` (remaining
 scanned skills), `roleTypes` and `seniority` from any scanned resume —
 rendered as an unsaved draft in the editor; nothing persists until Save.
@@ -246,7 +246,7 @@ and saves it on one press, linked to that resume. The wizard's step 3
 offers the same for a second resume once the first search exists. New
 profiles are **born inactive** — creating a search never switches the one
 the pipeline is scoring against; activation stays a deliberate press on
-`/settings` → Profile.
+`/settings` → Searches.
 
 ## Toggles
 
