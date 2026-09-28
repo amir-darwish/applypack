@@ -3,7 +3,7 @@ import { logger } from '../logger';
 import type { AiRuntime } from '../ai-runtime';
 import { askForJson } from '../ai-json';
 import type { KeywordMatcher } from '../resume/keyword-matcher';
-import { anchorCompareReply, secondOrder, type StoredComparison } from './comparison';
+import { anchorCompareReply, comparisonView, readingsAgreement, secondOrder, type StoredComparison } from './comparison';
 import { buildComparePrompt, COMPARE_MAX_TOKENS, COMPARE_PROMPT_VERSION, COMPARE_TIMEOUT_MS, parseCompareResponse } from './prompts';
 import { createComparison, postingOf, type ScreeningWithJob } from './store';
 import type { Rubric } from './rubric';
@@ -56,6 +56,8 @@ export async function compareApplicants(
     const [a, b] = await Promise.all([reading(applicants), reading(secondOrder(applicants))]);
     if (!a || !b) return { ok: false, reason: reason || 'no engine answered' };
     const readings: StoredComparison = { v: 1, readings: [{ shown: a.shown, reply: a.reply }, { shown: b.shown, reply: b.reply }] };
+    // TASKS E10: the disagreement rate, measured on every real comparison at no extra call.
+    logger.info({ screeningId: screening.id, ids, ...readingsAgreement(comparisonView(readings, rubric)) }, 'screening: shortlist readings compared');
     const row = await createComparison({
       screeningId: screening.id,
       applicantIds: ids,

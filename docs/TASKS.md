@@ -2424,6 +2424,12 @@ release-discipline skill, a docs/site block does not.
       - E3 (Q9): a cover letter in an upload is attached to its applicant
         (`applicant_letter`), shown on the scorecard, never scored.
 
+      **Part 3 (untagged, folds into the next release):** E2 — the gold set
+      has `01-olena-petrenko.tailored.md` and `expected.json`, so the
+      tailoring and gate lines print; E10 — `comparison.ts:readingsAgreement`
+      is logged on every comparison and printed by `bench:screen --compare`.
+      Its first mock run found #313 (a stack in the headline reads as work).
+
 - [x] **`resume-honesty`** (minor, parts 1–3 v2.31.0 … v2.33.0) — the 2026-09 plan's
       W7. R1: a one-off file is judged on its text alone unless it is the
       person's own (a checkbox on both launchers, or the same text as a saved

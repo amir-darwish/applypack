@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadKeywordMatcher } from '../resume/keyword-matcher';
-import { anchorCompareReply, comparisonMarkdown, comparisonView, readStoredComparison, secondOrder, type StoredComparison } from './comparison';
+import { anchorCompareReply, comparisonMarkdown, comparisonView, readingsAgreement, readStoredComparison, secondOrder, type StoredComparison } from './comparison';
 import { CompareReplySchema } from './prompts';
 import { RubricSchema, specOf, type Criterion, type Rubric } from './rubric';
 
@@ -70,6 +70,7 @@ test('comparisonView says where the readings differ; the Markdown carries both',
   assert.equal(view.disagreements, 1);
   assert.equal(view.firstAgree, false);
   assert.equal(view.orderAgree, false);
+  assert.deepEqual(readingsAgreement(view), { firstAgree: false, orderAgree: false, criteriaAnswered: 2, criteriaDisagree: 1 }, 'TASKS E10: what the log line and the bench report');
   assert.equal(view.criteria[0]!.quotes.length, 1, 'the same quote from both readings is one line');
   const md = comparisonMarkdown(view, new Map([[1, 'Олена'], [3, null]]), 'Senior Java');
   assert.match(md, /^# Shortlist — Senior Java/);

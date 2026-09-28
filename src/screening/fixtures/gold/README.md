@@ -15,11 +15,18 @@ database.
   expected.json    optional: { "<file>": { "<gate id>": "pass|unknown|fail" } }
 ```
 
-`qa-automation` is a starter: six synthetic resumes and a ranking written by
-the author of the fixtures, so its τ says nothing yet. A set counts when a
-recruiter ranked it: three postings × ~30 resumes is the target.
+`qa-automation` is a starter: seven synthetic resumes, and a ranking and
+an `expected.json` written by the author of the fixtures, so its τ and its
+gate line say little yet. A set counts when a recruiter ranked it and read
+its gates: three postings × ~30 resumes is the target.
+`01-olena-petrenko.tailored.md` is `01` with the same facts reworded and
+reordered, so the tailoring line has a pair to print: the gap it reports is
+the wording's, since the facts did not move.
 
 Run `npm run bench:screen -- --set qa-automation --runs 2`. Two runs of the
 same texts give the stability line (the score movement between runs); a
 resume named `<name>.tailored.<ext>` is paired with `<name>.<ext>` for the
-tailoring test (the same facts reworded must score the same).
+tailoring test (the same facts reworded must score the same). `--compare`
+also reads the first run's top three head to head, twice in opposite orders,
+and prints how far the two readings agree (ADR 0051's third-reading
+question) — two more calls a set.
