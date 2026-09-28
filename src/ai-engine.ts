@@ -80,15 +80,6 @@ export function bindingProviders(engine: ResolvedAiEngine, provider: AiProviderI
   return [...new Set([...engine.chain, ...engine.skipped, provider])];
 }
 
-/** Metered billing — every call spends money (vs a flat subscription). */
-export const PROVIDER_PAID: Record<AiProviderId, boolean> = {
-  anthropic_api: true,
-  claude_code: false,
-  gemini_cli: false,
-  openai_api: true,
-  codex_cli: false,
-};
-
 export type AiRole = 'classifier' | 'resume' | 'cover';
 
 /**
@@ -261,45 +252,6 @@ export interface ResolvedAiEngine {
   /** The engine answering because nothing in `order` can run; never in `order`. */
   lastResort: AiProviderId | null;
   modelFor(id: AiProviderId, role: AiRole): string;
-}
-
-/** Shape of AppSettings.aiUsage: { "YYYY-MM-DD": { provider: { role: n } } }. */
-const StoredUsageSchema = z.record(
-  z.string(),
-  z.record(z.string(), z.record(z.string(), z.number())),
-);
-
-export interface AiUsageRow {
-  id: AiProviderId;
-  classifier: number;
-  resume: number;
-  cover: number;
-}
-
-/** Sums the per-day counters over the last `days` days; busiest first. */
-export function summarizeAiUsage(raw: unknown, days: number, today: Date): AiUsageRow[] {
-  const parsed = StoredUsageSchema.safeParse(raw ?? {});
-  if (!parsed.success) return [];
-  const window = new Set<string>();
-  for (let i = 0; i < days; i++) {
-    window.add(new Date(today.getTime() - i * 86_400_000).toISOString().slice(0, 10));
-  }
-  const totals = new Map<AiProviderId, { classifier: number; resume: number; cover: number }>();
-  for (const [day, providers] of Object.entries(parsed.data)) {
-    if (!window.has(day)) continue;
-    for (const [id, roles] of Object.entries(providers)) {
-      if (!isAiProviderId(id)) continue;
-      const row = totals.get(id) ?? { classifier: 0, resume: 0, cover: 0 };
-      row.classifier += roles.classifier ?? 0;
-      row.resume += roles.resume ?? 0;
-      row.cover += roles.cover ?? 0;
-      totals.set(id, row);
-    }
-  }
-  return [...totals.entries()]
-    .map(([id, r]) => ({ id, ...r }))
-    .filter((r) => r.classifier + r.resume + r.cover > 0)
-    .sort((a, b) => b.classifier + b.resume + b.cover - (a.classifier + a.resume + a.cover));
 }
 
 /**

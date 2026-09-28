@@ -65,7 +65,7 @@ export async function suggestForMatch(
   });
   const answer = await askForJson(
     await getAiRuntime(),
-    { ...prompt, maxTokens: SUGGESTIONS_MAX_TOKENS, label: 'resume-suggestions', role: 'resume', timeoutMs: RESUME_TIMEOUT_MS.suggestions, onError },
+    { ...prompt, maxTokens: SUGGESTIONS_MAX_TOKENS, label: 'resume-suggestions', role: 'resume', timeoutMs: RESUME_TIMEOUT_MS.suggestions, onError, subject: { jobId: job.id, resumeId: match.resumeId } },
     // Every array defaults to empty, so "{}" parses — but a reply with nothing
     // in it would flip the row to "full" and lock the button out for good.
     (text) => {

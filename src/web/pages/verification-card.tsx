@@ -22,6 +22,8 @@ export interface VerificationCardProps {
   verificationCount: number;
   /** A run in flight: the buttons give way to a link to its progress page. */
   run: { id: string; startedAt: number } | null;
+  /** What the AI research usually costs here (ai-spend.ts:costHintText); the free checks cost nothing. */
+  costHint: string | null;
 }
 
 const LIVENESS_VIEW: Record<string, { label: string; tone: Tone }> = {
@@ -64,6 +66,7 @@ export const VerificationCard: FC<VerificationCardProps> = ({
   verification,
   verificationCount,
   run,
+  costHint,
 }) => (
   <div id="verification">
     <Card>
@@ -129,6 +132,7 @@ export const VerificationCard: FC<VerificationCardProps> = ({
           )}
         </div>
       </div>
+      {costHint && !run && <Hint class="mt-2">The AI research: {costHint.charAt(0).toLowerCase() + costHint.slice(1)}</Hint>}
       {liveness && !verification && (
         <p class="mt-3 text-sm text-ink-muted">
           {codeLabel(liveness.code)} · checked {formatRelative(liveness.checkedAt)}.

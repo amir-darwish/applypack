@@ -4,7 +4,8 @@ import { logger } from '../logger';
 import type { CronStats } from './cron-run';
 
 const RETENTION_DAYS = 30;
-const AI_USAGE_RETENTION_DAYS = 60;
+/** The AI ledger (ADR 0055): long enough for "this year" and last year's same month. */
+const AI_CALL_RETENTION_DAYS = 400;
 /**
  * Run history. Nothing pruned `cron_run` at all, while TASKS and the
  * search-analytics note both said 30 days — after a year of hourly ticks
@@ -32,17 +33,9 @@ export async function runCleanupJob(): Promise<{ stats: CronStats }> {
     },
   });
 
-  // Trim old AI-usage day buckets in one atomic statement — day keys are
-  // ISO dates, so a plain string compare is a date compare.
-  const usageCutoff = new Date(Date.now() - AI_USAGE_RETENTION_DAYS * DAY_MS)
-    .toISOString()
-    .slice(0, 10);
-  await prisma.$executeRaw`
-    UPDATE app_settings SET "aiUsage" = (
-      SELECT COALESCE(jsonb_object_agg(key, value), '{}'::jsonb)
-      FROM jsonb_each(COALESCE("aiUsage", '{}'::jsonb))
-      WHERE key >= ${usageCutoff}
-    ) WHERE id = 1`;
+  const aiCalls = await prisma.aiCall.deleteMany({
+    where: { at: { lt: new Date(Date.now() - AI_CALL_RETENTION_DAYS * DAY_MS) } },
+  });
 
   // Employer mode (ADR 0048): a screening past its date goes with every
   // applicant file and verdict — the cascade is the retention policy.
@@ -56,11 +49,13 @@ export async function runCleanupJob(): Promise<{ stats: CronStats }> {
   });
 
   const durationMs = Date.now() - started;
-  logger.info(
-    { deleted: result.count, screeningsDeleted: screenings.count, runsDeleted: runs.count, durationMs },
-    'cleanup-job: done',
-  );
-  return {
-    stats: { deleted: result.count, screeningsDeleted: screenings.count, runsDeleted: runs.count, durationMs },
+  const stats = {
+    deleted: result.count,
+    screeningsDeleted: screenings.count,
+    runsDeleted: runs.count,
+    aiCallsDeleted: aiCalls.count,
+    durationMs,
   };
+  logger.info(stats, 'cleanup-job: done');
+  return { stats };
 }

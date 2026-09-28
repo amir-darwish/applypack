@@ -34,6 +34,8 @@ export interface CoverLetterCardProps {
    * full analysis or there is none.
    */
   quickCheck: { matchId: number; resumeName: string } | null;
+  /** What a letter usually costs here (ai-spend.ts:costHintText); null until there are three. */
+  costHint: string | null;
 }
 
 /** The out-of-form "Get suggestions" button posts through this form (a form cannot nest). */
@@ -58,6 +60,7 @@ export const CoverLetterCard: FC<CoverLetterCardProps> = ({
   angles,
   quickCheck,
   addressee,
+  costHint,
 }) => (
   <div id="cover-letter">
     <Card>
@@ -107,6 +110,7 @@ export const CoverLetterCard: FC<CoverLetterCardProps> = ({
             </label>
             <Button variant="violet">Generate letter</Button>
           </div>
+          {costHint && <Hint>{costHint}</Hint>}
           {addressee.finding && (
             <Hint>
               Named by the verification: {addressee.finding.length > 200 ? `${addressee.finding.slice(0, 200)}…` : addressee.finding}{' '}

@@ -75,7 +75,7 @@ export async function generateCoverLetter(
   for (;;) {
     const answer = await askForJson(
       ai,
-      { ...prompt, maxTokens: COVER_MAX_TOKENS, label: 'cover-letter', role: 'cover', timeoutMs: COVER_TIMEOUT_MS },
+      { ...prompt, maxTokens: COVER_MAX_TOKENS, label: 'cover-letter', role: 'cover', timeoutMs: COVER_TIMEOUT_MS, subject: { jobId: job.id, resumeId: resume.id } },
       parseCoverResponse,
       { jobId: job.id },
     );

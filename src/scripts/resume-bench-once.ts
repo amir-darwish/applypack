@@ -131,7 +131,7 @@ async function runFixture(
   context: MatchContext = {},
 ): Promise<{ checks: Check[]; record: BenchFixture }> {
   const started = Date.now();
-  const text = await benchProvider.complete({
+  const { text } = await benchProvider.complete({
     ...buildMatchPrompt(resume, job, benchMode, { ...context, companySnapshot: benchCompany }),
     maxTokens: benchMode === 'fast' ? MATCH_FAST_MAX_TOKENS : MATCH_MAX_TOKENS,
     label: `bench:${name}`,

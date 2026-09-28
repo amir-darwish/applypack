@@ -15,6 +15,7 @@ import {
   getSettings,
   listNotificationTargets,
   maskToken,
+  setAiBudgetCents,
   setAiEngineConfig,
   setAiKey,
   setApplicationTrackingEnabled,
@@ -55,7 +56,6 @@ import {
   AI_PROVIDER_IDS,
   AI_PROVIDER_LABELS,
   PROVIDER_MODEL_OPTIONS,
-  PROVIDER_PAID,
   aiEngineCard,
   aiEngineOrder,
   defaultModelFor,
@@ -63,12 +63,14 @@ import {
   modelFitsProvider,
   parseAiEngineConfig,
   resolveAiEngine,
-  summarizeAiUsage,
   toggleAiEngine,
   type AiEngineConfig,
   type AiProviderId,
 } from '../../ai-engine';
-import { forgetAiProbe, getAiEngineEnv, probeAiProviders } from '../../ai-runtime';
+import { billingFacts, forgetAiProbe, getAiEngineEnv, probeAiProviders } from '../../ai-runtime';
+import { billingOf, type AiBilling } from '../../ai-usage';
+import { billingNotes, isSpendPeriod, periodRange, spendView, type SpendPeriod } from '../../ai-spend';
+import { billedThisMonth, loadSpendGroups } from '../../ai-ledger';
 import {
   AI_KEY_ENV_VARS,
   aiKeySource,
@@ -207,10 +209,13 @@ function cardRank(e: { enabled: boolean; position: number; lastResort: boolean }
   return e.lastResort ? AI_PROVIDER_IDS.length : AI_PROVIDER_IDS.length + 1;
 }
 
-async function loadSettingsProps() {
+async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
   // The keys are read once and lent to the probe — both need them (ADR 0027).
   const aiKeys = await getAiKeys();
-  const [settings, targets, profiles, active, resumes, aiStatuses, stageCounts] =
+  const billing = billingFacts(aiKeys);
+  const billingFor = (id: AiProviderId): AiBilling => billingOf(id, billing);
+  const spendRange = periodRange(spendPeriod, new Date());
+  const [settings, targets, profiles, active, resumes, aiStatuses, stageCounts, spendGroups, billedMonth] =
     await Promise.all([
       getSettings(),
       listNotificationTargets(),
@@ -223,6 +228,8 @@ async function loadSettingsProps() {
         _count: { _all: true },
         where: { pipelineStage: { not: null } },
       }),
+      loadSpendGroups(spendRange.from, spendRange.to),
+      billedThisMonth(),
     ]);
   const check = await loadNextCheck(settings.schedule);
   const scheduleView = {
@@ -257,7 +264,7 @@ async function loadSettingsProps() {
       coverDefault: defaultModelFor(id, 'cover', aiEnv) || 'CLI default',
       options: PROVIDER_MODEL_OPTIONS[id],
       freeTextModels: id === 'openai_api',
-      paid: PROVIDER_PAID[id],
+      billing: billingFor(id),
       // ADR 0027: the field takes a key, it never hands one back — only the
       // last four characters of what is stored, and where it came from.
       keyEnvVar: providerTakesKey(id) ? AI_KEY_ENV_VARS[id] : null,
@@ -280,12 +287,13 @@ async function loadSettingsProps() {
     active: AI_PROVIDER_LABELS[primary],
     chain: engine.chain.map((id) => AI_PROVIDER_LABELS[id]),
     skipped: engine.skipped.map((id) => AI_PROVIDER_LABELS[id]),
-    usage7d: summarizeAiUsage(settings.aiUsage, 7, new Date()).map((r) => ({
-      label: AI_PROVIDER_LABELS[r.id],
-      classifier: r.classifier,
-      resume: r.resume,
-      cover: r.cover,
-    })),
+    billingNotes: billingNotes(engine.chain, billingFor),
+  };
+  const aiSpend = {
+    period: spendPeriod,
+    view: spendView(spendGroups),
+    budgetCents: settings.aiBudgetCents,
+    billedThisMonthMicro: billedMonth,
   };
   return {
     telegramEnabled: settings.telegramEnabled,
@@ -310,6 +318,7 @@ async function loadSettingsProps() {
     schedule: scheduleView,
     aiEngines,
     aiStatus,
+    aiSpend,
     targets: targets.map((t) => ({
       id: t.id,
       name: t.name,
@@ -345,7 +354,7 @@ async function loadSettingsProps() {
       retentionMin: SCREENING_RETENTION_DAYS.min,
       retentionMax: SCREENING_RETENTION_DAYS.max,
       engineLabel: AI_PROVIDER_LABELS[primary],
-      engineSubscription: !PROVIDER_PAID[primary],
+      engineSubscription: billingFor(primary) === 'plan',
       screenings: screeningCount,
       notice: applicantNotice(undefined, settings.screeningRetentionDays),
       legalNote: LEGAL_NOTE,
@@ -354,7 +363,8 @@ async function loadSettingsProps() {
 }
 
 settingsRoute.get('/settings', async (c) => {
-  const props = await loadSettingsProps();
+  const spend = c.req.query('spend');
+  const props = await loadSettingsProps(isSpendPeriod(spend) ? spend : undefined);
   const tabParam = c.req.query('tab');
   const activeTab = isSettingsTab(tabParam) ? tabParam : 'general';
   // ?profile= points the editor at a specific (possibly inactive) profile.
@@ -514,7 +524,8 @@ settingsRoute.post('/settings/ai/enable', async (c) => {
   }
   // A metered engine standing behind subscription engines = money spent
   // exactly when the free capacity runs out — say so up front.
-  if (PROVIDER_PAID[provider] && next.slice(0, -1).some((id) => !PROVIDER_PAID[id])) {
+  const billing = billingFacts(await getAiKeys());
+  if (billingOf(provider, billing) === 'billed' && next.slice(0, -1).some((id) => billingOf(id, billing) !== 'billed')) {
     return flashRedirect(
       '/settings?tab=ai',
       'warn',
@@ -522,6 +533,27 @@ settingsRoute.post('/settings/ai/enable', async (c) => {
     );
   }
   return flashRedirect('/settings?tab=ai', 'ok', `${label} enabled as priority #${next.length}.`);
+});
+
+/** The monthly ceiling on billed AI money (ADR 0055): dollars in, cents stored; empty or 0 = none. */
+const MAX_AI_BUDGET_USD = 100_000;
+
+settingsRoute.post('/settings/ai/budget', async (c) => {
+  const form = await c.req.parseBody();
+  const raw = typeof form.budget === 'string' ? form.budget.trim() : '';
+  const usd = raw === '' ? 0 : Number(raw);
+  if (!Number.isFinite(usd) || usd < 0 || usd > MAX_AI_BUDGET_USD) {
+    return flashRedirect('/settings?tab=ai#usage', 'err', `The budget is dollars a month, from 0 to ${MAX_AI_BUDGET_USD.toLocaleString('en-US')}; nothing was changed.`);
+  }
+  const cents = Math.round(usd * 100);
+  await setAiBudgetCents(cents > 0 ? cents : null);
+  return flashRedirect(
+    '/settings?tab=ai#usage',
+    'ok',
+    cents > 0
+      ? `Monthly budget set to $${(cents / 100).toFixed(2)}: a warning at 80 % and 100 % of billed spend, nothing stopped.`
+      : 'Monthly budget removed.',
+  );
 });
 
 settingsRoute.post('/settings/ai/move', async (c) => {

@@ -41,7 +41,7 @@ export async function reviewResume(resume: {
   });
   const answer = await askForJson(
     await getAiRuntime(),
-    { ...prompt, maxTokens: REVIEW_MAX_TOKENS, label: 'resume-review', role: 'resume', timeoutMs: RESUME_TIMEOUT_MS.review, onError },
+    { ...prompt, maxTokens: REVIEW_MAX_TOKENS, label: 'resume-review', role: 'resume', timeoutMs: RESUME_TIMEOUT_MS.review, onError, subject: { resumeId: resume.id } },
     parseReviewResponse,
     { resumeId: resume.id },
   );

@@ -6,7 +6,9 @@ import {
   type AiProviderId,
 } from '../ai-engine';
 import { resolveAiKey } from '../ai-keys';
-import { getAiEngineEnv } from '../ai-runtime';
+import { billingFacts, getAiEngineEnv } from '../ai-runtime';
+import { recordAiCall } from '../ai-ledger';
+import { billingOf } from '../ai-usage';
 import { getAiKeys, getSettings } from '../settings';
 
 const ENGINE_TEST_TIMEOUT_MS = 90_000;
@@ -40,7 +42,7 @@ export async function testAiEngine(provider: AiProviderId): Promise<EngineTestRe
   // answers null so one bad job never stops a tick. A test button, though,
   // exists to name the cause — "credit balance too low" is not "see logs".
   let failure: string | null = null;
-  const text = await backend.complete({
+  const attempt = await backend.complete({
     system: 'You are a connectivity test. Reply with exactly: OK',
     user: 'Reply with exactly: OK',
     maxTokens: 20,
@@ -52,8 +54,20 @@ export async function testAiEngine(provider: AiProviderId): Promise<EngineTestRe
       failure = reason;
     },
   });
+  // A test is a real call on the user's money: it goes in the ledger like any other (ADR 0055).
+  await recordAiCall({
+    at: new Date(started),
+    durationMs: Date.now() - started,
+    engine: provider,
+    model,
+    feature: 'engine-test',
+    outcome: attempt.outcome,
+    spend: attempt.spend,
+    viaFallback: false,
+    billing: billingOf(provider, billingFacts(keys)),
+  });
   const seconds = ((Date.now() - started) / 1000).toFixed(1);
-  if (text !== null) {
+  if (attempt.text !== null) {
     return { ok: true, text: `${label} works — replied in ${seconds}s (model ${model || 'CLI default'}).` };
   }
   const reason: string = failure ?? 'no reason reported — see the web container logs';

@@ -4,7 +4,7 @@ import { askForJson } from './ai-json';
 import type { AiCallRequest, AiCallResult } from './ai-runtime';
 import { extractJson, jsonFailure, type ParseResult } from './text-utils';
 
-const REQ: AiCallRequest = { system: 's', user: 'u', maxTokens: 100, label: 'test', role: 'resume' };
+const REQ: AiCallRequest = { system: 's', user: 'u', maxTokens: 100, label: 'resume-scan', role: 'resume' };
 
 /** A runtime that answers from a script; null means "no engine answered". */
 function runtime(replies: (string | null)[]) {

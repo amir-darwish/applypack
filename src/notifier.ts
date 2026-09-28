@@ -11,7 +11,7 @@ import {
   type PageChangeNotice,
   type QuietSourceAlert,
 } from './notify/lines';
-import { deliverDiscord, formatDiscordAlert, formatDiscordDigest, formatDiscordPageChanges } from './notify/discord';
+import { deliverDiscord, escapeDiscord, formatDiscordAlert, formatDiscordDigest, formatDiscordPageChanges } from './notify/discord';
 import { packMessages } from './notify/pack';
 
 /*
@@ -293,6 +293,11 @@ export function formatPageChangeMessage(pages: readonly PageChangeNotice[]): str
 
 export async function sendPageChangeAlert(pages: readonly PageChangeNotice[]): Promise<Delivery> {
   return broadcast({ telegram: [formatPageChangeMessage(pages)], discord: [formatDiscordPageChanges(pages)] }, null);
+}
+
+/** One plain line to every chat — the AI budget's warning (ADR 0055). */
+export async function sendBudgetAlert(text: string): Promise<Delivery> {
+  return broadcast({ telegram: [escapeMarkdownV2(text)], discord: [escapeDiscord(text)] }, null);
 }
 
 export function escapeMarkdownV2(text: string): string {
