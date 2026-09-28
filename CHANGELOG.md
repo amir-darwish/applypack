@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.32.0] — 2026-09-28
+
+### Added
+- **The same resume in two formats, side by side.** On a resume's page,
+  "What the ATS sees" takes the other file (say the PDF of your .docx) and
+  shows what a plain parser reads from each — contacts, roles with their
+  dates, sections, warnings — which one to send, and the lines where the two
+  texts differ. No AI, and the file is not kept.
+- **"What the ATS sees" shows what the parser found:** your name and
+  headline, each contact detail (or "not found"), the sections, and every
+  role with its dates — a role without dates is flagged.
+- **A keyword your resume has only under another spelling says so** ("as
+  Postgres"): many ATS filters search the posting's own word.
+
+### Changed
+- **An example in the strength review never invents a fact.** A suggested
+  bullet with a figure or a tool your resume does not show is replaced by a
+  question about it.
+
+### Fixed
+- **Windows (`npm start`): Compare, the keyword table and Save as vN work.**
+  The dashboard loaded two of its own modules by a Windows path, which Node
+  refuses; they now load by file URL (#309).
+
 ## [2.31.0] — 2026-09-28
 
 ### Changed

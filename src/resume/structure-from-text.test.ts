@@ -95,6 +95,17 @@ test('the contact line is read into its own fields', () => {
   assert.equal(b.location, 'Austin, Texas, 78758');
 });
 
+test('a sentence with a comma is not a place', () => {
+  // A resume with no headings is all header, and its prose has commas too.
+  const flat = `Jane Example — Backend Engineer. Skills: Node.js, PostgreSQL.
+Experience: Acme (2021–2026), backend engineer — built the billing service,
+moved it from MySQL to PostgreSQL, cut p95 latency by 40%. Education: BSc.`;
+  assert.equal(structureFromText(flat).basics.location, null);
+  assert.equal(structureFromText('Jane Example\nKyiv, Ukraine (open to relocation) · jane@example.com').basics.location, 'Kyiv, Ukraine (open to relocation)');
+  assert.equal(structureFromText('Jane Example\nWashington, D.C. · jane@example.com').basics.location, 'Washington, D.C.');
+  assert.equal(structureFromText('Jane Example\nBuilt APIs, led teams. · jane@example.com').basics.location, null);
+});
+
 test('a wrapped PDF bullet is joined back into one bullet', () => {
   const bullets = structureFromText(PDF_STYLE).work[0]?.highlights ?? [];
   assert.equal(bullets.length, 2);

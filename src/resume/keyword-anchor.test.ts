@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { anchorKeywords, elsewhereForPosting } from './keyword-anchor';
+import { anchorKeywords, annotateAliasOnly, elsewhereForPosting } from './keyword-anchor';
 import { loadKeywordMatcher } from './keyword-matcher';
 import type { MatchKeyword } from './prompts';
 
@@ -66,4 +66,21 @@ test('elsewhereForPosting keeps only the other-resume skills the posting names, 
     { skill: 'react', resumeName: 'B' },
   ];
   assert.deepEqual(elsewhereForPosting(skills, POSTING, matcher).map((s) => s.skill), ['php', 'golang']);
+});
+
+test('a present keyword found only as an alias carries the spelling an ATS would miss (R4)', async () => {
+  const matcher = await loadKeywordMatcher();
+  const resume = 'Built reporting on Postgres and deployed with Kubernetes; wrote PHP and TypeScript.';
+  const rows = annotateAliasOnly(
+    [
+      keyword('PostgreSQL', ['postgres']),
+      keyword('Kubernetes', ['k8s']),
+      { ...keyword('TypeScript', ['ts']), aliasOnly: 'ts' },
+      { ...keyword('Golang', ['go']), status: 'add' as const },
+      keyword('PHP'),
+    ],
+    resume,
+    matcher,
+  );
+  assert.deepEqual(rows.map((k) => k.aliasOnly ?? null), ['Postgres', null, null, null, null]);
 });

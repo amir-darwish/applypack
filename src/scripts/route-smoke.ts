@@ -19,7 +19,9 @@ import { app } from '../web/app';
 import { DEFAULT_BODY_BYTES } from '../web/body-limits';
 import { prisma } from '../db';
 import { createManualJob } from '../jobs/manual-job';
-import { createResume } from '../resume/store';
+import { createMatch, createResume } from '../resume/store';
+import { parseMatchResponse, PROMPT_VERSION } from '../resume/prompts';
+import { scoreMatch } from '../resume/score';
 import { setAiBudgetCents, setEmployerMode } from '../settings';
 import { recordAiCall } from '../ai-ledger';
 import { NO_USAGE } from '../ai-usage';
@@ -130,6 +132,37 @@ async function fixtures(): Promise<Fixtures> {
   await recordAiCall({ ...call, engine: 'openai_api', model: 'qwen2.5:14b', outcome: 'ok', billing: 'local', spend: { usage, model: 'qwen2.5:14b', reportedUsd: null } });
   await recordAiCall({ ...call, engine: 'openai_api', model: 'mystery-model', outcome: 'ok', billing: 'billed', spend: { usage, model: 'mystery-model', reportedUsd: null } });
   await recordAiCall({ ...call, engine: 'anthropic_api', model: 'claude-opus-5', outcome: 'timeout', billing: 'billed', spend: null });
+  // One stored comparison, so the job page and the targeted view draw a keyword
+  // table — the keyword matcher (a browser module imported by file URL) loads
+  // on every OS the smoke runs on.
+  const reply = parseMatchResponse(
+    JSON.stringify({
+      summary: 'Primary stack 2/2: Node.js and TypeScript present.',
+      alignment: { title: 'strong', summary: 'strong', recent_role: 'strong' },
+      keywords: [
+        { term: 'Node.js', priority: 1, requirement: 'must', primary: true, status: 'present', aliases: ['node'], where: 'skills', note: null },
+        { term: 'TypeScript', priority: 1, requirement: 'must', primary: true, status: 'present', aliases: [], where: 'skills', note: null },
+        { term: 'PostgreSQL', priority: 2, requirement: 'must', primary: false, status: 'present', aliases: ['postgres'], where: 'skills', note: null, aliasOnly: 'Postgres' },
+      ],
+    }),
+  );
+  if (!reply.ok) throw new Error(`smoke fixture: ${reply.error}`);
+  await createMatch({
+    jobId: job.job.id,
+    resumeId: resume.id,
+    resumeVersion: resume.version,
+    resumeText: RESUME,
+    resumeName: 'Smoke resume',
+    draft: false,
+    model: 'smoke',
+    result: reply.data,
+    breakdown: scoreMatch(reply.data.keywords, reply.data.alignment, 0),
+    promptVersion: PROMPT_VERSION,
+    mode: 'full',
+    frame: 'first-run',
+    verificationId: null,
+    evidence: 'own',
+  });
   const browserPage = await prisma.company.create({
     data: { name: 'Smoke Page', atsType: 'BROWSER_PAGE', atsToken: 'https://smoke.example/careers', watched: true, active: false },
   });
@@ -212,6 +245,16 @@ async function main(): Promise<void> {
         return { method: 'POST', headers: ORIGIN, body } satisfies RequestInit;
       })(),
       expect: (res) => res.status === 303 && res.headers.get('location') === `/resumes/${f.resumeId}`,
+    },
+    {
+      // TASKS R14: the same resume as another file, read beside the saved one — a page, nothing stored.
+      name: 'POST /resumes/:id/compare-format (the same resume as another file)',
+      init: (() => {
+        const body = new FormData();
+        body.set('file', new File([`${RESUME}\nCertificates: AWS Solutions Architect.`], 'smoke.md', { type: 'text/markdown' }));
+        return { method: 'POST', headers: ORIGIN, body } satisfies RequestInit;
+      })(),
+      expect: (res) => res.status === 200 && (res.headers.get('content-type') ?? '').includes('text/html'),
     },
     {
       name: 'POST /settings/fetching-toggle',
@@ -325,6 +368,7 @@ async function main(): Promise<void> {
     '/jobs/new',
     '/resumes',
     '/resumes',
+    `/resumes/${f.resumeId}/compare-format`,
     '/settings/fetching-toggle',
     `/jobs/${f.jobId}/status`,
     `/jobs/${f.jobId}/status`,
