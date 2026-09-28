@@ -2408,6 +2408,26 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
+- [x] **`site-employers`** (site, no tag) — the 2026-09 plan's W10.
+      - L12: employer mode has its own page, `site/public/employers/`
+        (criteria, quotes, the shortlist, calibration, the legal note; the
+        redaction list with religion and health, the held file and the
+        attached cover letter as the app now does them). The landing keeps
+        a short section with one link; the nav points at the page.
+        Lighthouse: 100 / 100 / 100 / 100 on the page, 99 / 100 / 100 /
+        100 on the landing.
+      - L13: `site/public/tour.webm`, the tour at 19.9 s and 0.9 MB, linked
+        from both launch drafts.
+      - L14: a demo chip is a button: a tap says what its title says on
+        hover, and a touch screen is told to tap.
+      - L11 in part: `jobs.webp` and `resume-score.webp` re-cut from the
+        post-redesign screenshots. The screenshots and the tour predate
+        v2.37.0's "Tailor resume" menu; a re-shoot costs five AI calls on
+        a scratch install (docs/screenshots/README.md).
+      - Also: a sitemap, six engines on the landing (the local model),
+        and the demo page's side gutter, which its own padding had taken
+        away.
+
 - [x] **`ui-finish`** (minor, parts 1–4 v2.36.0 … v2.39.0) — the 2026-09 plan's W9.
       U4 `ui.tsx:Notice` replaces ten hand-rolled tone banners; U5 the jobs
       list, the Comparisons card and the board use `Empty`; U6 a failed run
