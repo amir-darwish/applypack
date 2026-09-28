@@ -270,7 +270,8 @@ src/
   prompt-fence.ts              ← untrusted-text markers + directive (pure, tested, ADR 0022)
   ai-engine.ts                 ← pure: the engine chain, the models per role, defaultModelFor (ADR 0013/0014)
   ai-keys.ts                   ← pure: per-engine API keys, DB first, .env as fallback (ADR 0027)
-  ai-runtime.ts                ← getAiRuntime().complete(): the chain with failover, a ledger row per attempt, engine probes
+  ai-runtime.ts                ← getAiRuntime().complete(): the engine chain for this host, engine probes
+  ai-failover.ts               ← runChain: the failover loop, a ledger row per attempt, cooldowns; its I/O injected (tested)
   ai-cooldown.ts               ← pure: an engine that keeps failing is skipped for a while
   ai-provider.ts               ← the AiProvider seam: AnthropicApiProvider, OpenAiApiProvider,
                                  CliProvider (claude_code, gemini_cli, codex_cli)

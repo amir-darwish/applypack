@@ -15,6 +15,7 @@ import { spreadMinute } from './schedule';
 import { getInstanceId, getSchedule } from './settings';
 import { isDigestHour, isFirstDigestHour, type Schedule } from './user-schedule';
 import { announceReady, onLauncherStop } from './local/child';
+import { stopCliChildren } from './ai-provider';
 import { HEARTBEAT_EVERY_MS } from './heartbeat';
 
 const SHUTDOWN_POLL_MS = 250;
@@ -149,7 +150,9 @@ function registerCron(
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
-  logger.info({ signal, inFlight }, 'shutdown: waiting for in-flight jobs');
+  // The CLI calls go first: a job waited on here ends as soon as its call
+  // does, and a child left behind would run on, orphaned, on the user's plan (H43).
+  logger.info({ signal, inFlight, cliChildren: stopCliChildren() }, 'shutdown: waiting for in-flight jobs');
 
   const deadline = Date.now() + SHUTDOWN_MAX_WAIT_MS;
   while (inFlight > 0 && Date.now() < deadline) {

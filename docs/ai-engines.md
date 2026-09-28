@@ -210,6 +210,25 @@ works on macOS too.)
 
 ---
 
+## When a call fails
+
+Every engine's failure is read the same way (`ai-provider-parse.ts:failureKind`):
+
+- **A refused key or sign-in** (HTTP 401 / 403, or the CLI saying so) is not
+  retried. The next engine in the list answers, and the refused one is left
+  alone for ten minutes — or until you paste a different key. The flash says
+  "the key was refused" and where to fix it.
+- **A spent plan or quota** ("usage limit", "exceeded your current quota")
+  is not retried either: it does not clear in seconds. The next engine
+  answers.
+- **A rate limit or an overloaded server** (429, 529, 503) gets one more try
+  on the same engine, after the wait the server asks for when it is ten
+  seconds or less (two seconds when it names none), and only while the
+  call's time budget has room. A longer wait goes to the next engine.
+
+When the worker or the dashboard stops, a CLI call in flight is ended with
+it instead of running on to its timeout on your plan.
+
 ## Checking the whole setup
 
 1. `/settings` → AI engine: every engine you own shows **available**.

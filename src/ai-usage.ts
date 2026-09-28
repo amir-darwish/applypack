@@ -10,8 +10,11 @@ import type { AiProviderId } from './ai-engine';
  * and no price; neither is "free".
  */
 
-/** How an attempt ended. A cut-off, refused or empty reply was still billed. */
-const AI_OUTCOMES = ['ok', 'rate_limited', 'timeout', 'cut_off', 'refused', 'empty', 'error'] as const;
+/**
+ * How an attempt ended. A cut-off, refused or empty reply was still billed;
+ * `unauthorized` is a key or a sign-in the vendor turned away (H40).
+ */
+const AI_OUTCOMES = ['ok', 'rate_limited', 'timeout', 'cut_off', 'refused', 'empty', 'unauthorized', 'error'] as const;
 export type AiOutcome = (typeof AI_OUTCOMES)[number];
 
 /** Tokens as the vendor counted them; input is the UNCACHED part. */

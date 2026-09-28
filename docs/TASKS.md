@@ -2408,6 +2408,17 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
+- [x] **`ai-provider-hardening`** (patch, v2.28.1) — the 2026-09 plan's AI-4
+      rest (H40–H46; H44 had shipped). A refused key or sign-in is its own
+      outcome (`unauthorized`): never retried, the engine left alone until
+      the credential changes. A rate limit or an overloaded server gets one
+      more try after the server's `Retry-After` (≤ 10 s); a spent quota gets
+      none; the Anthropic SDK's own uncapped retries are off. The dead "rate-
+      limited on every attempt" tails are gone. Both shutdowns end the CLI
+      children in flight, and every child's stdin is closed at spawn. The
+      failover loop is `ai-failover.ts:runChain`, tested on recorded answers.
+      Gemini gets `--prompt=…` and Codex `--` (ADR 0022 addendum).
+
 ### 20.4 Owner items
 
 - GitHub About → the package description; social preview from
