@@ -27,8 +27,8 @@ export interface AppSettingsView {
   sourceHealthAlerts: boolean;
   /** Raw AppSettings.aiEngine JSON — parse with parseAiEngineConfig. */
   aiEngine: unknown;
-  /** Raw AppSettings.aiUsage JSON — summarize with summarizeAiUsage. */
-  aiUsage: unknown;
+  /** ADR 0055: the monthly ceiling on billed AI money, in cents; null = none. */
+  aiBudgetCents: number | null;
   /** Raw AppSettings.coverAngles JSON — parse with readCoverAngles. */
   coverAngles: unknown;
   /** Raw AppSettings.pipelineStages JSON — parse with parseStageConfig (ADR 0025). */
@@ -111,7 +111,7 @@ export async function getSettings(): Promise<AppSettingsView> {
     fetchingEnabled: row.fetchingEnabled,
     sourceHealthAlerts: row.sourceHealthAlerts,
     aiEngine: row.aiEngine,
-    aiUsage: row.aiUsage,
+    aiBudgetCents: row.aiBudgetCents,
     coverAngles: row.coverAngles,
     pipelineStages: row.pipelineStages,
     schedule: row.schedule,
@@ -289,6 +289,19 @@ export async function setTelegramEnabled(enabled: boolean): Promise<void> {
     update: { telegramEnabled: enabled },
     create: { id: SETTINGS_ID, telegramEnabled: enabled },
   });
+}
+
+/**
+ * The monthly AI budget (ADR 0055). A new ceiling forgets the warnings this
+ * month already sent: they were about the old one.
+ */
+export async function setAiBudgetCents(cents: number | null): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: SETTINGS_ID },
+    update: { aiBudgetCents: cents, aiBudgetAlerted: null },
+    create: { id: SETTINGS_ID, aiBudgetCents: cents },
+  });
+  logger.info({ cents }, 'settings: AI budget set');
 }
 
 export async function setClassifierMode(mode: ClassifierMode): Promise<void> {

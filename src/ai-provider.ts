@@ -5,8 +5,10 @@ import { promisify } from 'node:util';
 import { config } from './config';
 import { logger } from './logger';
 import { sleep } from './http';
+import { addUsage, NO_USAGE, type AiOutcome, type AiSpend } from './ai-usage';
 import {
   anthropicMaxTokens,
+  anthropicUsage,
   buildClaudeCodeArgs,
   buildCliEnv,
   buildCodexCliArgs,
@@ -41,7 +43,8 @@ import { AI_KEY_ENV_VARS } from './ai-keys';
  * - `codex_cli`:     headless `codex exec` — ChatGPT subscription login or
  *                    OPENAI_API_KEY.
  *
- * All return the raw text; callers own JSON extraction + zod validation.
+ * All return the raw text; callers own JSON extraction + zod validation —
+ * and, beside it, how the attempt ended and what it spent (ADR 0055).
  */
 export interface AiRequest {
   system: string;
@@ -72,14 +75,21 @@ export interface AiRequest {
   onError?: (reason: string) => void;
 }
 
+/** One attempt: the reply or null, how it ended, and what the vendor said it spent. */
+export interface AiAttempt {
+  /** The model text, or null after logging the failure — and after handing the reason to req.onError. */
+  text: string | null;
+  outcome: AiOutcome;
+  /** Null when the vendor reported nothing: a timeout, a refused key, a crash. */
+  spend: AiSpend | null;
+}
+
 export interface AiProvider {
   readonly name: string;
-  /**
-   * Returns the model text, or null after logging the failure — and after
-   * handing the reason to req.onError, when the caller asked for one.
-   */
-  complete(req: AiRequest): Promise<string | null>;
+  complete(req: AiRequest): Promise<AiAttempt>;
 }
+
+const failed = (outcome: AiOutcome, spend: AiSpend | null = null): AiAttempt => ({ text: null, outcome, spend });
 
 const RATE_LIMIT_RETRY_DELAY_MS = 2_000;
 const MAX_ATTEMPTS = 2;
@@ -123,16 +133,19 @@ class AnthropicApiProvider implements AiProvider {
     return this.cached.client;
   }
 
-  async complete(req: AiRequest): Promise<string | null> {
+  async complete(req: AiRequest): Promise<AiAttempt> {
     const key = req.apiKey ?? config.ANTHROPIC_API_KEY;
     if (!key) {
       logger.error({ label: req.label }, 'ai: no Anthropic API key — paste one on /settings');
       req.onError?.('no API key — paste one on /settings, or set it in .env');
-      return null;
+      return failed('error');
     }
+    // What the requests of this call spent so far: a web-search turn resumed
+    // and then refused was still billed for the turns before it.
+    const tally: { spend: AiSpend | null } = { spend: null };
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
-        return await this.run(req, this.clientFor(key));
+        return await this.run(req, this.clientFor(key), tally);
       } catch (err) {
         const status = err instanceof Anthropic.APIError ? err.status : undefined;
         if (status === 429 && attempt < MAX_ATTEMPTS - 1) {
@@ -144,14 +157,25 @@ class AnthropicApiProvider implements AiProvider {
         req.onError?.(
           describeAiFailure(status ? `HTTP ${status}: ${errorReason(err)}` : errorReason(err)),
         );
-        return null;
+        // The request that failed is not billed; the ones before it were.
+        return failed(
+          status === 429 ? 'rate_limited' : err instanceof Anthropic.APIConnectionTimeoutError ? 'timeout' : 'error',
+          tally.spend,
+        );
       }
     }
     req.onError?.('rate-limited on every attempt');
-    return null;
+    return failed('rate_limited', tally.spend);
   }
 
-  private async run(req: AiRequest, client: Anthropic): Promise<string> {
+  /** A reply the API billed and the caller cannot use: logged and reported as the thrown errors are. */
+  private refuse(req: AiRequest, outcome: AiOutcome, reason: string, spend: AiSpend): AiAttempt {
+    logger.error({ label: req.label, outcome }, `ai: request failed: ${reason}`);
+    req.onError?.(describeAiFailure(reason));
+    return failed(outcome, spend);
+  }
+
+  private async run(req: AiRequest, client: Anthropic, tally: { spend: AiSpend | null }): Promise<AiAttempt> {
     const messages: Anthropic.MessageParam[] = [{ role: 'user', content: req.user }];
     const model = req.model ?? config.CLAUDE_MODEL;
     const callers = webToolsDirectOnly(model) ? { allowed_callers: ['direct' as const] } : {};
@@ -161,6 +185,8 @@ class AnthropicApiProvider implements AiProvider {
           { type: 'web_fetch_20260209' as const, name: 'web_fetch' as const, max_uses: WEB_FETCH_MAX_USES, ...callers },
         ]
       : undefined;
+    // A paused web-search turn is resumed as a new request: each is billed, so they add.
+    let usage = tally.spend?.usage ?? NO_USAGE;
     for (let resumes = 0; ; resumes++) {
       // The same ceiling the chain hands every other backend; without it the
       // SDK's own ten minutes was the only limit and the chain's deadline
@@ -188,6 +214,9 @@ class AnthropicApiProvider implements AiProvider {
         },
         'ai: reply',
       );
+      usage = addUsage(usage, anthropicUsage(resp.usage));
+      const spend: AiSpend = { usage, model: resp.model, reportedUsd: null };
+      tally.spend = spend;
       if (resp.stop_reason === 'pause_turn' && resumes < MAX_PAUSE_TURN_RESUMES) {
         messages.push({ role: 'assistant', content: resp.content });
         continue;
@@ -196,12 +225,15 @@ class AnthropicApiProvider implements AiProvider {
       // JSON, and a cut-off one used to come back as "no JSON object" (#159).
       if (resp.stop_reason === 'max_tokens') {
         const { output_tokens, output_tokens_details } = resp.usage;
-        throw new Error(
+        return this.refuse(
+          req,
+          'cut_off',
           `reply cut off at ${output_tokens} output tokens (${output_tokens_details?.thinking_tokens ?? 0} of them thinking)`,
+          spend,
         );
       }
       if (resp.stop_reason === 'refusal') {
-        throw new Error(`the model declined this request (${resp.stop_details?.category ?? 'no category given'})`);
+        return this.refuse(req, 'refused', `the model declined this request (${resp.stop_details?.category ?? 'no category given'})`, spend);
       }
       const text = resp.content
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')
@@ -209,8 +241,8 @@ class AnthropicApiProvider implements AiProvider {
         .join('');
       // A reply with no text is not an answer: handed on as one, it spent a
       // parse retry instead of a failover to an engine that talks.
-      if (text.trim().length === 0) throw new Error('the model returned no text');
-      return text;
+      if (text.trim().length === 0) return this.refuse(req, 'empty', 'the model returned no text', spend);
+      return { text, outcome: 'ok', spend };
     }
   }
 }
@@ -221,12 +253,12 @@ class OpenAiApiProvider implements AiProvider {
 
   constructor(private readonly baseUrl: string) {}
 
-  async complete(req: AiRequest): Promise<string | null> {
+  async complete(req: AiRequest): Promise<AiAttempt> {
     const apiKey = req.apiKey ?? config.OPENAI_API_KEY;
     if (!apiKey) {
       logger.error({ label: req.label }, 'ai: no OpenAI API key — paste one on /settings');
       req.onError?.('no API key — paste one on /settings, or set it in .env');
-      return null;
+      return failed('error');
     }
     const model = req.model || config.OPENAI_MODEL || OPENAI_FALLBACK_MODEL;
     // api.openai.com rejects max_tokens for reasoning models; most
@@ -262,7 +294,7 @@ class OpenAiApiProvider implements AiProvider {
         });
         const raw = await resp.text();
         const out = parseOpenAiChatResponse(raw);
-        if (out.text !== null) return out.text;
+        if (out.text !== null) return { text: out.text, outcome: 'ok', spend: out.spend ?? null };
         const rateLimited = out.rateLimited || resp.status === 429;
         if (rateLimited && attempt < MAX_ATTEMPTS - 1) {
           logger.warn({ label: req.label }, 'ai: openai rate-limited, retrying');
@@ -274,17 +306,17 @@ class OpenAiApiProvider implements AiProvider {
           'ai: openai request failed',
         );
         req.onError?.(describeAiFailure(`HTTP ${resp.status}: ${out.error ?? 'no reply text'}`));
-        return null;
+        return failed(out.outcome ?? (rateLimited ? 'rate_limited' : 'error'), out.spend ?? null);
       } catch (err) {
         logger.error({ err, label: req.label, model }, 'ai: openai request failed');
         req.onError?.(describeAiFailure(errorReason(err)));
-        return null;
+        return failed(ctrl.signal.aborted ? 'timeout' : 'error');
       } finally {
         clearTimeout(timer);
       }
     }
     req.onError?.('rate-limited on every attempt');
-    return null;
+    return failed('rate_limited');
   }
 }
 
@@ -310,7 +342,7 @@ class CliProvider implements AiProvider {
     private readonly spec: CliSpec,
   ) {}
 
-  async complete(req: AiRequest): Promise<string | null> {
+  async complete(req: AiRequest): Promise<AiAttempt> {
     const args = this.spec.buildArgs({
       system: req.system,
       user: req.user,
@@ -337,7 +369,11 @@ class CliProvider implements AiProvider {
         const failure = cliFailure(err, req.timeoutMs ?? CLI_TIMEOUT_MS);
         logger.error({ label: req.label, provider: this.name, ...failure.log }, 'ai: cli process failed');
         req.onError?.(describeAiFailure(`${this.bin}: ${failure.reason}`));
-        return null;
+        // A CLI that exits non-zero may still have printed its result, usage
+        // included (Claude Code does): what it spent is read off that.
+        const e = err as { killed?: unknown; stdout?: unknown };
+        const printed = typeof e.stdout === 'string' && e.stdout.trim() ? this.spec.parse(e.stdout) : null;
+        return failed(e.killed === true ? 'timeout' : (printed?.outcome ?? 'error'), printed?.spend ?? null);
       }
       const parsedOut = this.spec.parse(stdout);
       // An empty reply is a failure to fail over from, not a text to parse.
@@ -347,7 +383,7 @@ class CliProvider implements AiProvider {
           : parsedOut;
       if (out.text !== null) {
         logger.info({ label: req.label, provider: this.name, model: req.model, ...out.usage }, 'ai: reply');
-        return out.text;
+        return { text: out.text, outcome: 'ok', spend: out.spend ?? null };
       }
       if (out.rateLimited && attempt < MAX_ATTEMPTS - 1) {
         logger.warn({ label: req.label, provider: this.name }, 'ai: cli rate-limited, retrying');
@@ -359,10 +395,11 @@ class CliProvider implements AiProvider {
         'ai: cli returned an error',
       );
       req.onError?.(describeAiFailure(out.error ?? 'the CLI returned no text'));
-      return null;
+      const outcome = parsedOut.text !== null ? 'empty' : (out.outcome ?? (out.rateLimited ? 'rate_limited' : 'error'));
+      return failed(outcome, out.spend ?? null);
     }
     req.onError?.('rate-limited on every attempt');
-    return null;
+    return failed('rate_limited');
   }
 
   /**

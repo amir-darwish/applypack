@@ -48,6 +48,7 @@ const FACTS: { key: string; one: string; many: string; always?: true; job?: stri
   { key: 'deleted', job: 'cleanup', one: 'old job deleted', many: 'old jobs deleted', always: true },
   { key: 'screeningsDeleted', one: 'screening deleted', many: 'screenings deleted' },
   { key: 'runsDeleted', one: 'old run deleted', many: 'old runs deleted' },
+  { key: 'aiCallsDeleted', one: 'old AI call record deleted', many: 'old AI call records deleted' },
   { key: 'candidates', one: 'candidate', many: 'candidates', always: true },
   { key: 'candidatesRecorded', one: 'candidate recorded', many: 'candidates recorded' },
 ];

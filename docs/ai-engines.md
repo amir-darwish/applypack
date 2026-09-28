@@ -179,6 +179,57 @@ works on macOS too.)
    on failover you will see `ai: engine failed, trying next` followed by
    `ai: served by fallback engine`.
 
+## What it costs, and checking it against the vendor
+
+`/settings` → AI engine → **Usage & cost** lists every call ApplyPack made
+(ADR 0055): what it was for, which model answered, the tokens the vendor
+reported and the money. It keeps three totals apart and never adds them:
+
+- **Billed** — the Anthropic API, an OpenAI-compatible server on the
+  internet, the Gemini CLI with a key. Priced from `src/ai-prices.ts`, a
+  table of the vendors' published rates dated on every row it priced; where
+  the vendor sends its own charge (OpenRouter) and the table does not know
+  the model, that charge is used.
+- **Covered by your plans** — Claude Code, Codex, the Gemini CLI on a
+  Google login. The figure is what the calls would cost on the API, an
+  estimate: your plan is not billed per call. If a CLI is signed in with an
+  API key instead of a plan, it bills that key, and this figure is your bill.
+- **Local models** — an OpenAI-compatible server on this machine or your
+  network. Counted, never priced.
+
+Each engine card says which of the three it spends. A billed engine ahead
+of one your plan covers gets a warning: move the plan up to spend it first.
+Under **Monthly budget for billed calls** a ceiling sends one line to your
+alert chats at 80 % and at 100 % of it, once each a month (UTC). Nothing is
+ever stopped.
+
+To compare with the vendor's own numbers, pick closed UTC days (their
+dashboards update with a delay and cut days in UTC) and print the ledger:
+
+```bash
+npm run spend:report -- --from 2026-09-01 --to 2026-09-27
+```
+
+It prints one tab-separated row per day, engine and model — calls, the
+calls that ended with no usage reported, input, cache writes (five-minute
+and one-hour), cache reads, output, web searches, our figure and the
+vendor-reported one — and a total for each kind of money. Paste it beside
+the Claude Console's Usage page or the OpenAI usage page. The usual reasons
+two correct numbers differ:
+
+- **A call ApplyPack timed out** may have finished on the vendor's side and
+  been billed; those calls are counted in the `aborted` column.
+- **A key used by other software too**: the vendor's total per key includes
+  it. A dedicated key per install keeps the two comparable.
+- **A new model or a changed rate**: a model the table does not know is
+  listed as not priced; a changed rate needs a new dated row in
+  `src/ai-prices.ts`.
+- **The subscription CLIs** have no bill to match: the tokens are the CLI's
+  own, and the dollar figure is an estimate by definition.
+
+The vendor's admin key, which reads an organisation's usage, never goes
+into ApplyPack.
+
 ## Troubleshooting
 
 - **"not detected" badge** — the hint in the card says exactly what is

@@ -18,6 +18,9 @@ import { MAX_UPLOAD_MB } from '../upload';
 import { ALERT_MODES, ALL_DAYS, DAY_LABELS, FETCH_EVERY, MAX_DIGEST_HOURS, describeSchedule, type Schedule } from '../../user-schedule';
 import { KIND_LABEL } from '../../notify/targets';
 import { SCHEDULE_HREF, type HeldLine } from '../held-line';
+import { AiSpendCard, type AiSpendProps } from './ai-spend-card';
+import { BILLING_WORDS } from '../../ai-spend';
+import type { AiBilling } from '../../ai-usage';
 
 interface MaskedTarget {
   id: number;
@@ -79,8 +82,8 @@ export interface AiEngineRow {
   /** Family model ids for the selects; empty = free-text input. */
   options: string[];
   freeTextModels: boolean;
-  /** Metered billing — every call costs money (vs a flat subscription). */
-  paid: boolean;
+  /** Whose money a call on this engine spends (ai-usage.ts:billingOf, ADR 0055). */
+  billing: AiBilling;
   /** The .env variable this engine's key mirrors; null = login-only engine. */
   keyEnvVar: string | null;
   /** Where the credential comes from right now (ADR 0027). */
@@ -104,7 +107,8 @@ export interface AiStatusSummary {
   active: string;
   chain: string[];
   skipped: string[];
-  usage7d: { label: string; classifier: number; resume: number; cover: number }[];
+  /** A pay-per-token engine standing ahead of one a plan covers (ai-spend.ts:billingNotes). */
+  billingNotes: string[];
 }
 
 /**
@@ -152,6 +156,7 @@ export interface SettingsProps {
   schedule: ScheduleView;
   aiEngines: AiEngineRow[];
   aiStatus: AiStatusSummary;
+  aiSpend: AiSpendProps;
   targets: MaskedTarget[];
   profiles: ProfileListItem[];
   activeProfile: Profile | null;
@@ -357,6 +362,7 @@ export const SettingsPage: FC<SettingsProps> = ({
   schedule,
   aiEngines,
   aiStatus,
+  aiSpend,
   targets,
   profiles,
   activeProfile,
@@ -612,17 +618,9 @@ export const SettingsPage: FC<SettingsProps> = ({
               <span> → fallback: {aiStatus.chain.slice(1).join(' → ')}</span>
             )}
           </div>
-          <div class="text-[13px] text-ink-faint">
-            Last 7 days:{' '}
-            {aiStatus.usage7d.length === 0
-              ? 'no AI calls recorded yet'
-              : aiStatus.usage7d
-                  .map(
-                    (u) =>
-                      `${u.label} ${u.classifier + u.resume + u.cover} (${u.classifier} classify · ${u.resume} resume · ${u.cover} letter)`,
-                  )
-                  .join(' — ')}
-          </div>
+          {aiStatus.billingNotes.map((note) => (
+            <div class="rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn">{note}</div>
+          ))}
           {aiStatus.skipped.length > 0 && (
             <div class="rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn">
               Enabled but skipped for now: {aiStatus.skipped.join(', ')} — not usable on this
@@ -637,6 +635,15 @@ export const SettingsPage: FC<SettingsProps> = ({
             <AiEngine engine={e} />
           ))}
         </div>
+      </Section>
+
+      <Section
+        id="usage"
+        title="Usage & cost"
+        desc="Every AI call ApplyPack made: what it was for, which model answered, and what it spent."
+        more="Tokens are what the vendor reported; a count it did not report stays empty rather than zero. Money is our price from a dated table of the vendors' published rates, or the vendor's own figure where it sends one (OpenRouter, the Claude Code CLI's estimate). Days are UTC, as on the vendors' own dashboards. Nothing of a prompt or a reply is kept."
+      >
+        <AiSpendCard {...aiSpend} />
       </Section>
 
       <Section
@@ -1310,7 +1317,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
       <span class="text-entity text-ink">{e.label}</span>
       <Badge tone={e.ok ? 'ok' : 'neutral'}>{e.ok ? 'available' : 'not detected'}</Badge>
       {e.lastResort && <Badge tone="warn">last resort</Badge>}
-      {e.paid && <Badge tone="warn">pay per token</Badge>}
+      <Badge tone={e.billing === 'billed' ? 'warn' : e.billing === 'local' ? 'ok' : 'neutral'}>{BILLING_WORDS[e.billing]}</Badge>
       <div class="ml-auto flex flex-wrap justify-end gap-2">
         {e.enabled && e.position > 0 && (
           <ActionForm action="/settings/ai/move" hidden={{ provider: e.id }}>

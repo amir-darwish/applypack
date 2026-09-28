@@ -20,7 +20,7 @@ gets a dated addendum at the end of the ADR.
 - [0004 — One active profile, not multi-tenant](./0004-single-active-profile.md) — *superseded by 0028*
 - [0005 — No LinkedIn / Indeed / Workday](./0005-no-linkedin-indeed-workday.md) — *amended by 0034, 0036*
 - [0006 — Discovery via HN parser, not ATS-vendor lists](./0006-discovery-via-hn-parser.md)
-- [0007 — One AI provider seam: Messages API or Claude Code CLI](./0007-ai-provider-seam.md) — *extended by 0013, 0014, 0027*
+- [0007 — One AI provider seam: Messages API or Claude Code CLI](./0007-ai-provider-seam.md) — *extended by 0013, 0014, 0027, 0055*
 - [0008 — Resume module lives in the web process, files in Postgres](./0008-resume-module-in-web.md)
 - [0009 — Web tools through the AI seam, for job verification only](./0009-web-tools-for-job-verification.md)
 - [0010 — Two scores: live keyword coverage in the browser, AI match on demand](./0010-two-scores-live-keywords-vs-ai-match.md) — *amended by 0012, 0038*
@@ -68,6 +68,7 @@ gets a dated addendum at the end of the ADR.
 - [0052 — Calibration reports agreement with the person's decisions and never tunes the rubric by itself](./0052-calibration-reports-agreement-and-never-tunes-the-rubric.md)
 - [0053 — Uniqueness lives in the database, and a row's state is written with the row](./0053-uniqueness-lives-in-the-database.md)
 - [0054 — `npm start` runs ApplyPack with a built-in Postgres; Docker is the server option](./0054-npm-start-runs-a-built-in-database.md)
+- [0055 — Every AI attempt is a ledger row, and a bill, a plan and a local model are never added together](./0055-every-ai-attempt-is-a-ledger-row.md) *(extends 0007)*
 
 ## When to write a new one
 

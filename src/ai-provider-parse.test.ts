@@ -344,3 +344,96 @@ test('parseOpenAiChatResponse reads finish_reason and refuses an empty completio
   const fine = parseOpenAiChatResponse(JSON.stringify({ choices: [{ message: { content: '{"ok":1}' }, finish_reason: 'stop' }] }));
   assert.equal(fine.text, '{"ok":1}');
 });
+
+// ADR 0055: what a call spent, read off each engine's own output. The shapes
+// are the vendors' documented ones (Claude Code's result message, Codex's
+// `turn.completed`, the Gemini CLI's telemetry, the chat completions usage).
+
+test('Claude Code: tokens, the model that answered and the CLI estimate — on success and on failure', () => {
+  const result = {
+    type: 'result',
+    subtype: 'success',
+    is_error: false,
+    result: '{"ok":1}',
+    total_cost_usd: 0.012345,
+    usage: {
+      input_tokens: 12,
+      cache_creation_input_tokens: 4_000,
+      cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 4_000 },
+      cache_read_input_tokens: 9_000,
+      output_tokens: 800,
+      server_tool_use: { web_search_requests: 2 },
+    },
+    modelUsage: {
+      'claude-haiku-4-5-20251001': { inputTokens: 300, outputTokens: 20, costUSD: 0.0004 },
+      'claude-sonnet-5': { inputTokens: 12, outputTokens: 780, costUSD: 0.0119 },
+    },
+  };
+  const out = parseClaudeCodeOutput(JSON.stringify(result));
+  assert.deepEqual(out.spend, {
+    usage: { inputTokens: 12, cacheWriteTokens: 0, cacheWrite1hTokens: 4_000, cacheReadTokens: 9_000, outputTokens: 800, webSearches: 2 },
+    model: 'claude-sonnet-5',
+    reportedUsd: 0.012345,
+  });
+  const failed = parseClaudeCodeOutput(JSON.stringify({ ...result, subtype: 'error_during_execution', is_error: true, result: 'boom' }));
+  assert.equal(failed.text, null);
+  assert.equal(failed.outcome, 'error');
+  assert.equal(failed.spend?.usage.outputTokens, 800);
+  // Without the lifetime split every write is priced as a five-minute one.
+  const plain = parseClaudeCodeOutput(JSON.stringify({ ...result, usage: { input_tokens: 1, cache_creation_input_tokens: 50 } }));
+  assert.equal(plain.spend?.usage.cacheWriteTokens, 50);
+  assert.equal(plain.spend?.usage.cacheWrite1hTokens, null);
+});
+
+test('chat completions: the uncached input, the reasoning in output, and OpenRouter\'s own charge', () => {
+  const body = {
+    model: 'gpt-5-mini-2025-08-07',
+    choices: [{ message: { content: '{"a":1}' }, finish_reason: 'stop' }],
+    usage: { prompt_tokens: 1_200, completion_tokens: 300, prompt_tokens_details: { cached_tokens: 1_000 }, cost: 0.00042 },
+  };
+  assert.deepEqual(parseOpenAiChatResponse(JSON.stringify(body)).spend, {
+    usage: { inputTokens: 200, cacheWriteTokens: null, cacheWrite1hTokens: null, cacheReadTokens: 1_000, outputTokens: 300, webSearches: null },
+    model: 'gpt-5-mini-2025-08-07',
+    reportedUsd: 0.00042,
+  });
+  // A cut-off reply was billed in full.
+  const cut = parseOpenAiChatResponse(JSON.stringify({ ...body, choices: [{ message: { content: '{"a":' }, finish_reason: 'length' }] }));
+  assert.equal(cut.outcome, 'cut_off');
+  assert.equal(cut.spend?.usage.outputTokens, 300);
+  // A server that reports no usage reports nothing, not zero.
+  assert.equal(parseOpenAiChatResponse(JSON.stringify({ choices: body.choices })).spend, undefined);
+});
+
+test('Codex: the turn.completed usage from its documentation', () => {
+  const out = parseCodexCliOutput(
+    [
+      '{"type":"thread.started"}',
+      '{"type":"item.completed","item":{"type":"agent_message","text":"{}"}}',
+      '{"type":"turn.completed","usage":{"input_tokens":24763,"cached_input_tokens":24448,"output_tokens":122,"reasoning_output_tokens":0}}',
+    ].join('\n'),
+  );
+  assert.deepEqual(out.spend, {
+    usage: { inputTokens: 315, cacheWriteTokens: null, cacheWrite1hTokens: null, cacheReadTokens: 24_448, outputTokens: 122, webSearches: null },
+    model: null,
+    reportedUsd: null,
+  });
+});
+
+test('Gemini CLI: prompt minus cached, the answer plus the thinking, named for the model that answered', () => {
+  const out = parseGeminiCliOutput(
+    JSON.stringify({
+      response: '{}',
+      stats: {
+        models: {
+          'gemini-2.5-flash-lite': { api: { totalRequests: 1 }, tokens: { prompt: 900, candidates: 5, cached: 0, thoughts: 0 } },
+          'gemini-2.5-pro': { api: { totalRequests: 1 }, tokens: { prompt: 5_000, candidates: 700, cached: 4_000, thoughts: 300, tool: 0 } },
+        },
+      },
+    }),
+  );
+  assert.deepEqual(out.spend, {
+    usage: { inputTokens: 1_900, cacheWriteTokens: null, cacheWrite1hTokens: null, cacheReadTokens: 4_000, outputTokens: 1_005, webSearches: null },
+    model: 'gemini-2.5-pro',
+    reportedUsd: null,
+  });
+});

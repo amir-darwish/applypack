@@ -54,6 +54,7 @@ export async function rewriteAction(
       role: 'resume',
       timeoutMs: RESUME_TIMEOUT_MS.rewrite,
       onError,
+      subject: { jobId: job.id, resumeId: match.resumeId },
     },
     parseRewriteResponse,
     { matchId: match.id },

@@ -59,6 +59,8 @@ export interface ResumeMatchCardProps {
   job: { title: string; companyName: string };
   /** The latest "Is this job real?" verdict, read for one line and the cautions — never scored (#162). */
   verification: VerificationForHint | null;
+  /** What a comparison usually costs here (ai-spend.ts:costHintText); null until there are three. */
+  costHint: string | null;
 }
 
 const PRIORITY_TONE: Record<MatchAction['priority'], Tone> = {
@@ -134,6 +136,7 @@ export const ResumeMatchCard: FC<ResumeMatchCardProps> = ({
   selectedKeywords,
   job,
   verification,
+  costHint,
 }) => (
   <div id="resume-match">
     <Card>
@@ -188,6 +191,7 @@ export const ResumeMatchCard: FC<ResumeMatchCardProps> = ({
               deterministically from the reply: same facts, same number, every time.
             </Hint>
           )}
+          {costHint && <Hint class="basis-full">{costHint}</Hint>}
         </form>
       )}
 

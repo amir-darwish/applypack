@@ -1,5 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import { Hono } from 'hono';
+import { jobSpend, typicalCost } from '../../ai-ledger';
+import { costHintText, jobSpendText } from '../../ai-spend';
 import { idParam, intQuery } from '../params';
 import { JobStatus, type Prisma } from '@prisma/client';
 import { z } from 'zod';
@@ -344,7 +346,7 @@ jobsRoute.get('/jobs/:id', async (c) => {
   const id = idParam(c.req.param('id'));
   if (!Number.isFinite(id)) return c.text('Bad id', 400);
 
-  const [job, settings, resumes, matches, verifications, letters, activeProfile] = await Promise.all([
+  const [job, settings, resumes, matches, verifications, letters, activeProfile, spentHere, matchCost, verifyCost, letterCost] = await Promise.all([
     prisma.job.findUnique({
       where: { id },
       include: {
@@ -385,6 +387,12 @@ jobsRoute.get('/jobs/:id', async (c) => {
     listVerificationsForJob(id),
     listCoverLettersForJob(id),
     getActiveProfile(),
+    // What the AI spent here, and what the three expensive buttons usually
+    // cost — read off the ledger, no call spent (ADR 0055).
+    jobSpend(id),
+    typicalCost('resume-match'),
+    typicalCost('job-verify'),
+    typicalCost('cover-letter'),
   ]);
   if (!job) return c.text('Not found', 404);
 
@@ -445,6 +453,8 @@ jobsRoute.get('/jobs/:id', async (c) => {
       verification={verifications[0] ?? null}
       verificationCount={verifications.length}
       verificationRun={verifyRunView(id)}
+      verifyCostHint={costHintText(verifyCost)}
+      aiSpent={jobSpendText(spentHere)}
       resumeMatch={{
         jobId: id,
         resumes: resumeOptions,
@@ -454,6 +464,7 @@ jobsRoute.get('/jobs/:id', async (c) => {
         selectedKeywords,
         job: { title: job.title, companyName: job.company.name },
         verification: verifications[0] ?? null,
+        costHint: costHintText(matchCost),
       }}
       coverLetters={{
         jobId: id,
@@ -465,6 +476,7 @@ jobsRoute.get('/jobs/:id', async (c) => {
         angles: readCoverAngles(settings.coverAngles),
         addressee: addresseeFromVerification(verifications[0]?.evidence, job.company.name),
         quickCheck,
+        costHint: costHintText(letterCost),
       }}
       flash={flashCookie}
     />,

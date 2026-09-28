@@ -5,10 +5,11 @@ import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
 import { isUniqueViolation, prisma } from '../../db';
 import { logger } from '../../logger';
-import { getAiRuntime } from '../../ai-runtime';
-import { AI_PROVIDER_LABELS, PROVIDER_PAID } from '../../ai-engine';
+import { billingFacts, getAiRuntime } from '../../ai-runtime';
+import { AI_PROVIDER_LABELS } from '../../ai-engine';
+import { billingOf } from '../../ai-usage';
 import { config } from '../../config';
-import { getSettings } from '../../settings';
+import { getAiKeys, getSettings } from '../../settings';
 import { createManualJob, MAX_FIELD_CHARS, MAX_POSTING_CHARS, MIN_DESCRIPTION_CHARS } from '../../jobs/manual-job';
 import { onceGuard } from '../once-guard';
 import { briefForPosting, briefLine } from '../../resume/brief';
@@ -243,7 +244,8 @@ async function engineNote(): Promise<{ label: string; warn: string | null }> {
   const first = runtime.chain[0];
   if (!first) return { label: 'no engine', warn: 'No AI engine is usable — set one up on Settings → AI engine before scoring.' };
   const label = AI_PROVIDER_LABELS[first];
-  if (PROVIDER_PAID[first]) return { label, warn: null };
+  // A key (under a vendor's API terms) or a local model is fine; a personal plan is the warning.
+  if (billingOf(first, billingFacts(await getAiKeys())) !== 'plan') return { label, warn: null };
   return {
     label,
     warn: `Scoring runs on ${label}, a personal subscription. Other people's resumes go through it under terms you do not control — for applicants' data the defensible path is an API engine under a data-processing agreement, or a local model through the OpenAI-compatible engine. Change the order on Settings → AI engine.`,

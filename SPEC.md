@@ -175,7 +175,7 @@ match and a recap at 09:00: the behaviour before v1.47.0.
 | `mm * * * *` | fetch              | full fetch + filter + classify + alert — gated by the user's schedule; held alerts and the France Travail check run first, even while paused |
 | `0 * * * *` | digest             | Recap of the NEW / ALERTED jobs stored since the last recap, to every active target; only on the digest hours |
 | `0 * * * *` | stale-applications | Nudge for jobs in the Applied column for more than 14 days with no recruiter contact; only on the first digest hour of the day |
-| `0 3 * * 0` | cleanup            | Delete DISMISSED jobs older than 30 days (never one with a pipeline stage), screenings past `retainUntil`, finished run rows older than 90 days and AI usage counts older than 60 days |
+| `0 3 * * 0` | cleanup            | Delete DISMISSED jobs older than 30 days (never one with a pipeline stage), screenings past `retainUntil`, finished run rows older than 90 days and AI ledger rows older than 400 days |
 | `mm 4 * * 0` | discovery         | Re-probe the pending Greenhouse, Lever and Ashby CompanyCandidates |
 | `mm 6 1 * *` | hn-hiring         | Pull latest HN Who-is-hiring + extract candidates |
 
@@ -259,6 +259,7 @@ clause at the start of the affected job/handler. The toggles live on
 | `disabledSources` (String[])     | `[]`     | Skip whole AtsType families in runAllFetchers (and the monthly HN pull, for HN_HIRING); a switched-off family is never called quiet |
 | `employerMode`                   | false    | Employer mode (ADR 0049): the Screening menu item and every `/screen` route exist only while on; the worker never reads it |
 | `screeningRetentionDays`         | 90       | How long a screening keeps its applicant files and verdicts before the weekly cleanup deletes it (ADR 0048) |
+| `aiBudgetCents`                  | NULL     | A monthly ceiling on billed AI money: one line to the alert chats at 80 % and at 100 %, once each per UTC month (`aiBudgetAlerted` holds the last one sent). NULL = no budget. Nothing is ever stopped (ADR 0055) |
 
 ## Application tracking
 
@@ -692,6 +693,39 @@ criteria behind them, per-criterion gaps — and never re-weights
 folder, writing nothing. A screening is deleted
 with its files on `retainUntil` (`screeningRetentionDays`, default 90) by
 the cleanup cron, or at once from its page.
+
+## AI spend (ADR 0055)
+
+Every attempt the engine chain makes — the failed ones too — is one
+`ai_call` row: the engine, the model asked for and the one the vendor says
+ran, the feature (a closed set: every call site's label), how it ended
+(`ok · rate_limited · timeout · cut_off · refused · empty · error`), the
+tokens by kind as the vendor reported them (a count it did not report is
+NULL, never 0), web searches, the posting and resume it served where the
+caller knows, and the money: ours from `src/ai-prices.ts` (a table of the
+vendors' published rates with its date on every row it priced; a model it
+does not know is "not priced") and the vendor's own figure beside it
+(OpenRouter's `usage.cost`, the Claude Code CLI's `total_cost_usd` estimate).
+No prompt and no reply is kept.
+
+Whose money a call spends decides which total it joins, and the three are
+never added: **billed** (the Anthropic API, an OpenAI-compatible server on
+the internet, the Gemini CLI with a key), **covered by a plan** (Claude
+Code, Codex, the Gemini CLI on a Google login — the figure is what the call
+would cost on the API) and **local** (an OpenAI-compatible server on this
+machine or network — free). `/settings` → AI engine → Usage & cost shows
+the three totals over the last 7 days, this month, last month or this year
+(UTC days, as the vendors' dashboards), a table of feature × model with
+calls, tokens and money, and three sentences when they apply: which
+feature takes most of one kind of money, which calls are not priced, and
+how many ended with no usage (a timed-out call may still be billed). Each
+engine card says which kind it spends; a billed engine standing ahead of
+one a plan covers gets a warning with the move that fixes it. `/jobs/:id`
+shows what the AI spent on that posting, and Compare, Verify and Generate
+letter show what such a call usually costs here (the middle of the last
+twenty that answered). `npm run spend:report` prints the ledger per UTC
+day, engine and model for a comparison with the vendor's own report; the
+vendor's admin key never enters ApplyPack.
 
 ## Hard out-of-scope (Phase 7+)
 

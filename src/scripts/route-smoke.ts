@@ -20,7 +20,9 @@ import { DEFAULT_BODY_BYTES } from '../web/body-limits';
 import { prisma } from '../db';
 import { createManualJob } from '../jobs/manual-job';
 import { createResume } from '../resume/store';
-import { setEmployerMode } from '../settings';
+import { setAiBudgetCents, setEmployerMode } from '../settings';
+import { recordAiCall } from '../ai-ledger';
+import { NO_USAGE } from '../ai-usage';
 import { createApplicant, createScreening } from '../screening/store';
 import { draftRubric } from '../screening/rubric';
 import { fingerprintText } from '../screening/intake';
@@ -45,6 +47,10 @@ const QUERY_VARIANTS = [
   '/jobs/:id?tab=letter',
   '/jobs/:id?tab=verify',
   '/jobs/:id?tab=nonsense',
+  // The AI ledger's card over each period, and a period nobody offers (ADR 0055).
+  '/settings?tab=ai&spend=month',
+  '/settings?tab=ai&spend=year',
+  '/settings?tab=ai&spend=nonsense',
 ];
 // app.request() builds no Host header of its own, and the origin guard
 // compares Origin's host with it (same-origin.ts) — so the request says both.
@@ -107,6 +113,19 @@ async function fixtures(): Promise<Fixtures> {
     textHash: print.hash,
     simhash: print.simhash,
   });
+  // The ledger through its own write path: each kind of money, a timeout with
+  // no usage, a model the price table does not know — and a one-cent budget,
+  // so the billed row crosses it and the warning path runs (no chat here, so
+  // it sends nothing).
+  await setAiBudgetCents(1);
+  const at = new Date();
+  const usage = { ...NO_USAGE, inputTokens: 1_200, outputTokens: 300 };
+  const call = { at, durationMs: 900, feature: 'resume-match' as const, viaFallback: false, jobId: job.job.id, resumeId: resume.id };
+  await recordAiCall({ ...call, engine: 'anthropic_api', model: 'claude-opus-5', outcome: 'ok', billing: 'billed', spend: { usage, model: 'claude-opus-5', reportedUsd: null } });
+  await recordAiCall({ ...call, engine: 'claude_code', model: 'claude-sonnet-5', outcome: 'ok', billing: 'plan', spend: { usage, model: 'claude-sonnet-5', reportedUsd: 0.004 } });
+  await recordAiCall({ ...call, engine: 'openai_api', model: 'qwen2.5:14b', outcome: 'ok', billing: 'local', spend: { usage, model: 'qwen2.5:14b', reportedUsd: null } });
+  await recordAiCall({ ...call, engine: 'openai_api', model: 'mystery-model', outcome: 'ok', billing: 'billed', spend: { usage, model: 'mystery-model', reportedUsd: null } });
+  await recordAiCall({ ...call, engine: 'anthropic_api', model: 'claude-opus-5', outcome: 'timeout', billing: 'billed', spend: null });
   return { jobId: job.job.id, companyId: job.job.companyId, resumeId: resume.id, screeningId: screening.id, applicantId: applicant.id };
 }
 
@@ -192,6 +211,11 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 303 && res.headers.get('location') === `/jobs/${f.jobId}`,
     },
     {
+      name: 'POST /settings/ai/budget',
+      init: form({ budget: '12.50' }),
+      expect: (res) => res.status === 303 && (res.headers.get('location') ?? '').startsWith('/settings?tab=ai'),
+    },
+    {
       // The one route that reads files beside dist/: the PDF fonts a build must copy.
       name: 'POST /resumes/:id/render (a clean PDF)',
       init: form({ mode: 'pdf' }),
@@ -205,6 +229,7 @@ async function main(): Promise<void> {
     `/jobs/${f.jobId}/status`,
     `/jobs/${f.jobId}/status`,
     `/jobs/${f.jobId}/status`,
+    '/settings/ai/budget',
     `/resumes/${f.resumeId}/render`,
   ];
   for (const [i, p] of posts.entries()) {

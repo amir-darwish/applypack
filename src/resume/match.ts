@@ -142,6 +142,7 @@ export async function matchResumeToJob(
       maxTokens: mode === 'fast' ? MATCH_FAST_MAX_TOKENS : MATCH_MAX_TOKENS,
       label: mode === 'fast' ? 'resume-match-fast' : 'resume-match',
       role: 'resume',
+      subject: { jobId: job.id, resumeId: resume.id },
       timeoutMs: mode === 'fast' ? RESUME_TIMEOUT_MS.fast : RESUME_TIMEOUT_MS.full,
       onError: opts.onError,
     },

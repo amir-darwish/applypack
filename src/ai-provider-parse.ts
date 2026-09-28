@@ -1,11 +1,49 @@
 import { z } from 'zod';
 import type { AiProviderId } from './ai-engine';
+import { addUsage, count, NO_USAGE, type AiOutcome, type AiSpend, type AiUsage } from './ai-usage';
 import { maskToken } from './text-utils';
+
+/** The Messages API's `usage` block, as the API and the Claude Code CLI report it. */
+const AnthropicUsageSchema = z.object({
+  input_tokens: z.number().optional(),
+  cache_creation_input_tokens: z.number().nullable().optional(),
+  cache_read_input_tokens: z.number().nullable().optional(),
+  // The write split by lifetime; the CLI on a plan writes for an hour (×2 input).
+  cache_creation: z
+    .object({ ephemeral_5m_input_tokens: z.number().optional(), ephemeral_1h_input_tokens: z.number().optional() })
+    .nullable()
+    .optional(),
+  output_tokens: z.number().optional(),
+  output_tokens_details: z.object({ thinking_tokens: z.number().optional() }).nullable().optional(),
+  server_tool_use: z.object({ web_search_requests: z.number().optional() }).nullable().optional(),
+});
+type AnthropicUsage = z.infer<typeof AnthropicUsageSchema>;
+
+/**
+ * An Anthropic `usage` block as the ledger's fields (ADR 0055). `input_tokens`
+ * is already the uncached part; `output_tokens` already counts the thinking.
+ * Without the lifetime split, a cache write is priced as a five-minute one.
+ */
+export function anthropicUsage(u: AnthropicUsage | null | undefined): AiUsage {
+  if (!u) return NO_USAGE;
+  const split = u.cache_creation;
+  const w5 = count(split?.ephemeral_5m_input_tokens);
+  const w1h = count(split?.ephemeral_1h_input_tokens);
+  return {
+    inputTokens: count(u.input_tokens),
+    cacheWriteTokens: w5 !== null || w1h !== null ? w5 : count(u.cache_creation_input_tokens),
+    cacheWrite1hTokens: w1h,
+    cacheReadTokens: count(u.cache_read_input_tokens),
+    outputTokens: count(u.output_tokens),
+    webSearches: count(u.server_tool_use?.web_search_requests),
+  };
+}
 
 /**
  * Shape of `claude -p --output-format json`. Only the fields we act on are
- * declared; everything else (usage, cost, session id) passes through
- * untouched. Kept SDK-free so the parser can be unit-tested.
+ * declared. Success and error results alike carry `usage`, `total_cost_usd`
+ * and `modelUsage` (the CLI's own estimate, from its bundled price table).
+ * Kept SDK-free so the parser can be unit-tested.
  */
 const ClaudeCodeResultSchema = z.object({
   type: z.literal('result'),
@@ -15,12 +53,9 @@ const ClaudeCodeResultSchema = z.object({
   api_error_status: z.number().nullable().optional(),
   duration_api_ms: z.number().optional(),
   num_turns: z.number().optional(),
-  usage: z
-    .object({
-      output_tokens: z.number().optional(),
-      output_tokens_details: z.object({ thinking_tokens: z.number().optional() }).optional(),
-    })
-    .optional(),
+  total_cost_usd: z.number().optional(),
+  usage: AnthropicUsageSchema.optional(),
+  modelUsage: z.record(z.string(), z.object({ outputTokens: z.number().optional() }).passthrough()).optional(),
 });
 
 /** What one CLI call spent — logged per call, so a slow call, a throttled call and a thinking call stop looking alike (#168). */
@@ -37,6 +72,10 @@ export interface CliOutcome {
   rateLimited: boolean;
   error: string | null;
   usage?: CliUsage;
+  /** What the call spent, when the output says (ADR 0055) — on a failure too: a cut-off reply was billed. */
+  spend?: AiSpend;
+  /** How a failure ended, when the output tells a cut-off or a refusal from an error. */
+  outcome?: AiOutcome;
 }
 
 const RATE_LIMIT_STATUS = 429;
@@ -147,16 +186,23 @@ export function parseClaudeCodeOutput(raw: string): CliOutcome {
     return { text: null, rateLimited: false, error: 'claude-code: unexpected result shape' };
   }
   const r = parsed.data;
+  const spend: AiSpend = {
+    usage: anthropicUsage(r.usage),
+    model: mainModel(r.modelUsage),
+    reportedUsd: typeof r.total_cost_usd === 'number' ? r.total_cost_usd : null,
+  };
   if (r.is_error || r.subtype !== 'success') {
     const message = r.result ?? r.subtype;
     const rateLimited =
       r.api_error_status === RATE_LIMIT_STATUS || RATE_LIMIT_PATTERN.test(message);
-    return { text: null, rateLimited, error: `claude-code: ${message}` };
+    const outcome: AiOutcome = rateLimited ? 'rate_limited' : /max.?output.?tokens/i.test(message) ? 'cut_off' : 'error';
+    return { text: null, rateLimited, error: `claude-code: ${message}`, spend, outcome };
   }
   return {
     text: r.result ?? '',
     rateLimited: false,
     error: null,
+    spend,
     usage: {
       apiMs: r.duration_api_ms,
       outputTokens: r.usage?.output_tokens,
@@ -164,6 +210,13 @@ export function parseClaudeCodeOutput(raw: string): CliOutcome {
       turns: r.num_turns,
     },
   };
+}
+
+/** The model that did the work: the one with the most output, when the CLI ran more than one. */
+function mainModel(models: Record<string, { outputTokens?: number }> | undefined): string | null {
+  const entries = Object.entries(models ?? {});
+  if (entries.length === 0) return null;
+  return entries.reduce((best, cur) => ((cur[1].outputTokens ?? 0) > (best[1].outputTokens ?? 0) ? cur : best))[0];
 }
 
 /**
@@ -251,8 +304,21 @@ export function buildClaudeCodeArgs(req: {
  * Shape of `gemini -p --output-format json`: success carries `response`,
  * failures an `error` object. Stats pass through untouched.
  */
+const GeminiTokensSchema = z.object({
+  prompt: z.number().optional(),
+  candidates: z.number().optional(),
+  cached: z.number().optional(),
+  thoughts: z.number().optional(),
+});
+
 const GeminiCliResultSchema = z.object({
   response: z.string().optional(),
+  // Per model: `prompt` includes the cached tokens, `candidates` is the answer
+  // and `thoughts` the thinking, billed as output (packages/core telemetry).
+  stats: z
+    .object({ models: z.record(z.string(), z.object({ tokens: GeminiTokensSchema.optional() }).passthrough()).optional() })
+    .passthrough()
+    .optional(),
   error: z
     .object({
       type: z.string().optional(),
@@ -274,15 +340,36 @@ export function parseGeminiCliOutput(raw: string): CliOutcome {
     return { text: null, rateLimited: false, error: 'gemini-cli: unexpected result shape' };
   }
   const r = parsed.data;
+  const spend = geminiSpend(r.stats?.models);
   if (r.error) {
     const rateLimited =
       r.error.code === RATE_LIMIT_STATUS || RATE_LIMIT_PATTERN.test(r.error.message);
-    return { text: null, rateLimited, error: `gemini-cli: ${r.error.message}` };
+    return { text: null, rateLimited, error: `gemini-cli: ${r.error.message}`, ...(spend && { spend }) };
   }
   if (typeof r.response === 'string') {
-    return { text: r.response, rateLimited: false, error: null };
+    return { text: r.response, rateLimited: false, error: null, ...(spend && { spend }) };
   }
-  return { text: null, rateLimited: false, error: 'gemini-cli: no response field' };
+  return { text: null, rateLimited: false, error: 'gemini-cli: no response field', ...(spend && { spend }) };
+}
+
+/** The Gemini CLI's per-model token stats as one usage, named for the model that answered most. */
+function geminiSpend(models: Record<string, { tokens?: z.infer<typeof GeminiTokensSchema> }> | undefined): AiSpend | undefined {
+  const entries = Object.entries(models ?? {}).filter(([, m]) => m.tokens);
+  if (entries.length === 0) return undefined;
+  let prompt = 0;
+  let cached = 0;
+  let output = 0;
+  for (const [, m] of entries) {
+    prompt += count(m.tokens?.prompt) ?? 0;
+    cached += count(m.tokens?.cached) ?? 0;
+    output += (count(m.tokens?.candidates) ?? 0) + (count(m.tokens?.thoughts) ?? 0);
+  }
+  const main = entries.reduce((best, cur) => ((cur[1].tokens?.candidates ?? 0) > (best[1].tokens?.candidates ?? 0) ? cur : best))[0];
+  return {
+    usage: { ...NO_USAGE, inputTokens: Math.max(0, prompt - cached), cacheReadTokens: cached, outputTokens: output },
+    model: main,
+    reportedUsd: null,
+  };
 }
 
 /**
@@ -342,6 +429,7 @@ export function buildCodexCliArgs(req: {
 export function parseCodexCliOutput(raw: string): CliOutcome {
   let text: string | null = null;
   let error: string | null = null;
+  let usage: AiUsage | null = null;
   for (const line of raw.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed.startsWith('{')) continue;
@@ -357,7 +445,21 @@ export function parseCodexCliOutput(raw: string): CliOutcome {
       error?: { message?: string };
       item?: { type?: string; text?: string };
       msg?: { type?: string; message?: string };
+      usage?: { input_tokens?: unknown; cached_input_tokens?: unknown; output_tokens?: unknown };
     };
+    // `input_tokens` includes the cached ones, OpenAI-style; `output_tokens`
+    // includes the reasoning. One turn per call, but a resumed one would add.
+    if (e.type === 'turn.completed' && e.usage) {
+      const input = count(e.usage.input_tokens);
+      const cached = count(e.usage.cached_input_tokens);
+      const turn: AiUsage = {
+        ...NO_USAGE,
+        inputTokens: input === null ? null : Math.max(0, input - (cached ?? 0)),
+        cacheReadTokens: cached,
+        outputTokens: count(e.usage.output_tokens),
+      };
+      usage = usage ? addUsage(usage, turn) : turn;
+    }
     if (e.item?.type === 'agent_message' && typeof e.item.text === 'string') {
       text = e.item.text;
     } else if (e.msg?.type === 'agent_message' && typeof e.msg.message === 'string') {
@@ -366,23 +468,54 @@ export function parseCodexCliOutput(raw: string): CliOutcome {
       error = e.message ?? e.error?.message ?? 'unknown error';
     }
   }
-  if (text !== null) return { text, rateLimited: false, error: null };
+  // Codex names no model in its events: the requested one, or the CLI's default, prices it.
+  const spend = usage ? { spend: { usage, model: null, reportedUsd: null } } : {};
+  if (text !== null) return { text, rateLimited: false, error: null, ...spend };
   if (error !== null) {
-    return { text: null, rateLimited: RATE_LIMIT_PATTERN.test(error), error: `codex: ${error}` };
+    return { text: null, rateLimited: RATE_LIMIT_PATTERN.test(error), error: `codex: ${error}`, ...spend };
   }
-  return { text: null, rateLimited: false, error: 'codex: no agent message in output' };
+  return { text: null, rateLimited: false, error: 'codex: no agent message in output', ...spend };
 }
+
 
 /**
  * Response of an OpenAI-compatible POST /chat/completions (OpenAI,
  * OpenRouter, Groq, local servers). Error shape is the OpenAI envelope.
  */
 const OpenAiChatResponseSchema = z.object({
+  model: z.string().optional(),
   choices: z
     .array(z.object({ message: z.object({ content: z.string().nullable() }), finish_reason: z.string().nullable().optional() }))
     .optional(),
+  // `prompt_tokens` includes the cached ones; `completion_tokens` includes the
+  // reasoning. OpenRouter adds `cost`: its own charge for the call, in USD.
+  usage: z
+    .object({
+      prompt_tokens: z.number().optional(),
+      completion_tokens: z.number().optional(),
+      prompt_tokens_details: z.object({ cached_tokens: z.number().optional() }).nullable().optional(),
+      cost: z.number().optional(),
+    })
+    .nullable()
+    .optional(),
   error: z.object({ message: z.string() }).optional(),
 });
+
+function openAiSpend(r: z.infer<typeof OpenAiChatResponseSchema>): AiSpend | undefined {
+  if (!r.usage) return undefined;
+  const prompt = count(r.usage.prompt_tokens);
+  const cached = count(r.usage.prompt_tokens_details?.cached_tokens);
+  return {
+    usage: {
+      ...NO_USAGE,
+      inputTokens: prompt === null ? null : Math.max(0, prompt - (cached ?? 0)),
+      cacheReadTokens: cached,
+      outputTokens: count(r.usage.completion_tokens),
+    },
+    model: r.model ?? null,
+    reportedUsd: typeof r.usage.cost === 'number' ? r.usage.cost : null,
+  };
+}
 
 export function parseOpenAiChatResponse(raw: string): CliOutcome {
   let json: unknown;
@@ -399,13 +532,15 @@ export function parseOpenAiChatResponse(raw: string): CliOutcome {
     const message = parsed.data.error.message;
     return { text: null, rateLimited: RATE_LIMIT_PATTERN.test(message), error: `openai: ${message}` };
   }
+  const spend = openAiSpend(parsed.data);
+  const spent = spend ? { spend } : {};
   const choice = parsed.data.choices?.[0];
   // The Anthropic path reads stop_reason (gotcha 16); this is the same read
   // for every OpenAI-compatible server. A cut-off reply is not an answer, and
   // a filtered one is a refusal, not "no JSON object" (audit 2026-09-10, AI-3).
-  if (choice?.finish_reason === 'length') return { text: null, rateLimited: false, error: 'openai: reply cut off at the token limit' };
-  if (choice?.finish_reason === 'content_filter') return { text: null, rateLimited: false, error: 'openai: the model declined this request' };
+  if (choice?.finish_reason === 'length') return { text: null, rateLimited: false, error: 'openai: reply cut off at the token limit', outcome: 'cut_off', ...spent };
+  if (choice?.finish_reason === 'content_filter') return { text: null, rateLimited: false, error: 'openai: the model declined this request', outcome: 'refused', ...spent };
   const content = choice?.message.content;
-  if (typeof content === 'string' && content.trim().length > 0) return { text: content, rateLimited: false, error: null };
-  return { text: null, rateLimited: false, error: 'openai: empty completion' };
+  if (typeof content === 'string' && content.trim().length > 0) return { text: content, rateLimited: false, error: null, ...spent };
+  return { text: null, rateLimited: false, error: 'openai: empty completion', outcome: 'empty', ...spent };
 }

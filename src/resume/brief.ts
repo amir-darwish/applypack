@@ -76,6 +76,7 @@ export async function briefForPosting(
       maxTokens: BRIEF_MAX_TOKENS,
       label: 'posting-brief',
       role: 'resume',
+      subject: { jobId: job.id },
       timeoutMs: RESUME_TIMEOUT_MS.brief,
       onError: opts.onError,
     },

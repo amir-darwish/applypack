@@ -264,12 +264,16 @@ src/
   prompt-fence.ts              ← untrusted-text markers + directive (pure, tested, ADR 0022)
   ai-engine.ts                 ← pure: the engine chain, the models per role, defaultModelFor (ADR 0013/0014)
   ai-keys.ts                   ← pure: per-engine API keys, DB first, .env as fallback (ADR 0027)
-  ai-runtime.ts                ← getAiRuntime().complete(): the chain with failover, usage counters, engine probes
+  ai-runtime.ts                ← getAiRuntime().complete(): the chain with failover, a ledger row per attempt, engine probes
   ai-cooldown.ts               ← pure: an engine that keeps failing is skipped for a while
   ai-provider.ts               ← the AiProvider seam: AnthropicApiProvider, OpenAiApiProvider,
                                  CliProvider (claude_code, gemini_cli, codex_cli)
   ai-provider-parse.ts         ← pure: CLI arguments, the child env allowlist, reply parsers, anthropicMaxTokens
   ai-json.ts                   ← askForJson: a call parsed by a schema, one retry unless the reply was cut off
+  ai-usage.ts                  ← pure: what an attempt spent (AiUsage, NULL = not reported), the closed feature set, billingOf (ADR 0055)
+  ai-prices.ts                 ← pure: the dated price table (PRICES_AS_OF), costMicroUsd; an unknown model is not priced
+  ai-spend.ts                  ← pure: ledgerRow, the Usage & cost view, periods, the budget warning, billingNotes, the estimates
+  ai-ledger.ts                 ← recordAiCall into ai_call (+ the budget warning), the sums the pages read
   notifier.ts                  ← sendAlert / sendDigest: to the routed target when it is active, else to every active
                                  target; the Telegram channel (MarkdownV2) and the switch to notify/discord.ts
   notify/                      ← the alert channels' shared pieces (ADR 0041)
@@ -470,6 +474,7 @@ src/
     reanchor-matches.ts         ← re-applies ADR 0045's presence rule to stored comparisons
     rescore-screenings.ts       ← re-anchors and re-scores stored screening verdicts, no AI call
     resume-bench-once.ts        ← npm run bench:resume: the match prompt over the gold fixtures
+    ai-spend-report.ts          ← npm run spend:report: the AI ledger per UTC day, tab-separated, beside the vendor's report
     screen-bench-once.ts        ← npm run bench:screen: a gold folder through the screening path
     verify-brief-once.ts        ← npm run verify:compare: the compare pipeline against one stored row
     match-matrix-once.ts        ← npm run matrix:compare: resumes × postings, every invariant checked
@@ -580,6 +585,7 @@ src/
       run-steps.tsx             ← step list shared by the two progress pages
       welcome.tsx               ← /welcome first-run wizard (5 steps, one card at a time)
       settings.tsx              ← /settings (6 tabs: General, Profile, AI engine, Notifications, Sources, Screening)
+      ai-spend-card.tsx         ← Usage & cost on the AI engine tab: three kinds of money, never added; the budget form
       resumes.tsx               ← /resumes (list + upload form component)
       resume-detail.tsx         ← /resumes/:id
       resume-review-card.tsx    ← "Resume strength" on /resumes/:id (ADR 0030)
@@ -612,13 +618,13 @@ src/
       runs.tsx                  ← /runs + POST /runs/fetch-now (the tick in the web process) + progress/state
       welcome.tsx               ← /welcome + skip / finish / ai key / ai test / resume → scan run / profile / search / score run
       settings.tsx              ← the profile editor and searches, the toggles, the schedule, AI engines and keys,
-                                  source keys, notification targets, board columns, screening settings
+                                  source keys, notification targets, board columns, screening settings, the AI budget
       screen.tsx                ← /screen, /screen/new, /screen/:id, the scorecard, compare, exports, decisions
       countries.ts              ← GET /countries.json, the gazetteer for the country picker
       health.ts                 ← JSON liveness for external monitoring
 
 prisma/
-  schema.prisma                 ← 21 models: Company, Job, JobScore, CronRun, FunnelDay, AppSettings, CompanyCandidate,
+  schema.prisma                 ← 22 models: Company, Job, JobScore, CronRun, FunnelDay, AiCall, AppSettings, CompanyCandidate,
                                   NotificationTarget, Profile, Resume, ResumeReview, ResumeMatch, CandidateFact,
                                   CoverLetter, JobStageEvent, PostingBrief, JobVerification, Screening, Applicant,
                                   ScreeningComparison, ScreeningVerdict; 6 enums: AtsType, JobStatus, Workplace,
@@ -673,7 +679,8 @@ user's schedule, read in the schedule's own time zone.
 Every model of `prisma/schema.prisma` with its key fields, in Prisma's own
 types. The six enums are `AtsType`, `JobStatus`, `Workplace`,
 `CronRunStatus`, `CandidateStatus` and `NotificationKind`. `CronRun`,
-`FunnelDay` and `CandidateFact` stand alone. `CompanyCandidate` has no
+`FunnelDay`, `AiCall` and `CandidateFact` stand alone (an `AiCall` keeps
+its job and resume ids without a foreign key, so the history outlives them). `CompanyCandidate` has no
 foreign key either: it meets `Company` only through the pair
 `(atsType, atsToken)`, which is unique in each table, so a pair has at most
 one row on each side.
@@ -716,7 +723,9 @@ erDiagram
     Json aiEngine "engine order + models per role (ADR 0013/0014)"
     Json aiKeys "per-engine API keys, DB first (ADR 0027)"
     Json sourceKeys "Adzuna and France Travail keys (ADR 0034)"
-    Json aiUsage "calls per day, engine and role"
+    Json aiUsage "retired in 2.21.0; the ai_call ledger replaced it"
+    Int aiBudgetCents "monthly ceiling on billed AI money, NULL = none (ADR 0055)"
+    String aiBudgetAlerted "the last budget warning sent, YYYY-MM:080 / :100"
     Boolean sourceHealthAlerts
     Json coverAngles
     Json pipelineStages "user-named funnel columns (ADR 0025)"
@@ -862,6 +871,21 @@ erDiagram
     DateTime day PK "a UTC date"
     Json counts "the funnel's tick counters, summed"
     DateTime updatedAt
+  }
+
+  AiCall {
+    Int id PK
+    DateTime at
+    String engine
+    String model "asked for; resolvedModel is what ran"
+    String feature "a closed set (ai-usage.ts)"
+    String outcome "ok, rate_limited, timeout, cut_off, refused, empty, error"
+    String billing "billed, plan or local, never added together"
+    Int inputTokens "NULL = not reported, never 0"
+    Int outputTokens
+    Int costMicroUsd "ours, from the dated price table"
+    Int reportedMicroUsd "the vendor's own figure"
+    Int jobId "no foreign key"
   }
 
   CompanyCandidate {

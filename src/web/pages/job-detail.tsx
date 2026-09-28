@@ -123,6 +123,10 @@ export interface JobDetailProps {
   verificationCount: number;
   /** A verify run in flight for this job — the card points at its progress page instead of a second button (#161). */
   verificationRun: VerificationCardProps['run'];
+  /** What the AI research usually costs here; null until there are three. */
+  verifyCostHint: string | null;
+  /** What the AI spent on this posting so far (ai-spend.ts:jobSpendText); null when nothing was recorded. */
+  aiSpent: string | null;
   resumeMatch: ResumeMatchCardProps;
   coverLetters: CoverLetterCardProps;
   /** The tab this request means (job-tabs.ts), and the four labels with what exists behind each. */
@@ -151,6 +155,8 @@ export const JobDetailPage: FC<JobDetailProps> = ({
   verification,
   verificationCount,
   verificationRun,
+  verifyCostHint,
+  aiSpent,
   resumeMatch,
   coverLetters,
   tab,
@@ -227,6 +233,7 @@ export const JobDetailPage: FC<JobDetailProps> = ({
             {job.alertedAt && <FactRow label="Alerted">{formatDate(job.alertedAt)}</FactRow>}
             <AppliedWithRow job={job} />
             <FactRow label="Source">{job.company.atsType.replace('_', ' ')}</FactRow>
+            {aiSpent && <FactRow label="AI spent">{aiSpent}</FactRow>}
             <FactRow label="External id">
               <span class="block truncate font-mono text-xs" title={job.externalId}>
                 {job.externalId}
@@ -300,6 +307,7 @@ export const JobDetailPage: FC<JobDetailProps> = ({
           verificationCount={verificationCount}
           run={verificationRun}
           url={job.url}
+          costHint={verifyCostHint}
         />
         )}
 

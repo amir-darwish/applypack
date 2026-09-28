@@ -65,7 +65,7 @@ of truth when the two disagree.
 - 0004 One active profile, not multi-tenant — *superseded by 0028*
 - 0005 No LinkedIn / Indeed / Workday — *amended by 0034, 0036*
 - 0006 Discovery via HN parser, not ATS-vendor lists
-- 0007 One AI provider seam: Messages API or Claude Code CLI — *extended by 0013, 0014, 0027*
+- 0007 One AI provider seam: Messages API or Claude Code CLI — *extended by 0013, 0014, 0027, 0055*
 - 0008 Resume module lives in the web process, files in Postgres
 - 0009 Web tools through the AI seam, for job verification only
 - 0010 Two scores: live keyword coverage in the browser, AI match on demand — *amended by 0012, 0038*
@@ -113,6 +113,7 @@ of truth when the two disagree.
 - 0052 Calibration reports agreement with the person's decisions and never tunes the rubric by itself
 - 0053 Uniqueness lives in the database, and a row's state is written with the row
 - 0054 `npm start` runs ApplyPack with a built-in Postgres; Docker is the server option
+- 0055 Every AI attempt is a ledger row, and a bill, a plan and a local model are never added together *(extends 0007)*
 
 Check a proposal against these before touching process layout, sources,
 scheduling, profiles, how the AI is called, the resume score or employer

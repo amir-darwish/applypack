@@ -311,6 +311,44 @@ model FunnelDay {
   @@map("funnel_day")
 }
 
+// One AI attempt (ADR 0055): which engine and model, for which feature, how it
+// ended, and what the vendor said it spent — metadata only, never a prompt or
+// a reply. A token count the vendor did not report is NULL, never 0. Money is
+// in micro-dollars: ours from src/ai-prices.ts, and the vendor's own figure
+// beside it. `billing` decides the total a row joins; the three are never added.
+model AiCall {
+  id                 Int      @id @default(autoincrement())
+  at                 DateTime @default(now())
+  durationMs         Int
+  engine             String
+  // Asked for ('' = the CLI's default), and what the vendor says ran.
+  model              String
+  resolvedModel      String?
+  feature            String
+  outcome            String
+  viaFallback        Boolean  @default(false)
+  billing            String
+  inputTokens        Int?
+  cacheWriteTokens   Int?
+  cacheWrite1hTokens Int?
+  cacheReadTokens    Int?
+  outputTokens       Int?
+  webSearches        Int?
+  costMicroUsd       Int?
+  reportedMicroUsd   Int?
+  priceAsOf          String?
+  // What the call was for, where the caller knows; no foreign key, so the
+  // history outlives a deleted job or resume.
+  jobId              Int?
+  resumeId           Int?
+
+  @@index([at])
+  @@index([jobId])
+  // The estimate under a button reads the last twenty of one feature.
+  @@index([feature, at])
+  @@map("ai_call")
+}
+
 // Singleton table — always one row with id=1.
 model AppSettings {
   id                             Int       @id @default(1)
@@ -356,11 +394,15 @@ model AppSettings {
   // France Travail) — {SOURCE: {field: secret}}, same rules as aiKeys: read
   // only through its accessor, never rendered in full, never logged.
   sourceKeys                     Json?
-  // Lightweight AI usage counters: { "YYYY-MM-DD": { <provider>: {
-  // classifier: n, resume: n } } }. Incremented atomically per successful
-  // call (ai-runtime.ts:recordUsage), trimmed to 60 days by the cleanup
-  // cron, summarized on /settings → AI engine.
+  // Retired in 2.21.0: the per-day run counters the ai_call ledger replaced
+  // (ADR 0055). Nothing reads or writes it; the column goes in a later
+  // release, so a rollback to 2.20 still finds it.
   aiUsage                        Json?
+  // ADR 0055: a monthly ceiling on BILLED AI money, in cents; null = none.
+  // It warns at 80 % and 100 % on the alert channels and never stops a call.
+  // `aiBudgetAlerted` is the last warning sent, "YYYY-MM:80" / "YYYY-MM:100".
+  aiBudgetCents                  Int?
+  aiBudgetAlerted                String?
   // F4 (ADR 0019): one digest line when a source crosses the failure
   // streak. Default TRUE — the alert adds a signal, never suppresses a job.
   sourceHealthAlerts             Boolean   @default(true)

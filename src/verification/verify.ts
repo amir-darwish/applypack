@@ -27,7 +27,7 @@ export async function verifyJob(
 ): Promise<JobVerification | null> {
   const answer = await askForJson(
     await getAiRuntime(),
-    { ...buildVerifyPrompt(job), maxTokens: VERIFY_MAX_TOKENS, label: 'job-verify', role: 'resume', timeoutMs: VERIFY_TIMEOUT_MS, webTools: true, onError },
+    { ...buildVerifyPrompt(job), maxTokens: VERIFY_MAX_TOKENS, label: 'job-verify', role: 'resume', timeoutMs: VERIFY_TIMEOUT_MS, webTools: true, onError, subject: { jobId: job.id } },
     parseVerifyResponse,
     { jobId: job.id },
   );

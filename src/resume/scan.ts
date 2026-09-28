@@ -12,7 +12,7 @@ export async function scanResume(
 ): Promise<ResumeScan | null> {
   const answer = await askForJson(
     await getAiRuntime(),
-    { ...buildScanPrompt(resume.text), maxTokens: SCAN_MAX_TOKENS, label: 'resume-scan', role: 'resume', timeoutMs: RESUME_TIMEOUT_MS.scan, onError },
+    { ...buildScanPrompt(resume.text), maxTokens: SCAN_MAX_TOKENS, label: 'resume-scan', role: 'resume', timeoutMs: RESUME_TIMEOUT_MS.scan, onError, subject: { resumeId: resume.id } },
     parseScanResponse,
     { id: resume.id },
   );

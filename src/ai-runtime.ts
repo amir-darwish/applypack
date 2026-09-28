@@ -11,6 +11,8 @@ import { getAiProviderById, type AiProvider } from './ai-provider';
 import { SETTINGS_ID } from './settings';
 import { aiKeySource, parseAiKeys, resolveAiKey, type AiKeys, type AiKeySource } from './ai-keys';
 import { createCooldownTracker } from './ai-cooldown';
+import { recordAiCall } from './ai-ledger';
+import { billingOf, type AiFeature, type BillingFacts } from './ai-usage';
 import {
   PROVIDER_WEB_TOOLS,
   resolveAiEngine,
@@ -58,8 +60,10 @@ export interface AiCallRequest {
   system: string;
   user: string;
   maxTokens: number;
-  /** Short tag for log lines, e.g. 'classifier' / 'resume-match'. */
-  label: string;
+  /** What the call is for — its log tag and its ledger feature, a closed set (ai-usage.ts, ADR 0055). */
+  label: AiFeature;
+  /** The posting and the resume the call serves, where the caller knows — so a page can say what they cost. */
+  subject?: { jobId?: number; resumeId?: number };
   /** Picks the per-engine model slot (classifier vs resume calls). */
   role: AiRole;
   timeoutMs?: number;
@@ -135,6 +139,7 @@ async function completeWithFailover(
   }
   const tryList = (hot.length > 0 ? hot : chain).slice(0, MAX_ENGINE_SWITCHES);
   const perAttemptMs = req.timeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
+  const billing = billingFacts(keys);
   const deadline = Date.now() + perAttemptMs * CHAIN_DEADLINE_FACTOR;
   for (let i = 0; i < tryList.length; i++) {
     const id = tryList[i]!;
@@ -151,7 +156,8 @@ async function completeWithFailover(
       continue;
     }
     const model = engine.modelFor(id, req.role);
-    const text = await provider.complete({
+    const started = Date.now();
+    const attempt = await provider.complete({
       system: req.system,
       user: req.user,
       maxTokens: req.maxTokens,
@@ -162,10 +168,24 @@ async function completeWithFailover(
       apiKey: resolveAiKey(id, keys),
       onError: req.onError,
     });
+    const viaFallback = id !== engine.chain[0];
+    // Every attempt, the failed ones too: a cut-off reply was billed (ADR 0055).
+    await recordAiCall({
+      at: new Date(started),
+      durationMs: Date.now() - started,
+      engine: id,
+      model,
+      feature: req.label,
+      outcome: attempt.outcome,
+      spend: attempt.spend,
+      viaFallback,
+      billing: billingOf(id, billing),
+      jobId: req.subject?.jobId,
+      resumeId: req.subject?.resumeId,
+    });
+    const text = attempt.text;
     if (text !== null) {
       cooldowns.success(id);
-      void recordUsage(id, req.role);
-      const viaFallback = id !== engine.chain[0];
       if (viaFallback) {
         logger.warn(
           { served: id, primary: engine.chain[0], label: req.label },
@@ -183,29 +203,9 @@ async function completeWithFailover(
   return null;
 }
 
-/**
- * Lightweight usage counters (docs/ai-engine-improvements.md item 6):
- * runs per day × engine × role in AppSettings.aiUsage. One atomic jsonb
- * update, fire-and-forget — a counter must never fail an AI call. All the
- * COALESCE reads see the pre-update value, so nested paths self-create.
- */
-async function recordUsage(id: AiProviderId, role: AiRole): Promise<void> {
-  const day = new Date().toISOString().slice(0, 10);
-  try {
-    await prisma.$executeRaw`
-      UPDATE app_settings SET "aiUsage" =
-        jsonb_set(
-          jsonb_set(
-            jsonb_set(
-              COALESCE("aiUsage", '{}'::jsonb),
-              ARRAY[${day}], COALESCE("aiUsage"->${day}, '{}'::jsonb), true),
-            ARRAY[${day}, ${id}], COALESCE("aiUsage"->${day}->${id}, '{}'::jsonb), true),
-          ARRAY[${day}, ${id}, ${role}],
-          to_jsonb(COALESCE(("aiUsage"->${day}->${id}->>${role})::int, 0) + 1), true)
-      WHERE id = ${SETTINGS_ID}`;
-  } catch (err) {
-    logger.debug({ err }, 'ai: usage counter update failed');
-  }
+/** What decides whose money an engine spends, from this host's settings (ai-usage.ts:billingOf). */
+export function billingFacts(keys: AiKeys): BillingFacts {
+  return { openAiBaseUrl: config.OPENAI_BASE_URL, geminiKey: Boolean(resolveAiKey('gemini_cli', keys)) };
 }
 
 export interface AiProviderStatus {

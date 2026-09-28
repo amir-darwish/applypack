@@ -28,6 +28,7 @@ export async function structureResume(
       maxTokens: STRUCTURE_MAX_TOKENS,
       label: 'resume-structure',
       role: 'resume',
+      subject: { resumeId: resume.id },
       timeoutMs: RESUME_TIMEOUT_MS.structure,
       onError,
     },

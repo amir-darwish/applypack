@@ -10,8 +10,9 @@ conventional Postgres. PR #59 shipped the rename via `@@map()` on all 13
 models plus one rename migration. The rename reaches every deployment on
 next boot — `init.ts` runs `prisma migrate deploy`, and a failed statement
 means the container does not start — so every named object must be covered
-exactly. Two raw-SQL sites (`ai-runtime.ts:recordUsage`,
-`cleanup-job.ts`) still referenced `"AppSettings"` by name: the first
+exactly. Two raw-SQL sites (the AI usage counter in `ai-runtime.ts`,
+retired since by ADR 0055, and `cleanup-job.ts`) still referenced
+`"AppSettings"` by name: the first
 fails silently (try/catch, debug log), the second crashes the nightly
 cleanup. #59 also left the 12 autoincrement sequences PascalCase.
 
