@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { alsoClaims, claimRun, findLiveRun, getRun, runFailure, startRun, updateRun } from './target-runs';
+import { alsoClaims, claimRun, findLiveRun, getRun, startRun, updateRun } from './target-runs';
+import { runFailure } from './run-failure';
 
 /*
  * Issue #76 — server-side idempotency for the POSTs that start AI runs. Every

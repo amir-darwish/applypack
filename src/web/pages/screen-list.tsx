@@ -1,9 +1,9 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { ActionForm, Badge, Button, Card, Empty, Flash, Hint, PageHeader, Table, Td, Tr } from '../ui';
+import { ActionForm, Badge, Button, Card, Empty, Flash, Hint, PageHeader, Table, Td, Tr, When } from '../ui';
 import type { FlashMessage } from '../flash';
-import { formatDateShort, formatRelative } from '../format';
+import { formatDateShort } from '../format';
 import type { ScreeningSummary } from '../../screening/store';
 
 /*
@@ -70,7 +70,7 @@ export const ScreenListPage: FC<{ screenings: ScreeningSummary[]; flash?: FlashM
                 )}
               </Td>
               <Td class="text-ink-faint" title={s.createdAt.toISOString()}>
-                {formatRelative(s.createdAt)}
+                <When at={s.createdAt} />
               </Td>
               <Td class="text-ink-faint">{formatDateShort(s.retainUntil)}</Td>
               <Td class="text-right">

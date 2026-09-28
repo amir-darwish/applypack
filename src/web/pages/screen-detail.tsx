@@ -1,7 +1,28 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { ActionForm, Badge, Button, Card, Empty, FILE_INPUT_CLASS, Flash, Hint, Input, PageHeader, SectionTitle, Select, SUBMIT_ONCE, Table, Td, Textarea, Tr } from '../ui';
+import {
+  ActionForm,
+  Badge,
+  Button,
+  Card,
+  Empty,
+  FILE_INPUT_CLASS,
+  Flash,
+  Hint,
+  Input,
+  Notice,
+  PageHeader,
+  SectionTitle,
+  Select,
+  Stars,
+  SUBMIT_ONCE,
+  Table,
+  Td,
+  Textarea,
+  Tr,
+  When,
+} from '../ui';
 import type { FlashMessage } from '../flash';
 import { formatDateShort, formatRelative } from '../format';
 import {
@@ -28,7 +49,7 @@ import type { ScreenRunState } from '../../screening/batch';
 import { calibrationLine, MIN_DECISIONS, type Calibration } from '../../screening/calibration';
 import { ordinal } from '../../screening/export';
 import { DECISIONS } from '../../screening/store';
-import { groupRows, type ApplicantRowView } from '../screen-view';
+import { BUCKET_TONE, groupRows, type ApplicantRowView } from '../screen-view';
 
 export interface ScreenDetailProps {
   screening: {
@@ -58,7 +79,6 @@ export interface ScreenDetailProps {
 }
 
 const CONFIDENCE_TONE: Record<ConfidenceBand, 'ok' | 'warn' | 'neutral'> = { high: 'ok', medium: 'neutral', low: 'warn' };
-const BUCKET_TONE: Record<GateBucket, 'ok' | 'warn' | 'danger'> = { pass: 'ok', ask: 'warn', fail: 'danger' };
 
 export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, rows, run, pending, engine, retentionDays, calibration, flash }) => {
   const groups = groupRows(rows);
@@ -124,7 +144,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
           {screening.job.location ? ` · ${screening.job.location}` : ''}
         </p>
         {screening.scoredBeforePosting > 0 && (
-          <div class="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn" role="status">
+          <Notice tone="warn" role="status" class="mt-3 flex flex-wrap items-center gap-3">
             <span>
               The posting changed after {screening.scoredBeforePosting} of the current scores were written. Re-read the
               rubric from it (a new yardstick), or score everyone again against the new text with the rubric as it is.
@@ -139,7 +159,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                 Score everyone again
               </Button>
             </ActionForm>
-          </div>
+          </Notice>
         )}
         <details class="mt-3">
           <summary class={DISCLOSURE}>
@@ -536,7 +556,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                     .map((sep) => (
                       <tr class={Math.abs(sep.gap!) < FLAT_GAP ? 'text-ink-faint' : ''}>
                         <td class="py-1 pr-2">
-                          {sep.label} <span class="text-ink-faint">{'★'.repeat(sep.weight)}</span>
+                          {sep.label} <Stars n={sep.weight} class="text-ink-faint" />
                         </td>
                         <td class="py-1 pr-2 text-right tabular-nums">{sep.interviewed}</td>
                         <td class="py-1 pr-2 text-right tabular-nums">{sep.declined}</td>
@@ -565,7 +585,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
         )}
       </Card>
       <Hint class="mt-3">
-        Created {formatRelative(screening.createdAt)}. "Priority to talk to" means every gate passed; "Ask first" means one is unknown and the scorecard has the
+        Created <When at={screening.createdAt} />. "Priority to talk to" means every gate passed; "Ask first" means one is unknown and the scorecard has the
         question. A failed gate is a fact about the posting's conditions, never a verdict on the person. A score
         with a small +N or −N beside it carries your own adjustment from the scorecard; the computed number is in
         its tooltip and in the export.
@@ -596,7 +616,7 @@ const CriterionChip: FC<{ c: Criterion }> = ({ c }) => {
     >
       {c.mode === 'gate' && <span class="text-warn">gate</span>}
       <span class="min-w-0 truncate">{words}</span>
-      {c.mode === 'scored' && <span class="shrink-0 text-ink-faint">{'★'.repeat(c.weight)}</span>}
+      {c.mode === 'scored' && <Stars n={c.weight} class="shrink-0 text-ink-faint" />}
       {c.mode === 'note' && <span class="text-ink-faint">note</span>}
     </span>
   );
@@ -615,7 +635,7 @@ const ModeSelect: FC<{ name: string; value: Criterion['mode'] }> = ({ name, valu
 const WeightSelect: FC<{ name: string; value: number }> = ({ name, value }) => (
   <Select name={name} aria-label="Weight" class="!py-1 text-[13px]">
     {Array.from({ length: MAX_WEIGHT }, (_, i) => i + 1).map((w) => (
-      <option value={w} selected={w === value}>
+      <option value={w} selected={w === value} aria-label={`Weight ${w} of ${MAX_WEIGHT}`}>
         {'★'.repeat(w)}
         {'☆'.repeat(MAX_WEIGHT - w)}
       </option>
@@ -798,7 +818,8 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
                   title={`${g}: ${status}`}
                   class={status === 'pass' ? 'text-ok' : status === 'fail' ? 'text-danger' : 'text-warn'}
                 >
-                  {GATE_MARK[status]}
+                  <span aria-hidden="true">{GATE_MARK[status]}</span>
+                  <span class="sr-only">{`${g}: ${status}`}</span>
                 </span>
               );
             })}

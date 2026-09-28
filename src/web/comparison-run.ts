@@ -8,7 +8,8 @@ import type { MatchJobInput } from '../resume/prompts';
 import { flashRedirect } from './flash';
 import { formatRelative } from './format';
 import { finishSuggestions, startSuggestionsRun, suggestionsKey } from './suggestions-run';
-import { alsoClaims, claimRun, matchStep, runFailure, startRun, updateRun, type RunStep } from './target-runs';
+import { alsoClaims, claimRun, matchStep, startRun, updateRun, type RunStep } from './target-runs';
+import { runFailure } from './run-failure';
 
 /**
  * One comparison of one text against one stored posting, run on the progress

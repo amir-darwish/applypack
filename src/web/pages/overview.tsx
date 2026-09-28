@@ -2,7 +2,20 @@
 import type { FC } from 'hono/jsx';
 import type { CronRunStatus } from '@prisma/client';
 import { Layout } from '../layout';
-import { Badge, Button, Card, Empty, FitBadge, Flash, MetricStrip, PageHeader, SectionTitle, StatusBadge } from '../ui';
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  FitBadge,
+  Flash,
+  MetricStrip,
+  PageHeader,
+  SectionTitle,
+  StatusBadge,
+  TONE_FILL,
+  When,
+} from '../ui';
 import type { FlashMessage } from '../flash';
 import type { FetchRun } from '../fetch-runs';
 import type { HeldLine } from '../held-line';
@@ -76,14 +89,6 @@ const FUNNEL_WORD: Record<(typeof FUNNEL_LINE)[number], string> = {
 /** The four statuses worth acting on; Total and Dismissed stay quiet. */
 const PRIMARY_STATUSES = ['NEW', 'ALERTED', 'APPLIED', 'SAVED'] as const;
 
-const TONE_DOT: Record<Tone, string> = {
-  ok: 'bg-ok',
-  warn: 'bg-warn',
-  danger: 'bg-danger',
-  info: 'bg-info',
-  violet: 'bg-violet',
-  neutral: 'bg-ink-faint',
-};
 
 export const OverviewPage: FC<OverviewProps> = ({
   counts,
@@ -259,7 +264,7 @@ export const OverviewPage: FC<OverviewProps> = ({
                         <div class="truncate text-sm font-medium text-ink">{j.title}</div>
                         <div class="mt-0.5 truncate text-[13px] text-ink-faint">
                           {j.employer ?? j.company.name} · {j.location || 'Remote'} ·{' '}
-                          {formatRelative(j.alertedAt ?? j.fetchedAt)}
+                          <When at={j.alertedAt ?? j.fetchedAt} />
                         </div>
                       </div>
                       <div class="flex shrink-0 items-center gap-3">
@@ -284,7 +289,7 @@ export const OverviewPage: FC<OverviewProps> = ({
               {latestRuns.map(({ name, run }) => (
                 <li class="flex items-center gap-2.5 px-5 py-2">
                   <span
-                    class={`h-1.5 w-1.5 shrink-0 rounded-full ${run ? TONE_DOT[runTone(run.status)] : 'bg-line-strong'}`}
+                    class={`h-1.5 w-1.5 shrink-0 rounded-full ${run ? TONE_FILL[runTone(run.status)] : 'bg-line-strong'}`}
                     aria-hidden="true"
                   />
                   <span class="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">{name}</span>

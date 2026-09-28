@@ -449,7 +449,7 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
               ) : r.newJobs > 0 ? (
                 <a
                   href={`/jobs?q=${encodeURIComponent(r.name)}`}
-                  class="font-medium text-accent"
+                  class="font-medium text-accent-strong hover:text-accent-deep"
                   aria-label={`${r.newJobs} posting${r.newJobs === 1 ? '' : 's'} from ${r.name} in the last week`}
                 >
                   {r.newJobs}

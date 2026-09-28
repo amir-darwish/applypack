@@ -4,7 +4,25 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.36.0] — 2026-09-28
+
+### Changed
+- **A failed run on the Runs page reads as a sentence.** It says what failed
+  and why in one line, and what is safe and what comes next. The raw error
+  folds under Details.
+- **Empty lists say what to do.** An empty jobs list offers Fetch now (or
+  Clear all filters), a resume without comparisons points at your jobs, and
+  an empty applications board says how a card gets onto it.
+- **Dates like "3 hours ago" show the exact date and time on hover.**
+- **The schedule's time zone starts at your browser's** until you save one.
+- **Saving your edits into your own .docx offers the file** right in the
+  message: "Download .docx".
+- **Smaller things:**
+  - The name of the resume on a comparison links to its strength review.
+  - A resume's page links to filling your current search from it.
+  - The targeted view's three tabs work with the arrow keys.
+  - Stars and gate marks in a screening are read out by a screen reader.
+  - A wide table can be scrolled from the keyboard.
 
 ### Added
 - **Screening bench (for maintainers):** the gold set has a tailoring pair

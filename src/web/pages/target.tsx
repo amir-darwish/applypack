@@ -1,9 +1,9 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { Badge, Button, Card, FitBadge, Flash, Hint, HistoryChip, SUBMIT_ONCE } from '../ui';
+import { Badge, Button, Card, FitBadge, Flash, Hint, HistoryChip, SUBMIT_ONCE, TONE_TEXT, When } from '../ui';
 import type { FlashMessage } from '../flash';
-import { FIT_OK_FLOOR, fitTone, formatRelative, type Tone } from '../format';
+import { FIT_OK_FLOOR, fitTone } from '../format';
 import type { MatchWithResume } from '../../resume/store';
 import type { CountedKeyword } from '../../resume/keyword-matcher';
 import type { VerificationForHint } from '../../resume/verification-hint';
@@ -96,15 +96,6 @@ const SUMMARY_BUTTON =
 const MENU_PANEL =
   'z-10 mt-2 w-80 max-w-[calc(100vw-4rem)] rounded-lg border border-line bg-surface-raised p-3 shadow-lg sm:absolute sm:right-0';
 
-/** Stroke colour for the static AI-match ring. */
-const AI_TONE: Record<Tone, string> = {
-  ok: 'text-ok',
-  info: 'text-info',
-  warn: 'text-warn',
-  danger: 'text-danger',
-  violet: 'text-violet',
-  neutral: 'text-ink-faint',
-};
 
 /** Score at which the card tells the user to stop polishing and apply — the `ok` tone's floor, one number in one place. */
 const READY_TO_APPLY = FIT_OK_FLOOR;
@@ -273,7 +264,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                   stroke-linecap="round"
                   stroke-dasharray={RING_LENGTH}
                   stroke-dashoffset={String(RING_LENGTH - (RING_LENGTH * match.matchScore) / 100)}
-                  class={`transition-[stroke-dashoffset] duration-300 ${AI_TONE[fitTone(match.matchScore)]}`}
+                  class={`transition-[stroke-dashoffset] duration-300 ${TONE_TEXT[fitTone(match.matchScore)]}`}
                 />
               </svg>
               {/* The number alone. "/100" is in the sentence the ring shows
@@ -523,8 +514,11 @@ export const TargetPage: FC<TargetPageProps> = ({
             <button
               type="button"
               role="tab"
+              id={`view-tab-${t.key}`}
               data-tab={t.key}
+              aria-controls="panes"
               aria-selected={t.key === 'both'}
+              tabindex={t.key === 'both' ? 0 : -1}
               class="tab cursor-pointer rounded-[5px] px-3 py-1 text-[13px] text-ink-muted transition-colors duration-150 hover:text-ink aria-selected:bg-surface-raised aria-selected:font-medium aria-selected:text-ink aria-selected:shadow-sm"
             >
               {t.label}
@@ -537,7 +531,7 @@ export const TargetPage: FC<TargetPageProps> = ({
         </label>
       </div>
 
-      <div id="panes" class="show-matched grid gap-4 lg:grid-cols-2" data-view="both">
+      <div id="panes" class="show-matched grid gap-4 lg:grid-cols-2" data-view="both" role="tabpanel" aria-labelledby="view-tab-both">
         <Card class="pane-job">
           <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div class="text-label text-ink">Job description</div>
@@ -562,7 +556,8 @@ export const TargetPage: FC<TargetPageProps> = ({
           <Hint class="mt-2">
             A dashed underline means nothing in your resume backs the word yet — write it in where
             it is true and it counts, or confirm it below; the number reads your text, not our guess
-            about you.
+            about you. Benefits and equal-opportunity text stay unmarked on purpose: nobody is
+            screened on them.
           </Hint>
         </Card>
 
@@ -747,7 +742,7 @@ const RunChip: FC<{ m: MatchWithResume; currentId: number; jobId: number }> = ({
       {m.resume.name}
       {!m.resume.hidden && <span class="font-mono font-normal text-ink-faint">v{m.resumeVersion}</span>}
       {m.draft && <Badge tone="neutral">draft</Badge>}
-      <span class="font-normal text-ink-faint">{formatRelative(m.createdAt)}</span>
+      <span class="font-normal text-ink-faint"><When at={m.createdAt} /></span>
     </HistoryChip>
   </li>
 );

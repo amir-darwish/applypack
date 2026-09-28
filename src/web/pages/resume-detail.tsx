@@ -21,12 +21,13 @@ import {
   Tag,
   Td,
   Tr,
+  When,
 } from '../ui';
 import { deleteConfirm, type DeleteImpact } from '../delete-confirm';
 import { ACCEPTED_EXTENSIONS } from '../../resume/resume-text';
 import { MAX_UPLOAD_MB } from '../upload';
 import type { FlashMessage } from '../flash';
-import { formatDate, formatRelative } from '../format';
+import { formatDate } from '../format';
 import type { ResumeReview } from '@prisma/client';
 import type { MatchRunSummary, ResumeSummary } from '../../resume/store';
 import { ResumeReviewCard } from './resume-review-card';
@@ -158,7 +159,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
                 <span class="text-ink-faint">Headline: </span>
                 <span class="font-medium text-ink">{resume.title ?? '—'}</span>
                 <span class="ml-3 text-xs text-ink-faint">
-                  scanned {formatRelative(resume.scannedAt)}
+                  scanned <When at={resume.scannedAt} />
                 </span>
               </div>
               {resume.summary && (
@@ -238,11 +239,17 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
           Comparisons
         </div>
         {matches.length === 0 ? (
-          <div class="px-5 py-4">
-            <Hint>
-              None yet. Open a job and press Compare to score this resume against it.
-            </Hint>
-          </div>
+          <Empty
+            bare
+            title="No comparisons yet"
+            action={
+              <Button href="/jobs" variant="secondary" size="sm">
+                Open your jobs
+              </Button>
+            }
+          >
+            Open a job and press Compare on its Resume match tab to score this resume against it.
+          </Empty>
         ) : (
           <Table columns={['Job', 'Company', 'Version', 'Match', <span class="block text-right">When</span>]}>
             {groupMatchesByJob(matches).map((h) => {
@@ -425,11 +432,14 @@ const SearchCard: FC<ResumeDetailProps['search'] & { resumeId: number }> = ({
           {draft.warnings.length > 0 && (
             <p class="mt-2 text-[13px] leading-5 text-warn">Note: {draft.warnings.join('; ')}.</p>
           )}
-          <div class="mt-3.5">
+          <div class="mt-3.5 flex flex-wrap items-center gap-3">
             {/* The card's one act, and it spends no AI: the draft above is the stored scan's. */}
             <ActionForm action={`/resumes/${resumeId}/profile`}>
               <Button size="sm">Create a search from this resume</Button>
             </ActionForm>
+            <a href={`/settings?tab=profile&fill=${resumeId}#fill`} class="text-[13px] font-medium text-accent-strong hover:text-accent-deep">
+              or fill your current search from it →
+            </a>
           </div>
           <Hint class="mt-3">
             It starts switched off — your current search keeps running until you press Run on

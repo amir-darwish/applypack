@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { ActionForm, Button, Card, Hint } from '../ui';
+import { ActionForm, Button, Card, Hint, Notice } from '../ui';
 import { RunSteps, type StepView } from './run-steps';
 import { FETCH_FAILED, FETCH_RUN_STEPS, type FetchRun } from '../fetch-runs';
 
@@ -73,9 +73,9 @@ export const FetchRunPage: FC<{ run: FetchRun }> = ({ run }) => {
 
           {failed ? (
             <div class="mt-4 space-y-4">
-              <div class="rounded-md border border-danger/25 bg-danger/5 px-3.5 py-2.5 text-sm text-danger">
+              <Notice tone="danger" role="alert">
                 {run.error ?? FETCH_FAILED}
-              </div>
+              </Notice>
               <div class="flex flex-wrap gap-2">
                 <Button href={run.backUrl} variant="secondary">
                   ← {run.backUrl === '/welcome' ? 'Back to setup' : 'Back to runs'}

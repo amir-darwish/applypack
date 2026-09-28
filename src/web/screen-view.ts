@@ -91,6 +91,9 @@ export function adjustedScore(score: number, adjustment: number): number {
 
 export type ApplicantStatus = 'ok' | 'unreadable' | 'held';
 
+/** A gate bucket's tone on every screening page (TASKS U18). */
+export const BUCKET_TONE: Record<GateBucket, 'ok' | 'warn' | 'danger'> = { pass: 'ok', ask: 'warn', fail: 'danger' };
+
 /** The stored `parseStatus`, read: anything unknown is a file that could not be read. */
 export function applicantStatus(parseStatus: string): ApplicantStatus {
   return parseStatus === 'ok' || parseStatus === 'held' ? parseStatus : 'unreadable';

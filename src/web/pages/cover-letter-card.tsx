@@ -1,9 +1,9 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
-import { ActionForm, Badge, Button, Card, Hint, HistoryChip, Input, SectionTitle, Select, Tag, Textarea } from '../ui';
+import { ActionForm, Badge, Button, Card, Hint, HistoryChip, Input, SectionTitle, Select, Tag, Textarea, When } from '../ui';
 import { greetingOf } from '../../resume/addressee';
 import type { Tone } from '../format';
-import { formatRelative } from '../format';
+
 import type { CoverLetterWithResume } from '../../resume/store';
 import {
   countWords,
@@ -199,7 +199,7 @@ export const CoverLetterCard: FC<CoverLetterCardProps> = ({
                   </Badge>
                   {l.resume.name}
                   <span class="font-mono font-normal text-ink-faint">v{l.resumeVersion}</span>
-                  <span class="font-normal text-ink-faint">{formatRelative(l.createdAt)}</span>
+                  <span class="font-normal text-ink-faint"><When at={l.createdAt} /></span>
                 </HistoryChip>
               </li>
             ))}
@@ -230,7 +230,7 @@ const LetterReport: FC<{ jobId: number; letter: CoverLetterWithResume }> = ({ jo
         <Badge tone="neutral">{letter.tone}</Badge>
         {letter.editedText && <Badge tone="info">edited</Badge>}
         <span class="text-xs text-ink-faint">
-          {formatRelative(letter.createdAt)} · <span class="font-mono">{letter.model}</span>
+          <When at={letter.createdAt} /> · <span class="font-mono">{letter.model}</span>
         </span>
         <ActionForm
           action={`/jobs/${jobId}/cover`}

@@ -307,11 +307,28 @@ export function init(data) {
   document.getElementById('reset-edits').addEventListener('click', resetEdits);
   document.getElementById('bar-discard').addEventListener('click', resetEdits);
 
-  for (const tab of document.querySelectorAll('[role=tab]')) {
-    tab.addEventListener('click', () => {
-      for (const t of document.querySelectorAll('[role=tab]')) t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
-      panes.dataset.view = tab.dataset.tab;
-      render();
+  // One panel, three views of it (TASKS U11): the selected tab names the panel,
+  // takes the only tab stop, and the arrow keys move between the three.
+  const tabs = [...document.querySelectorAll('[role=tab]')];
+  const selectTab = (tab) => {
+    for (const t of tabs) {
+      t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+      t.tabIndex = t === tab ? 0 : -1;
+    }
+    panes.dataset.view = tab.dataset.tab;
+    panes.setAttribute('aria-labelledby', tab.id);
+    render();
+  };
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => selectTab(tab));
+    tab.addEventListener('keydown', (e) => {
+      const at = tabs.indexOf(tab);
+      const next = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: tabs.length - 1 }[e.key];
+      if (next === undefined) return;
+      e.preventDefault();
+      const to = tabs[(next + tabs.length) % tabs.length];
+      to.focus();
+      selectTab(to);
     });
   }
 

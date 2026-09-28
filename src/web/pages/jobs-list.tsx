@@ -3,14 +3,17 @@ import type { FC, PropsWithChildren } from 'hono/jsx';
 import type { JobStatus } from '@prisma/client';
 import { Layout } from '../layout';
 import {
+  ActionForm,
   Badge,
   Button,
   Card,
   Disclosure,
+  Empty,
   FilterChip,
   FitBadge,
   Input,
   MarkIcon,
+  Notice,
   PageHeader,
   Select,
   StatusBadge,
@@ -18,8 +21,9 @@ import {
   Tabs,
   Td,
   Tr,
+  When,
 } from '../ui';
-import { formatDateShort, formatRelative, formatSalary } from '../format';
+import { formatDateShort, formatSalary } from '../format';
 import { formatUsdPerYear } from '../../currency';
 import { flagOf } from '../../countries';
 import {
@@ -135,14 +139,14 @@ export const JobsListPage: FC<JobsListProps> = ({
       />
 
       {blankProfileBanner && (
-        <div class="mb-4 shrink-0 rounded-md border border-warn/25 bg-warn/5 px-3.5 py-2.5 text-[13px] leading-5 text-warn">
+        <Notice tone="warn" class="mb-4 shrink-0">
           Every running search is empty — classification idle. New jobs are fetched but
           not scored or alerted until one lists a required stack or role types.{' '}
           <a href="/settings?tab=profile" class="font-medium underline">
             Fix the search
           </a>
           .
-        </div>
+        </Notice>
       )}
 
       <div class="mb-3 flex shrink-0 flex-wrap items-center gap-2">
@@ -302,30 +306,34 @@ export const JobsListPage: FC<JobsListProps> = ({
       <div class="flex min-h-[320px] min-w-0 flex-1 flex-col">
         <Card flush class="flex min-h-0 flex-1 flex-col">
           {jobs.length === 0 ? (
-            <div class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-              <div class="text-sm font-medium text-ink">{hasFilters ? 'No jobs match these filters' : 'No jobs yet'}</div>
-              <p data-ui="hint" class="text-[13px] text-ink-faint">
-                {hasFilters ? (
-                  <>
-                    Try widening the search, or{' '}
-                    <a
-                      href="/jobs"
-                      class="font-medium text-accent-strong hover:text-accent-deep"
-                    >
-                      clear all filters
-                    </a>
-                    .
-                  </>
-                ) : (
-                  <>
-                    Nothing fetched yet. Check the{' '}
-                    <a href="/settings?tab=sources" class="font-medium text-accent-strong hover:text-accent-deep">
-                      Sources
-                    </a>{' '}
-                    tab in Settings.
-                  </>
-                )}
-              </p>
+            <div class="flex flex-1 items-center justify-center py-8">
+              {hasFilters ? (
+                <Empty
+                  bare
+                  title="No jobs match these filters"
+                  action={
+                    <Button href="/jobs" variant="secondary" size="sm">
+                      Clear all filters
+                    </Button>
+                  }
+                >
+                  The filters in force hide every stored job; widen them or clear them.
+                </Empty>
+              ) : (
+                <Empty
+                  bare
+                  title="No jobs yet"
+                  action={
+                    <ActionForm action="/runs/fetch-now" once>
+                      <Button variant="secondary" size="sm">
+                        Fetch now
+                      </Button>
+                    </ActionForm>
+                  }
+                >
+                  The hourly search fills this list from the sources in Settings → Sources.
+                </Empty>
+              )}
             </div>
           ) : (
             <>
@@ -425,7 +433,7 @@ export const JobsListPage: FC<JobsListProps> = ({
                           class="whitespace-nowrap text-right text-[13px] text-ink-faint"
                           title={formatDateShort(j.fetchedAt)}
                         >
-                          {formatRelative(j.fetchedAt)}
+                          <When at={j.fetchedAt} />
                         </Td>
                       </Tr>
                     ))}

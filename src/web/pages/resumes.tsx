@@ -1,9 +1,32 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { ActionForm, Badge, Button, Card, Disclosure, Empty, Field, FILE_INPUT_CLASS, FitBadge, Flash, Hint, Input, MarkIcon, PageHeader, SectionTitle, Select, SUBMIT_ONCE, Table, Tag, Td, Tr } from '../ui';
+import {
+  ActionForm,
+  Badge,
+  Button,
+  Card,
+  Disclosure,
+  Empty,
+  Field,
+  FILE_INPUT_CLASS,
+  FitBadge,
+  Flash,
+  Hint,
+  Input,
+  MarkIcon,
+  PageHeader,
+  SectionTitle,
+  Select,
+  SUBMIT_ONCE,
+  Table,
+  Tag,
+  Td,
+  Tr,
+  When,
+} from '../ui';
 import type { FlashMessage } from '../flash';
-import { formatRelative } from '../format';
+
 import { ACCEPTED_EXTENSIONS } from '../../resume/resume-text';
 import { MAX_UPLOAD_MB } from '../upload';
 
@@ -122,7 +145,7 @@ export const ResumesPage: FC<{
                 <StrengthCell resume={r} />
               </Td>
               <Td class="whitespace-nowrap text-[13px] text-ink-faint">
-                {r.scannedAt ? formatRelative(r.scannedAt) : <Badge tone="warn">not scanned</Badge>}
+                {r.scannedAt ? <When at={r.scannedAt} /> : <Badge tone="warn">not scanned</Badge>}
               </Td>
               <Td>
                 <div class="flex justify-end">

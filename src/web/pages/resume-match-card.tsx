@@ -8,17 +8,18 @@ import {
   FitBadge,
   Hint,
   HistoryChip,
-  SUBMIT_ONCE,
   Input,
   MarkIcon,
   SectionTitle,
   Select,
+  SUBMIT_ONCE,
   Table,
   Td,
   Tr,
+  When,
 } from '../ui';
 import type { Tone } from '../format';
-import { formatRelative } from '../format';
+
 import type { MatchWithResume } from '../../resume/store';
 import {
   ACTION_SECTIONS,
@@ -220,7 +221,7 @@ export const ResumeMatchCard: FC<ResumeMatchCardProps> = ({
                     {m.resume.hidden ? '' : `v${m.resumeVersion}`}
                     {m.draft ? ' draft' : ''}
                   </span>
-                  <span class="font-normal text-ink-faint">{formatRelative(m.createdAt)}</span>
+                  <span class="font-normal text-ink-faint"><When at={m.createdAt} /></span>
                 </HistoryChip>
               </li>
             ))}
@@ -457,11 +458,18 @@ const MatchReport: FC<{
           </Badge>
         )}
         <span class="text-sm text-ink">
-          {match.resume.name}{' '}
+          {match.resume.hidden ? (
+            match.resume.name
+          ) : (
+            // TASKS R20: how strong the resume is on its own is one click away from how it fits.
+            <a href={`/resumes/${match.resume.id}#resume-strength`} class="hover:underline" title="This resume on its own: the strength review">
+              {match.resume.name}
+            </a>
+          )}{' '}
           {!match.resume.hidden && <span class="font-mono text-xs text-ink-faint">v{match.resumeVersion}</span>}
         </span>
         <span class="text-xs text-ink-faint">
-          {formatRelative(match.createdAt)} · <span class="font-mono">{match.model}</span>
+          <When at={match.createdAt} /> · <span class="font-mono">{match.model}</span>
           {match.draft ? ' · draft' : ''}
         </span>
         {/* The card's primary once a result exists: free, and the step the verdict leads to (#164). Full-width under the score row on a phone. */}

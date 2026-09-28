@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import type { JobVerification } from '@prisma/client';
-import { ActionForm, Badge, Button, Card, Hint, MarkIcon, SectionTitle } from '../ui';
+import { ActionForm, Badge, Button, Card, Hint, MarkIcon, SectionTitle, When } from '../ui';
 import type { Tone } from '../format';
 import { formatRelative, safeHref } from '../format';
 import { readEvidence, type VerificationEvidence } from '../../verification/prompts';
@@ -95,7 +95,7 @@ export const VerificationCard: FC<VerificationCardProps> = ({
                     {verification.confidence}% confidence
                   </span>
                   <span class="text-xs text-ink-faint">
-                    · {formatRelative(verification.createdAt)}
+                    · <When at={verification.createdAt} />
                     {verificationCount > 1 ? ` · ${verificationCount} runs` : ''}
                   </span>
                 </>
@@ -112,7 +112,7 @@ export const VerificationCard: FC<VerificationCardProps> = ({
         <div class="flex shrink-0 flex-wrap items-center gap-2">
           {run ? (
             <Button href={`/target/runs/${run.id}`} variant="secondary" size="sm">
-              Checking… started {formatRelative(new Date(run.startedAt))} — open the progress page
+              Checking… started <When at={new Date(run.startedAt)} /> — open the progress page
             </Button>
           ) : (
             <>
@@ -135,7 +135,7 @@ export const VerificationCard: FC<VerificationCardProps> = ({
       {costHint && !run && <Hint class="mt-2">The AI research: {costHint.charAt(0).toLowerCase() + costHint.slice(1)}</Hint>}
       {liveness && !verification && (
         <p class="mt-3 text-sm text-ink-muted">
-          {codeLabel(liveness.code)} · checked {formatRelative(liveness.checkedAt)}.
+          {codeLabel(liveness.code)} · checked <When at={liveness.checkedAt} />.
         </p>
       )}
 

@@ -44,7 +44,8 @@ import { oneOffDraft, previousFor } from '../../resume/match-name';
 import { nameFromFilename, readResumeUpload, resumeUploadLimit } from '../upload';
 import { scanInBackground } from '../../resume/scan';
 import { clearFlashCookie, flashRedirect, parseFlashCookie } from '../flash';
-import { claimRun, findLiveRun, LETTER_FAILED, runFailure, startRun, updateRun } from '../target-runs';
+import { claimRun, findLiveRun, LETTER_FAILED, startRun, updateRun } from '../target-runs';
+import { runFailure } from '../run-failure';
 import { startComparison } from '../comparison-run';
 import { startSuggestionsRun } from '../suggestions-run';
 import {

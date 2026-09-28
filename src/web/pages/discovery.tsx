@@ -16,8 +16,9 @@ import {
   Td,
   ToggleRow,
   Tr,
+  When,
 } from '../ui';
-import { formatRelative } from '../format';
+
 import type { FlashMessage } from '../flash';
 import { sourceLabel } from '../source-names';
 
@@ -167,7 +168,7 @@ const CandidateTable: FC<{ rows: CompanyCandidate[]; actions?: boolean }> = ({
               </Td>
               <Td class="text-right tabular-nums text-ink-muted">{c.jobsSeen}</Td>
               <Td class="whitespace-nowrap text-right text-[13px] text-ink-faint">
-                {formatRelative(c.discoveredAt)}
+                <When at={c.discoveredAt} />
               </Td>
               {actions && (
                 <Td>
