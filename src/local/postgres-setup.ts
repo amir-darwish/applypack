@@ -16,7 +16,7 @@ const PLATFORM_PACKAGES: Record<string, string> = {
 };
 
 /** How long pg_ctl waits for the server to start or stop. */
-export const PG_CTL_WAIT_SECONDS = 60;
+const PG_CTL_WAIT_SECONDS = 60;
 
 export interface PgBinaries {
   initdb: string;

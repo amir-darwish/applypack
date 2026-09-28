@@ -44,9 +44,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Verifies prisma/schema.prisma parses and is valid. It does not
-      # compare prisma/migrations/ with the schema, so a half-finished
-      # migration commit still passes this step.
+      # The shipped dependencies only: a high or critical advisory fails the
+      # build. `overrides` in package.json is where a transitive fix goes when
+      # the parent has not released one yet (deepmerge-ts under prisma).
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      # Verifies prisma/schema.prisma parses and is valid. The migrations are
+      # compared with the schema after `migrate deploy`, below.
       - name: Validate Prisma schema
         run: npx prisma validate
 
@@ -62,12 +67,22 @@ jobs:
       - name: Run tests (node --test via tsx)
         run: npm test
 
+      # An export nothing imports, or one used only in its own file, fails
+      # here; a seam a test reaches for is fine (src/scripts/dead-exports.ts).
+      - name: Unused exports
+        run: npm run exports:audit
+
       # The wiring: every GET route and the first run's POSTs, in-process,
       # against the migrated service database. claude_code as the engine so
       # the one background scan the upload starts fails fast on a missing
       # binary instead of calling out.
       - name: Migrate the service database
         run: npx prisma migrate deploy
+
+      # The database the migrations just built against the schema: a schema
+      # change committed without its migration (or the reverse) exits 2.
+      - name: Migrations match the schema
+        run: npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code
 
       - name: Build
         run: npm run build
@@ -76,6 +91,18 @@ jobs:
         run: npm run smoke:routes
         env:
           AI_PROVIDER: claude_code
+
+  docker:
+    # The server option (docker compose) builds this image, and nothing else
+    # in CI did: the Dockerfile could rot unseen between releases. Built,
+    # never pushed.
+    name: docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the image
+        run: docker build --tag applypack:ci .
 
   local-start:
     # The default install (ADR 0054): `npm start` with the built-in database,

@@ -467,7 +467,7 @@ src/
     churn-once.ts               ← npm run churn:compare: analyse → apply everything → analyse
     keyword-audit.ts            ← npm run keywords:audit: the keyword matcher over stored comparisons
     priority-rules-dryrun.ts    ← npm run priority:dryrun: which stored jobs a profile's priorityRules match
-    dead-exports.ts             ← npm run exports:audit: exported symbols nobody imports
+    dead-exports.ts             ← npm run exports:audit: exported symbols nobody imports; a CI gate
 
   web/                          ← the dashboard: its own process (Hono), read-mostly
     server.ts                   ← listens on WEB_HOST:WEB_PORT and stops on a signal; the app is app.ts

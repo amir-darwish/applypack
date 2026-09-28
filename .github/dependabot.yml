@@ -1,0 +1,12 @@
+# Weekly dependency updates. Minor and patch versions arrive together as one
+# pull request; a major version gets its own, because it is the one that can
+# break. Security updates are a repository setting, not this file.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]

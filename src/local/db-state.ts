@@ -10,11 +10,11 @@ import { z } from 'zod';
 
 export const LOCAL_DB_USER = 'applypack';
 /** initdb's own database: the cluster serves ApplyPack alone, so nothing has to create another. */
-export const LOCAL_DB_NAME = 'postgres';
+const LOCAL_DB_NAME = 'postgres';
 /** 5432 is where a Postgres already on the machine answers, 5433 is compose's publish. */
 export const PREFERRED_PORT = 5434;
 
-export const DbStateSchema = z.object({
+const DbStateSchema = z.object({
   port: z.number().int().min(1).max(65_535),
   user: z.string().min(1),
   password: z.string().min(16),

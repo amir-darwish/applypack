@@ -6,10 +6,12 @@
  * for, which is fine and stays. Types and interfaces are left alone: an
  * unused type costs nothing at runtime.
  *
- *   npx tsx src/scripts/dead-exports.ts
+ *   npm run exports:audit
  *
- * Hand-run: the answer is a list to read, not a gate (audit 2026-09-10,
- * DEAD-1 found 10 dead and 84 over-exported this way).
+ * A gate since CI runs it: a dead or an over-exported symbol exits 1, and
+ * the fix is to delete the export or drop the keyword (audit 2026-09-10,
+ * DEAD-1 found 10 dead and 84 over-exported this way). Tests-only is
+ * listed and passes.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -59,3 +61,4 @@ const section = (title: string, rows: string[]) => `${title} (${rows.length})\n$
 console.log(section('DEAD — no use anywhere', dead));
 console.log(section('OVER-EXPORTED — used only in its own file', overExported));
 console.log(section('TESTS-ONLY — a seam a test reaches for; stays', testsOnly));
+if (dead.length + overExported.length > 0) process.exitCode = 1;

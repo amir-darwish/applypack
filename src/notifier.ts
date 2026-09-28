@@ -53,7 +53,7 @@ export interface Delivery {
 }
 
 /** Every target refused the message; nothing reached anyone, so the caller may safely try again. */
-export class AlertDeliveryError extends Error {
+class AlertDeliveryError extends Error {
   constructor(readonly targets: number) {
     super(`notify: every target failed (${targets})`);
     this.name = 'AlertDeliveryError';

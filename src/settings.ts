@@ -49,7 +49,7 @@ export interface AppSettingsView {
  * for it with raw SQL — an atomic `jsonb_set`, a `FOR UPDATE` lock — need the
  * row to exist first: an UPDATE or a lock over nothing is a silent no-op.
  */
-export async function ensureSettingsRow(): Promise<void> {
+async function ensureSettingsRow(): Promise<void> {
   await prisma.appSettings.upsert({
     where: { id: SETTINGS_ID },
     update: {},

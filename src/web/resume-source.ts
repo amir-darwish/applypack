@@ -9,7 +9,7 @@ import { MAX_RESUME_NAME_CHARS, nameFromFilename, readResumeUpload } from './upl
  * hidden scratch row — a launcher is a one-off and never adds to Resumes.
  */
 
-export const MIN_RESUME_CHARS = 200;
+const MIN_RESUME_CHARS = 200;
 
 /** The resume half of a launcher form; merge it into the route's own schema. */
 export const ResumeSourceFields = {
