@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mapWorkableFeed } from './workable';
+import { mapWorkableFeed, workablePage } from './workable';
 
 const COMPANY_ID = 13;
 const SLUG = 'acme';
@@ -216,5 +216,14 @@ describe('mapWorkableFeed — location hints (ADR 0031)', () => {
       SLUG,
     );
     assert.deepEqual(out[0]?.locationHints, { countries: ['DE'], workplace: 'ONSITE' });
+  });
+});
+
+describe('workablePage', () => {
+  it('reads the rows, the total and the token for the next page', () => {
+    assert.deepEqual(workablePage({ total: 42, results: [{}, {}], nextPage: 'eyJwIjoyfQ==' }), { rows: 2, total: 42, nextPage: 'eyJwIjoyfQ==' });
+    assert.deepEqual(workablePage({ total: 2, results: [{}, {}], nextPage: null }), { rows: 2, total: 2, nextPage: null });
+    assert.deepEqual(workablePage({ results: [] }), { rows: 0, total: null, nextPage: null });
+    assert.deepEqual(workablePage('nope'), { rows: 0, total: null, nextPage: null });
   });
 });

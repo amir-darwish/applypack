@@ -97,6 +97,13 @@ export async function fetchSmartRecruiters(
     // failure streak from the first tick (FETCH-4).
     throw new Error(`SmartRecruiters list schema invalid for "${company.atsToken}": ${list.error.message}`);
   }
+  // One page of LIST_LIMIT: a board past it shows its first page only, and
+  // the log says how much was left (audit FETCH-5). Paging would give up the
+  // conditional request a single URL earns (ADR 0035).
+  const { totalFound } = list.data;
+  if (totalFound !== undefined && totalFound > list.data.content.length) {
+    logger.info({ atsToken: company.atsToken, totalFound, read: list.data.content.length }, 'smartrecruiters: first page of a longer board');
+  }
   // Normalise list rows
   const postings: z.infer<typeof SrPostingSchema>[] = [];
   for (const item of list.data.content) {

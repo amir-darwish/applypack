@@ -147,10 +147,19 @@ describe('mapHimalayasFeed — location hints (ADR 0031)', () => {
 
 describe('himalayasUrls — the calls a context needs (stage 3a)', () => {
   it('one search per country plus worldwide when the searches name countries', () => {
+    assert.deepEqual(himalayasUrls({ countries: ['PL', 'DE'], regions: [] }), [
+      'https://himalayas.app/jobs/api/search?country=PL&exclude_worldwide=true&limit=20',
+      'https://himalayas.app/jobs/api/search?country=DE&exclude_worldwide=true&limit=20',
+      'https://himalayas.app/jobs/api/search?worldwide=true&limit=20',
+    ]);
+  });
+
+  it('adds the browse feed when a group is named beside the countries', () => {
     assert.deepEqual(himalayasUrls({ countries: ['PL', 'DE'], regions: ['EU'] }), [
       'https://himalayas.app/jobs/api/search?country=PL&exclude_worldwide=true&limit=20',
       'https://himalayas.app/jobs/api/search?country=DE&exclude_worldwide=true&limit=20',
       'https://himalayas.app/jobs/api/search?worldwide=true&limit=20',
+      'https://himalayas.app/jobs/api?limit=20',
     ]);
   });
 

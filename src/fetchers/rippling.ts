@@ -14,6 +14,8 @@ const DETAIL_URL = (slug: string, uuid: string) =>
   `${LIST_URL(slug)}/${encodeURIComponent(uuid)}`;
 const DETAIL_DELAY_MS = 250;
 const MAX_DETAILS_PER_FETCH = 60;
+/** A list longer than this is cut, and said so: the vendor pages it without end (audit FETCH-5). */
+const MAX_LIST_ROWS = 1_000;
 
 const RipplingListRowSchema = z
   .object({
@@ -77,7 +79,11 @@ export async function fetchRippling(
   const listUrl = LIST_URL(company.atsToken);
   const resp = await fetchWithRetry(listUrl, { init: { headers: conditionalHeaders(company.id, listUrl) } });
   const raw: unknown = await resp.json();
-  const rows = parseRipplingList(raw);
+  const listed = parseRipplingList(raw);
+  if (listed.length > MAX_LIST_ROWS) {
+    logger.warn({ atsToken: company.atsToken, listed: listed.length, kept: MAX_LIST_ROWS }, 'rippling: list cut at the cap');
+  }
+  const rows = listed.slice(0, MAX_LIST_ROWS);
 
   const out: NormalizedJob[] = [];
   for (let i = 0; i < rows.length; i++) {

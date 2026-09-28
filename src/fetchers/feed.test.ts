@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { feedUrl, looksLikeFeed, mapFeedItem } from './feed';
+import { absoluteLink, feedUrl, looksLikeFeed, mapFeedItem } from './feed';
 
 describe('feedUrl', () => {
   it('accepts a public http(s) feed URL', () => {
@@ -57,6 +57,16 @@ describe('mapFeedItem', () => {
     assert.equal(job.title, 'Senior TypeScript Engineer');
     assert.equal(job.url, 'https://example.com/jobs/42');
     assert.equal(job.postedAt.toISOString(), '2026-09-01T10:00:00.000Z');
+  });
+
+  it('makes a relative link absolute against the feed, and keeps its identity as written', () => {
+    const job = mapFeedItem({ ...item, link: '/jobs/42' }, 7, 'https://acme.example/careers/feed.xml');
+    assert.equal(job?.url, 'https://acme.example/jobs/42');
+    assert.equal(job?.externalId, mapFeedItem({ ...item, link: '/jobs/42' }, 7)?.externalId);
+    assert.equal(absoluteLink('jobs/7', 'https://acme.example/careers/feed.xml'), 'https://acme.example/careers/jobs/7');
+    assert.equal(absoluteLink('https://other.example/x', 'https://acme.example/feed'), 'https://other.example/x');
+    assert.equal(absoluteLink('javascript:alert(1)', 'https://acme.example/feed'), 'javascript:alert(1)');
+    assert.equal(absoluteLink('', 'https://acme.example/feed'), '');
   });
 
   it('decodes entities and rebuilds the list, so the classifier reads prose', () => {

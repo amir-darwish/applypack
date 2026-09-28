@@ -59,6 +59,11 @@ describe('mapAdzunaPage', () => {
     assert.match(py?.description ?? '', /^Contract: full time\. Salary: 55000 GBP \(year, Adzuna estimate\)\.\n\nSnippet only/);
   });
 
+  it('reads a snippet with markup as text', () => {
+    const [job] = mapAdzunaPage({ results: [{ id: '1', title: 'Dev', redirect_url: 'x', description: '<strong>Build</strong> APIs &amp; more' }] }, 3, ADZUNA_MARKETS.gb!);
+    assert.match(job?.description ?? '', /^Build APIs & more\n\nSnippet only/);
+  });
+
   it('answers nothing for a payload that is not a search result', () => {
     assert.deepEqual(mapAdzunaPage({ error: 'AUTH_FAIL' }, 3, ADZUNA_MARKETS.de!), []);
     assert.equal(adzunaCount(page), 1731);

@@ -1,10 +1,18 @@
 import { z } from 'zod';
-import { fetchWithRetry } from '../http';
+import { fetchWithRetry, sleep } from '../http';
+import { logger } from '../logger';
 import { workplaceFromText } from '../location';
 import type { NormalizedJob } from '../types';
 
 const ENDPOINT_TEMPLATE = (slug: string) =>
   `https://apply.workable.com/api/v3/accounts/${encodeURIComponent(slug)}/jobs`;
+/**
+ * The list comes a page at a time: the answer's `nextPage` goes back as the
+ * next request's `token`. A board past the last page read is cut, and said
+ * so — until the cap it used to be cut silently at page one (audit FETCH-5).
+ */
+const MAX_PAGES = 5;
+const PAGE_DELAY_MS = 300;
 
 // The list endpoint returns lightweight job metadata. Workable does NOT
 // expose per-job descriptions on a public endpoint, so description stays
@@ -38,8 +46,16 @@ const WorkableResponseSchema = z
   .object({
     total: z.number().optional(),
     results: z.array(z.unknown()),
+    nextPage: z.string().nullable().optional(),
   })
   .passthrough();
+
+/** What one page says about the list: how many rows it carried, the board's total, and the token for the next page. */
+export function workablePage(raw: unknown): { rows: number; total: number | null; nextPage: string | null } {
+  const top = WorkableResponseSchema.safeParse(raw);
+  if (!top.success) return { rows: 0, total: null, nextPage: null };
+  return { rows: top.data.results.length, total: top.data.total ?? null, nextPage: top.data.nextPage || null };
+}
 
 export interface WorkableCompany {
   id: number;
@@ -49,15 +65,31 @@ export interface WorkableCompany {
 export async function fetchWorkable(
   company: WorkableCompany,
 ): Promise<NormalizedJob[]> {
-  const resp = await fetchWithRetry(ENDPOINT_TEMPLATE(company.atsToken), {
-    init: {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: '', workplace: [], department: [] }),
-    },
-  });
-  const data: unknown = await resp.json();
-  return mapWorkableFeed(data, company.id, company.atsToken);
+  const out: NormalizedJob[] = [];
+  let token: string | null = null;
+  let read = 0;
+  let total: number | null = null;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    if (page > 0) await sleep(PAGE_DELAY_MS);
+    const resp = await fetchWithRetry(ENDPOINT_TEMPLATE(company.atsToken), {
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: '', workplace: [], department: [], ...(token !== null && { token }) }),
+      },
+    });
+    const data: unknown = await resp.json();
+    out.push(...mapWorkableFeed(data, company.id, company.atsToken));
+    const paging = workablePage(data);
+    read += paging.rows;
+    total = paging.total ?? total;
+    if (paging.nextPage === null || (total !== null && read >= total)) break;
+    token = paging.nextPage;
+  }
+  if (total !== null && read < total) {
+    logger.warn({ atsToken: company.atsToken, total, read }, 'workable: board has more postings than the pages read');
+  }
+  return out;
 }
 
 export function mapWorkableFeed(

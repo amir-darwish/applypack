@@ -13,11 +13,11 @@
  */
 
 const URL_RE = /\bhttps?:\/\/[^\s<>"')]+/i;
-// Pipes / em-dashes / en-dashes — accept zero or more whitespace on either
-// side. HN comments routinely use "Foo|Bar" without surrounding spaces.
-// These three characters effectively never appear inside URLs or normal
-// English prose, so over-splitting risk is low.
-const SEPARATOR_RE = /\s*[—|–]\s*/g;
+// Pipes and em-dashes with or without spaces — HN comments routinely write
+// "Foo|Bar". An en-dash only between spaces: bare, it is the range sign of
+// the salaries these comments carry ("$120–160k"), and splitting on it put
+// half a salary in the title or the location (audit FETCH-5).
+const SEPARATOR_RE = /\s*[—|]\s*|\s+–\s+/g;
 // Case-sensitive on the company match (capital first letter) but the verbs
 // are written lowercase in essentially every HN comment. No /i flag here —
 // adding it would make [A-Z] match lowercase too and break "we are hiring".

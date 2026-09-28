@@ -113,7 +113,9 @@ export function fourDayWeekPlaces(context: FetchContext): string[] {
   const add = (name: string) => {
     if (!out.includes(name)) out.push(name);
   };
-  for (const code of context.countries) add(placeLabel(code));
+  // A code the gazetteer cannot name would go out as `country=XX`, and the
+  // board answers that with nothing at all (audit FETCH-5): leave it out.
+  for (const code of context.countries) if (placeLabel(code) !== code) add(placeLabel(code));
   for (const region of context.regions) for (const c of CONTINENT_OF_REGION[region] ?? []) add(c);
   return out;
 }
