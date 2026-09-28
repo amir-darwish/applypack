@@ -124,7 +124,7 @@ function mountPicker(host, countries, doc) {
       li.id = `${list.id}-${i}`;
       li.setAttribute('role', 'option');
       li.setAttribute('aria-selected', String(i === active));
-      li.className = `flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-[13px] ${
+      li.className = `flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-note ${
         i === active ? 'bg-accent/10 text-accent-strong' : 'text-ink hover:bg-surface-overlay'
       }`;
       const via = normalize(hit.via) === normalize(hit.country.name) ? '' : hit.via;

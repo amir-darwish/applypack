@@ -238,7 +238,7 @@ export const JobDetailPage: FC<JobDetailProps> = ({
                 {formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryPeriod)}
               </span>
               {formatUsdPerYear(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryPeriod) && (
-                <span class="ml-2 text-xs text-ink-faint">
+                <span class="ml-2 text-meta text-ink-faint">
                   {formatUsdPerYear(job.salaryMin, job.salaryMax, job.salaryCurrency, job.salaryPeriod)}
                 </span>
               )}
@@ -250,7 +250,7 @@ export const JobDetailPage: FC<JobDetailProps> = ({
             <FactRow label="Source">{job.company.atsType.replace('_', ' ')}</FactRow>
             {aiSpent && <FactRow label="AI spent">{aiSpent}</FactRow>}
             <FactRow label="External id">
-              <span class="block truncate font-mono text-xs" title={job.externalId}>
+              <span class="block truncate font-mono text-meta" title={job.externalId}>
                 {job.externalId}
               </span>
             </FactRow>
@@ -357,7 +357,7 @@ export const JobDetailPage: FC<JobDetailProps> = ({
         <Card variant="flat" class="p-5">
           <SectionTitle>Description</SectionTitle>
           {job.descriptionRefreshedAt && (
-            <div class="mb-3 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+            <div class="mb-3 flex flex-wrap items-center gap-2 text-note text-ink-muted">
               <span>
                 {job.descriptionOriginal !== null
                   ? `Replaced with the company's own listing ${formatRelative(job.descriptionRefreshedAt)}; the original (${job.descriptionOriginal.length.toLocaleString('en-US')} characters) is kept.`
@@ -440,10 +440,10 @@ const ProfileScoreRow: FC<{ scores: ProfileScore[] }> = ({ scores }) => {
   if (scores.length < 2) return null;
   return (
     <div class="mt-3 border-t border-line pt-3">
-      <div class="mb-2 text-xs font-medium text-ink-muted">By search</div>
+      <div class="mb-2 text-meta font-medium text-ink-muted">By search</div>
       <ul class="space-y-1.5">
         {scores.map((s, i) => (
-          <li class="flex items-start gap-2 text-[13px]">
+          <li class="flex items-start gap-2 text-note">
             <FitBadge score={s.fitScore} />
             <div class="min-w-0 flex-1">
               <a
@@ -453,18 +453,18 @@ const ProfileScoreRow: FC<{ scores: ProfileScore[] }> = ({ scores }) => {
                 {s.name}
               </a>
               {i === 0 && (
-                <span class="ml-1.5 text-xs text-ink-faint">· best match</span>
+                <span class="ml-1.5 text-meta text-ink-faint">· best match</span>
               )}
               {!s.active && (
-                <span class="ml-1.5 text-xs text-ink-faint">· paused</span>
+                <span class="ml-1.5 text-meta text-ink-faint">· paused</span>
               )}
               {!s.locationMatch && (
-                <span class="ml-1.5 text-xs text-warn">
+                <span class="ml-1.5 text-meta text-warn">
                   · location mismatch{s.locationReason ? ` — ${s.locationReason}` : ''}
                 </span>
               )}
               {s.summary && (
-                <div class="truncate text-xs text-ink-muted" title={s.summary}>
+                <div class="truncate text-meta text-ink-muted" title={s.summary}>
                   {s.summary}
                 </div>
               )}
@@ -492,7 +492,7 @@ const CrossListingNotice: FC<{ job: JobDetail }> = ({ job }) => {
       <p class="font-medium">
         Also listed elsewhere — apply through one channel only
       </p>
-      <ul class="mt-1.5 space-y-1 text-[13px] text-ink-muted">
+      <ul class="mt-1.5 space-y-1 text-note text-ink-muted">
         {others.map((o) => (
           <li>
             <a
@@ -513,7 +513,7 @@ const PageHeaderBlock: FC<{ job: JobDetail; primary: boolean }> = ({ job, primar
   <header class="mb-5 shrink-0">
     <a
       href="/jobs"
-      class="mb-1.5 inline-flex items-center gap-1 text-[13px] text-ink-faint transition-colors duration-150 hover:text-ink"
+      class="mb-1.5 inline-flex items-center gap-1 text-note text-ink-faint transition-colors duration-150 hover:text-ink"
     >
       <svg
         viewBox="0 0 24 24"
@@ -541,7 +541,7 @@ const PageHeaderBlock: FC<{ job: JobDetail; primary: boolean }> = ({ job, primar
           · {job.location || 'Remote'}
         </div>
         {job.company.watched && (
-          <div data-ui="hint" class="mt-1 text-xs text-ink-faint">
+          <div data-ui="hint" class="mt-1 text-meta text-ink-faint">
             Watched company · {intervalLabel(job.company.checkEvery).toLowerCase()}, with your search&rsquo;s schedule ·{' '}
             {job.company.alertPolicy === 'all' ? 'alerts on every posting' : 'alerts on matches only'} ·{' '}
             <a href="/companies" class="underline">
@@ -692,10 +692,10 @@ const AppliedWithField: FC<{ job: JobDetail; picker: JobDetailProps['appliedResu
 const AppliedTextDisclosure: FC<{ job: JobDetail }> = ({ job }) =>
   job.appliedResumeText ? (
     <details class="mt-3 rounded-md border border-line px-3 py-2">
-      <summary class="cursor-pointer select-none text-[13px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
+      <summary class="cursor-pointer select-none text-note font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
         The text that went out ({job.appliedResumeText.length.toLocaleString()} chars)
       </summary>
-      <pre class="mt-3 whitespace-pre-wrap break-words font-sans text-[13px] leading-6 text-ink-muted">
+      <pre class="mt-3 whitespace-pre-wrap break-words font-sans text-note leading-6 text-ink-muted">
         {job.appliedResumeText}
       </pre>
     </details>
@@ -712,7 +712,7 @@ const AppliedWithRow: FC<{ job: JobDetail }> = ({ job }) => {
 
 const FactRow: FC<PropsWithChildren<{ label: string }>> = ({ label, children }) => (
   <div class="flex items-baseline justify-between gap-4">
-    <dt class="shrink-0 text-[13px] text-ink-faint">{label}</dt>
+    <dt class="shrink-0 text-note text-ink-faint">{label}</dt>
     <dd class="min-w-0 text-right text-ink">{children}</dd>
   </div>
 );
@@ -724,7 +724,7 @@ const TagRow: FC<{ label: string; items: string[]; tone: 'ok' | 'danger' | 'neut
 }) =>
   items.length === 0 ? null : (
     <div class="flex flex-wrap items-center gap-1.5">
-      <dt class="mr-1 text-[13px] font-medium text-ink-muted">{label}</dt>
+      <dt class="mr-1 text-note font-medium text-ink-muted">{label}</dt>
       {items.map((t) => (
         <dd>
           <Tag tone={tone}>{t}</Tag>

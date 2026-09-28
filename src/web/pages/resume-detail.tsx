@@ -125,13 +125,13 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
               maxlength="120"
               required
               aria-label="Resume name"
-              class="!w-56 !px-2 !py-1 !text-xs"
+              class="!w-56 !px-2 !py-1 !text-meta"
             />
             <Button size="sm" variant="ghost">
               Rename
             </Button>
           </form>
-          <span class="break-all font-mono text-xs">{resume.sourceFilename}</span>
+          <span class="break-all font-mono text-meta">{resume.sourceFilename}</span>
           <Badge tone="info">v{resume.version}</Badge>
           {resume.isDefault && <Badge tone="ok">default</Badge>}
           {resume.seniority && <Badge tone="info">{resume.seniority}</Badge>}
@@ -152,7 +152,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
               <div class="text-sm">
                 <span class="text-ink-faint">Headline: </span>
                 <span class="font-medium text-ink">{resume.title ?? '—'}</span>
-                <span class="ml-3 text-xs text-ink-faint">
+                <span class="ml-3 text-meta text-ink-faint">
                   scanned <When at={resume.scannedAt} />
                 </span>
               </div>
@@ -186,7 +186,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
                 kept for reference.
               </Hint>
               <details class="mt-2">
-                <summary class="cursor-pointer text-[13px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
+                <summary class="cursor-pointer text-note font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
                   What the scan flagged — {issues.length} note{issues.length === 1 ? '' : 's'}
                 </summary>
                 <IssueList issues={issues} />
@@ -215,7 +215,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
               name="file"
               required
               accept={ACCEPTED_EXTENSIONS.join(',')}
-              class="file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-surface-overlay file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-ink"
+              class="file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-surface-overlay file:px-2.5 file:py-1 file:text-meta file:font-medium file:text-ink"
             />
           </Field>
           <div class="flex items-end">
@@ -229,7 +229,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
       </Card>
 
       <Card class="mt-4" flush>
-        <div class="border-b border-line px-5 py-3 text-sm font-semibold text-ink">
+        <div class="border-b border-line px-5 py-3 text-entity text-ink">
           Comparisons
         </div>
         {matches.length === 0 ? (
@@ -262,7 +262,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
                     {/* Every earlier run stays one click away — grouping must
                         not hide history, only stop repeating the job title. */}
                     {line && (
-                      <div class="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-ink-faint">
+                      <div class="mt-0.5 flex flex-wrap items-center gap-x-1 text-meta text-ink-faint">
                         <span class="mr-0.5">{line} ·</span>
                         {runs.map((r, i) => (
                           <>
@@ -282,7 +282,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
                   <Td class="max-w-[14rem] text-ink-muted">
                     <div class="truncate">{h.job.employer ?? h.job.company.name}</div>
                   </Td>
-                  <Td class="whitespace-nowrap font-mono text-xs text-ink-faint">
+                  <Td class="whitespace-nowrap font-mono text-meta text-ink-faint">
                     v{h.latest.resumeVersion}
                     {h.latest.draft ? ' draft' : ''}
                   </Td>
@@ -296,7 +296,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
                       )}
                     </div>
                   </Td>
-                  <Td class="whitespace-nowrap text-right text-[13px] text-ink-faint">
+                  <Td class="whitespace-nowrap text-right text-note text-ink-faint">
                     {formatDate(h.latest.createdAt)}
                   </Td>
                 </Tr>
@@ -344,7 +344,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
               name="file"
               required
               accept={ACCEPTED_EXTENSIONS.join(',')}
-              class="file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-surface-overlay file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-ink"
+              class="file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-surface-overlay file:px-2.5 file:py-1 file:text-meta file:font-medium file:text-ink"
             />
           </Field>
           <div class="flex items-end">
@@ -356,7 +356,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
           </Hint>
         </form>
         <details class="mt-2">
-          <summary class="cursor-pointer select-none text-sm font-semibold text-ink">
+          <summary class="cursor-pointer select-none text-label text-ink">
             Extracted text ({resume.text.length.toLocaleString()} chars) — exactly what the AI and
             an ATS parser get
           </summary>
@@ -424,14 +424,14 @@ const SearchCard: FC<ResumeDetailProps['search'] & { resumeId: number }> = ({
             ))}
           </div>
           {draft.warnings.length > 0 && (
-            <p class="mt-2 text-[13px] leading-5 text-warn">Note: {draft.warnings.join('; ')}.</p>
+            <p class="mt-2 text-note leading-5 text-warn">Note: {draft.warnings.join('; ')}.</p>
           )}
           <div class="mt-3.5 flex flex-wrap items-center gap-3">
             {/* The card's one act, and it spends no AI: the draft above is the stored scan's. */}
             <ActionForm action={`/resumes/${resumeId}/profile`}>
               <Button size="sm">Create a search from this resume</Button>
             </ActionForm>
-            <a href={`/settings?tab=profile&fill=${resumeId}#fill`} class="text-[13px] font-medium text-accent-strong hover:text-accent-deep">
+            <a href={`/settings?tab=profile&fill=${resumeId}#fill`} class="text-note font-medium text-accent-strong hover:text-accent-deep">
               or fill your current search from it →
             </a>
           </div>
@@ -453,7 +453,7 @@ const IssueList: FC<{ issues: ReturnType<typeof readIssues> }> = ({ issues }) =>
         <Badge tone="warn">{i.section}</Badge>
         <div class="mt-1.5 min-w-0 text-sm">
           <div class="text-ink">{i.issue}</div>
-          <div class="mt-0.5 text-[13px] leading-5 text-ink-muted">→ {i.fix}</div>
+          <div class="mt-0.5 text-note leading-5 text-ink-muted">→ {i.fix}</div>
         </div>
       </li>
     ))}
@@ -467,7 +467,7 @@ const TagRow: FC<{ label: string; items: string[]; tone: 'ok' | 'info' }> = ({
 }) =>
   items.length === 0 ? null : (
     <div class="flex flex-wrap items-center gap-1.5">
-      <span class="mr-1 text-[13px] font-medium text-ink-muted">{label}</span>
+      <span class="mr-1 text-note font-medium text-ink-muted">{label}</span>
       {items.map((t) => (
         <Tag tone={tone}>{t}</Tag>
       ))}
@@ -592,7 +592,7 @@ const CoverageMove: FC<{ kind: CoverageKind }> = ({ kind }) =>
 const CoverageCard: FC<{ coverage: Coverage }> = ({ coverage }) => (
   <Card class="mt-4" flush>
     <div class="border-b border-line px-5 py-3">
-      <div class="text-sm font-semibold text-ink">Missing across postings</div>
+      <div class="text-entity text-ink">Missing across postings</div>
       <Hint class="mt-0.5">
         What the latest comparison of each of your {coverage.postings} compared postings asked for and this resume does
         not say, read against the text as it is now. No AI.

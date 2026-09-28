@@ -101,7 +101,7 @@ const HealthDot: FC<{ status: string | null; streak: number }> = ({ status, stre
       title={streakText ? `${label} — ${streakText}` : label}
     >
       <span class={`h-2 w-2 shrink-0 rounded-full ${DOT_TONE[tone]}`} aria-hidden="true" />
-      <span class="text-[13px] text-ink-muted">{label}</span>
+      <span class="text-note text-ink-muted">{label}</span>
       {streakText && <span class="sr-only">, {streakText}</span>}
     </span>
   );
@@ -137,7 +137,7 @@ const QuietSources: FC<{ companies: CompanyRow[]; fetchingEnabled: boolean }> = 
           <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface-raised px-4 py-3">
             <div class="min-w-0">
               <div class="truncate font-medium text-ink">{c.name}</div>
-              <div class="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+              <div class="mt-0.5 flex flex-wrap items-center gap-2 text-note text-ink-muted">
                 <Tag>{c.atsType.replace('_', ' ')}</Tag>
                 <Code>{c.atsToken}</Code>
                 <Badge tone={c.quiet === 'failing' ? 'danger' : 'warn'}>
@@ -222,7 +222,7 @@ const SuggestedSources: FC<{ suggestions: SourceSuggestion[]; packs: PackOffer[]
               <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
                 <div class="min-w-0">
                   <div class="text-label text-ink">{s.name}</div>
-                  <div class="truncate text-xs text-ink-faint">
+                  <div class="truncate text-meta text-ink-faint">
                     {s.reason} · <Code>{s.atsToken}</Code>
                   </div>
                 </div>
@@ -343,7 +343,7 @@ export const CompaniesPage: FC<CompaniesProps> = ({
                   </Td>
                   {/* A feed query can run to fifty characters; untruncated it pushed Active and
                       Delete out of a 1440 px window, behind a sideways scroll inside the card. */}
-                  <Td class="max-w-[11rem] font-mono text-xs text-ink-muted">
+                  <Td class="max-w-[11rem] font-mono text-meta text-ink-muted">
                     <div class="truncate" title={c.atsToken}>
                       {c.atsToken}
                     </div>
@@ -359,7 +359,7 @@ export const CompaniesPage: FC<CompaniesProps> = ({
                   >
                     {c.alertedTotal}
                   </Td>
-                  <Td class="whitespace-nowrap text-right text-[13px] text-ink-faint">
+                  <Td class="whitespace-nowrap text-right text-note text-ink-faint">
                     <When at={c.lastFetchedAt} />
                   </Td>
                   <Td>

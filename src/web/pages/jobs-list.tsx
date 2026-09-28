@@ -210,7 +210,7 @@ export const JobsListPage: FC<JobsListProps> = ({
                 ))}
                 {places.more.length > 0 && (
                   <details class="contents">
-                    <summary class="inline-flex min-h-[28px] cursor-pointer list-none items-center rounded-md px-2 text-[13px] text-ink-muted underline-offset-2 hover:text-ink hover:underline [&::-webkit-details-marker]:hidden">
+                    <summary class="inline-flex min-h-[28px] cursor-pointer list-none items-center rounded-md px-2 text-note text-ink-muted underline-offset-2 hover:text-ink hover:underline [&::-webkit-details-marker]:hidden">
                       More…
                     </summary>
                     {places.more.map((c) => (
@@ -282,7 +282,7 @@ export const JobsListPage: FC<JobsListProps> = ({
           ))}
           <a
             href={clearFiltersHref(filters)}
-            class="ml-1 text-[13px] text-ink-muted underline-offset-2 transition-colors duration-150 hover:text-ink hover:underline"
+            class="ml-1 text-note text-ink-muted underline-offset-2 transition-colors duration-150 hover:text-ink hover:underline"
           >
             Clear all
           </a>
@@ -290,7 +290,7 @@ export const JobsListPage: FC<JobsListProps> = ({
       )}
 
       {mutedHidden > 0 && (
-        <p data-ui="hint" class="mb-3 shrink-0 text-[13px] text-ink-muted">
+        <p data-ui="hint" class="mb-3 shrink-0 text-note text-ink-muted">
           {mutedHidden.toLocaleString()} {mutedHidden === 1 ? 'posting' : 'postings'} from companies you muted{' '}
           {mutedHidden === 1 ? 'is' : 'are'} hidden.{' '}
           <a href={jobsHref({ ...filters, muted: '1' })} class="font-medium text-accent-strong hover:text-accent-deep">
@@ -378,7 +378,7 @@ export const JobsListPage: FC<JobsListProps> = ({
                             </div>
                           )}
                           {j.techMatch.length > 0 && (
-                            <div class="mt-0.5 truncate text-xs text-ink-faint">
+                            <div class="mt-0.5 truncate text-meta text-ink-faint">
                               {j.techMatch.join(' · ')}
                             </div>
                           )}
@@ -414,7 +414,7 @@ export const JobsListPage: FC<JobsListProps> = ({
                           />
                         </Td>
                         <Td
-                          class="overflow-hidden whitespace-nowrap text-right text-[13px] tabular-nums text-ink-muted"
+                          class="overflow-hidden whitespace-nowrap text-right text-note tabular-nums text-ink-muted"
                           title={salaryTitle(j)}
                         >
                           {formatSalary(j.salaryMin, j.salaryMax, j.salaryCurrency, j.salaryPeriod)}
@@ -432,7 +432,7 @@ export const JobsListPage: FC<JobsListProps> = ({
                           )}
                         </Td>
                         <Td
-                          class="whitespace-nowrap text-right text-[13px] text-ink-faint"
+                          class="whitespace-nowrap text-right text-note text-ink-faint"
                           title={formatDateShort(j.fetchedAt)}
                         >
                           <When at={j.fetchedAt} />
@@ -446,12 +446,12 @@ export const JobsListPage: FC<JobsListProps> = ({
                 aria-label="Pagination"
                 class="flex shrink-0 items-center justify-between gap-3 border-t border-line px-5 py-2.5"
               >
-                <span class="text-[13px] text-ink-faint tabular-nums">
+                <span class="text-note text-ink-faint tabular-nums">
                   <span class="hidden sm:inline">Showing </span>
                   {from.toLocaleString()}–{to.toLocaleString()} of {total.toLocaleString()}
                 </span>
                 <div class="flex items-center gap-2">
-                  <span class="hidden text-[13px] text-ink-faint tabular-nums md:inline">
+                  <span class="hidden text-note text-ink-faint tabular-nums md:inline">
                     Page {page} of {totalPages}
                   </span>
                   <PageLink href={jobsHref(filters, { page: page - 1 })} disabled={page <= 1}>
@@ -504,7 +504,7 @@ const OptionLink: FC<PropsWithChildren<{ href: string; selected: boolean; title?
     href={href}
     title={title}
     aria-current={selected ? 'true' : undefined}
-    class={`inline-flex min-h-[28px] items-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] transition-colors duration-150 ${
+    class={`inline-flex min-h-[28px] items-center gap-1.5 rounded-md px-2 py-0.5 text-note transition-colors duration-150 ${
       selected
         ? 'bg-surface-selected font-medium text-accent-strong'
         : 'bg-surface-overlay text-ink-muted hover:text-ink'
@@ -531,7 +531,7 @@ const PageLink: FC<{ href: string; disabled: boolean; children: string }> = ({
 }) =>
   disabled ? (
     <span
-      class="inline-flex min-h-[28px] items-center rounded-md border border-line px-2.5 py-1 text-[13px] text-ink-faint opacity-60"
+      class="inline-flex min-h-[28px] items-center rounded-md border border-line px-2.5 py-1 text-note text-ink-faint opacity-60"
       aria-disabled="true"
     >
       {children}
@@ -539,7 +539,7 @@ const PageLink: FC<{ href: string; disabled: boolean; children: string }> = ({
   ) : (
     <a
       href={href}
-      class="inline-flex min-h-[28px] items-center rounded-md border border-line-strong bg-surface-raised px-2.5 py-1 text-[13px] font-medium text-ink shadow-sm transition-colors duration-150 hover:bg-surface-overlay"
+      class="inline-flex min-h-[28px] items-center rounded-md border border-line-strong bg-surface-raised px-2.5 py-1 text-note font-medium text-ink shadow-sm transition-colors duration-150 hover:bg-surface-overlay"
     >
       {children}
     </a>

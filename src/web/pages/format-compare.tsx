@@ -28,7 +28,7 @@ function verdict(r: FormatComparison): string {
 const Side: FC<{ reading: FormatReading; file: string }> = ({ reading, file }) => (
   <Card>
     <SectionTitle>{reading.label}</SectionTitle>
-    <p class="-mt-2 mb-3 break-all text-xs text-ink-faint">{file}</p>
+    <p class="-mt-2 mb-3 break-all text-meta text-ink-faint">{file}</p>
     <ParsedViewBlock view={reading.view} />
     {reading.warnings.length === 0 ? (
       <Hint>No parse warnings.</Hint>
@@ -45,13 +45,13 @@ const Side: FC<{ reading: FormatReading; file: string }> = ({ reading, file }) =
 );
 
 const More: FC<{ list: DiffList<unknown> }> = ({ list }) =>
-  list.total > list.lines.length ? <li class="text-xs text-ink-faint">and {list.total - list.lines.length} more</li> : null;
+  list.total > list.lines.length ? <li class="text-meta text-ink-faint">and {list.total - list.lines.length} more</li> : null;
 
 const Lines: FC<{ title: string; list: DiffList<string> }> = ({ title, list }) =>
   list.total === 0 ? null : (
     <div>
       <h3 class="text-label text-ink">{title}</h3>
-      <ul class="mt-1.5 space-y-1 font-mono text-xs leading-5 text-ink-muted">
+      <ul class="mt-1.5 space-y-1 font-mono text-meta leading-5 text-ink-muted">
         {list.lines.map((line) => (
           <li class="break-words">{line}</li>
         ))}
@@ -102,7 +102,7 @@ export const FormatComparePage: FC<FormatComparePageProps> = ({ resume, files, r
               {changed.total > 0 && (
                 <div>
                   <h3 class="text-label text-ink">Read differently</h3>
-                  <ul class="mt-1.5 space-y-2 font-mono text-xs leading-5">
+                  <ul class="mt-1.5 space-y-2 font-mono text-meta leading-5">
                     {changed.lines.map((pair) => (
                       <li class="break-words">
                         <div class="text-ink-muted">

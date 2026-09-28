@@ -42,11 +42,11 @@ export const DescriptionRefreshPage: FC<DescriptionRefreshProps> = ({ job, url, 
         <p class="text-sm leading-6 text-ink">
           The company's own listing,{' '}
           {safeHref(url) ? (
-            <a href={safeHref(url)!} target="_blank" rel="noopener noreferrer" class="break-all font-mono text-xs text-accent-strong hover:text-accent-deep">
+            <a href={safeHref(url)!} target="_blank" rel="noopener noreferrer" class="break-all font-mono text-meta text-accent-strong hover:text-accent-deep">
               {url.replace(/^https?:\/\//, '')}
             </a>
           ) : (
-            <span class="break-all font-mono text-xs">{url}</span>
+            <span class="break-all font-mono text-meta">{url}</span>
           )}
           , reads {describeRefresh(plan)}
         </p>
@@ -61,7 +61,7 @@ export const DescriptionRefreshPage: FC<DescriptionRefreshProps> = ({ job, url, 
           running searches, and makes the next comparison read its keywords afresh — earlier scores judged another text.
         </Hint>
         <div class="mt-4 overflow-x-auto rounded-md border border-line">
-          <ol class="font-mono text-[12px] leading-5">
+          <ol class="font-mono text-meta leading-5">
             {rows.map((row) =>
               row.kind === 'fold' ? (
                 <li class="bg-surface-overlay/50 px-3 py-1 text-ink-faint">… {row.count} unchanged line{row.count === 1 ? '' : 's'} …</li>

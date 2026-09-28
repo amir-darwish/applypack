@@ -28,7 +28,7 @@ function enhance(host) {
     list.forEach(function (value, i) {
       var chip = document.createElement('span');
       chip.setAttribute('data-chip', '');
-      chip.className = 'inline-flex items-center gap-1 rounded-md bg-surface-overlay px-2 py-0.5 text-[13px] text-ink ring-1 ring-inset ring-line';
+      chip.className = 'inline-flex items-center gap-1 rounded-md bg-surface-overlay px-2 py-0.5 text-note text-ink ring-1 ring-inset ring-line';
       var text = document.createElement('span');
       text.textContent = value;
       var del = document.createElement('button');

@@ -109,7 +109,7 @@ export const TargetRunPage: FC<{ run: TargetRun; lane: Lane }> = ({ run, lane })
     <Layout title={failed ? heading : `${heading}…`} active={run.heading ? undefined : 'target'}>
       <div class="mx-auto w-full max-w-2xl pt-6 lg:pt-16">
         <Card>
-          <div class="mb-1 text-sm font-semibold text-ink">{heading}</div>
+          <div class="mb-1 text-entity text-ink">{heading}</div>
           <div class="text-sm text-ink-muted">
             {run.subtitle ?? (
               <>
@@ -149,7 +149,7 @@ export const TargetRunPage: FC<{ run: TargetRun; lane: Lane }> = ({ run, lane })
                   You can close this page — the run keeps going and the result lands{' '}
                   {run.backUrl.startsWith('/screen') ? 'on the screening page' : run.heading ? 'back in setup' : 'on the job page'}.
                 </Hint>
-                <span id="run-elapsed" class="shrink-0 text-xs tabular-nums text-ink-faint">
+                <span id="run-elapsed" class="shrink-0 text-meta tabular-nums text-ink-faint">
                   {elapsed}s
                 </span>
               </div>

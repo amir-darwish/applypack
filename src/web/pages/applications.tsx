@@ -56,12 +56,12 @@ const StageCard: FC<{ card: ApplicationCard; stage: string; work: StageDef[] }> 
       <div class="line-clamp-2 text-sm font-medium leading-snug text-ink">
         {card.title}
       </div>
-      <div class="mt-1 truncate text-[13px] text-ink-muted">
+      <div class="mt-1 truncate text-note text-ink-muted">
         {card.companyName}
       </div>
       <div class="mt-2 flex items-center justify-between gap-2">
         <span
-          class={`min-w-0 truncate text-xs ${
+          class={`min-w-0 truncate text-meta ${
             card.stageLine?.stale ? 'font-medium text-warn' : 'text-ink-faint'
           }`}
           title={card.stageLine?.since.toISOString().slice(0, 10)}
@@ -83,7 +83,7 @@ const StageCard: FC<{ card: ApplicationCard; stage: string; work: StageDef[] }> 
       <select
         id={`move-${card.id}`}
         name="toStage"
-        class="h-8 w-full min-w-0 flex-1 rounded-md border border-line-strong bg-surface-raised px-1.5 text-xs text-ink shadow-sm transition-colors duration-150 hover:border-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15"
+        class="h-8 w-full min-w-0 flex-1 rounded-md border border-line-strong bg-surface-raised px-1.5 text-meta text-ink shadow-sm transition-colors duration-150 hover:border-ink-faint focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15"
       >
         {allStages(work)
           .filter((s) => s.key !== stage)
@@ -111,7 +111,7 @@ const ColumnHeader: FC<{ dot: string; id: string; label: string; count: number }
     <h2 id={id} class="text-label text-ink">
       {label}
     </h2>
-    <span class="ml-auto text-xs text-ink-faint tabular-nums">{count}</span>
+    <span class="ml-auto text-meta text-ink-faint tabular-nums">{count}</span>
   </div>
 );
 
@@ -216,7 +216,7 @@ export const ApplicationsPage: FC<ApplicationsProps> = ({
           {columns.map((s) => (
             <a
               href={`#stage-col-${s.key}`}
-              class="inline-flex min-h-[32px] items-center gap-1 rounded-md border border-line bg-surface-raised px-3 text-xs text-ink-muted"
+              class="inline-flex min-h-[32px] items-center gap-1 rounded-md border border-line bg-surface-raised px-3 text-meta text-ink-muted"
             >
               {s.label}
               <span class="tabular-nums text-ink-faint">{count(s.key)}</span>
@@ -225,7 +225,7 @@ export const ApplicationsPage: FC<ApplicationsProps> = ({
           {closedCount > 0 && (
             <a
               href="#closed"
-              class="inline-flex min-h-[32px] items-center gap-1 rounded-md border border-line bg-surface-raised px-3 text-xs text-ink-muted"
+              class="inline-flex min-h-[32px] items-center gap-1 rounded-md border border-line bg-surface-raised px-3 text-meta text-ink-muted"
             >
               Closed <span class="tabular-nums text-ink-faint">{closedCount}</span>
             </a>
@@ -267,7 +267,7 @@ export const ApplicationsPage: FC<ApplicationsProps> = ({
           <details id="closed" class="mt-4 scroll-mt-4 rounded-lg bg-surface-overlay">
             <summary class="cursor-pointer select-none rounded-lg px-4 py-2.5 text-sm font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
               Closed
-              <span class="ml-2 text-xs font-normal text-ink-faint">
+              <span class="ml-2 text-meta font-normal text-ink-faint">
                 {count('rejected')} rejected · {count('ghosted')} ghosted
                 {stranded ? ` · ${count(UNFILED_STAGE.key)} unfiled` : ''}
               </span>
@@ -285,7 +285,7 @@ export const ApplicationsPage: FC<ApplicationsProps> = ({
                       <h2 id={`stage-${s.key}`} class="text-label text-ink">
                         {s.label}
                       </h2>
-                      <span class="ml-auto text-xs text-ink-faint tabular-nums">
+                      <span class="ml-auto text-meta text-ink-faint tabular-nums">
                         {items.length}
                       </span>
                     </div>

@@ -39,9 +39,9 @@ const Cell: FC<{ r: ScoreRow | null }> = ({ r }) => {
       <span title={(EVIDENCE_RUNG_LABELS as Record<string, string>)[r.answer]}>
         <Badge tone={tone ?? 'neutral'}>{answer}</Badge>
       </span>
-      {r.mode === 'scored' && r.max > 0 && <span class="ml-1.5 text-xs tabular-nums text-ink-faint">{r.pts} / {r.max}</span>}
-      {r.quote && <q class="mt-1 block text-[13px] leading-5 text-ink-muted">{r.quote}</q>}
-      {!r.quote && r.detail && <div class="mt-1 text-xs text-ink-faint">{r.detail}</div>}
+      {r.mode === 'scored' && r.max > 0 && <span class="ml-1.5 text-meta tabular-nums text-ink-faint">{r.pts} / {r.max}</span>}
+      {r.quote && <q class="mt-1 block text-note leading-5 text-ink-muted">{r.quote}</q>}
+      {!r.quote && r.detail && <div class="mt-1 text-meta text-ink-faint">{r.detail}</div>}
     </>
   );
 };
@@ -53,7 +53,7 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
   const back = `/screen/${screening.id}#results`;
   const names = new Map(side.columns.map((c) => [c.number, c.name]));
   const n = side.columns.length;
-  const th = 'px-3 py-2 text-left align-top text-xs font-medium text-ink-muted sm:px-4';
+  const th = 'px-3 py-2 text-left align-top text-meta font-medium text-ink-muted sm:px-4';
   const td = 'px-3 py-2 align-top text-sm sm:px-4';
   const label = `${td} whitespace-nowrap text-ink-muted`;
   const view = comparison?.view ?? null;
@@ -73,14 +73,14 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
                 <th class={th} />
                 {side.columns.map((c) => (
                   <th class={th}>
-                    <a href={`/screen/${screening.id}/applicants/${c.id}`} class="text-sm font-semibold text-ink hover:underline">
+                    <a href={`/screen/${screening.id}/applicants/${c.id}`} class="text-entity text-ink hover:underline">
                       №{c.number}
                       {c.name ? ` — ${c.name}` : ''}
                     </a>
                     <div class="mt-1 flex flex-wrap items-center gap-1.5 font-normal">
                       <Badge tone={BUCKET_TONE[c.bucket]}>{GATE_BUCKET_LABELS[c.bucket]}</Badge>
-                      <span class="text-base font-semibold text-ink">{c.adjusted}</span>
-                      <span class="text-xs text-ink-faint">
+                      <span class="text-entity text-ink">{c.adjusted}</span>
+                      <span class="text-meta text-ink-faint">
                         / 100{c.adjustment !== 0 ? ` (computed ${c.score}, your ${c.adjustment > 0 ? '+' : ''}${c.adjustment})` : ''} · {c.confidence}
                       </span>
                     </div>
@@ -108,7 +108,7 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
                 ))}
               </tr>
               <tr class="bg-surface-overlay/60">
-                <td colspan={n + 1} class="px-3 py-1.5 text-xs font-medium text-ink-muted sm:px-4">
+                <td colspan={n + 1} class="px-3 py-1.5 text-meta font-medium text-ink-muted sm:px-4">
                   Criteria, rubric v{screening.rubricVersion}
                 </td>
               </tr>
@@ -116,7 +116,7 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
                 <tr>
                   <td class={`${td} text-ink`}>
                     <div>{r.label}</div>
-                    <div class="text-xs text-ink-faint">
+                    <div class="text-meta text-ink-faint">
                       {CRITERION_KIND_LABELS[r.kind]} · {r.mode === 'gate' ? 'gate' : r.mode === 'note' ? 'note' : 'scored'}
                     </div>
                   </td>
@@ -156,7 +156,7 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 class="text-entity text-ink">Compare with AI — the shortlist read head to head</h2>
-            <p class="mt-1 text-[13px] text-ink-muted">
+            <p class="mt-1 text-note text-ink-muted">
               One call with these {n} resumes, the posting and the criteria, run twice — the second time with the
               resumes in the reverse order, because the first and last slots win in a listwise reading. It says who
               is stronger on each criterion and why, with the lines, and whom to talk to first. Never a score: the
@@ -181,12 +181,12 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
 
         {comparison && view && (
           <div class="mt-4 space-y-4">
-            <p data-ui="hint" class="text-[13px] text-ink-faint">
+            <p data-ui="hint" class="text-note text-ink-faint">
               Read {formatDate(comparison.createdAt)} on {comparison.model}, rubric v{comparison.rubricVersion}
               {comparison.rubricVersion !== screening.rubricVersion ? ' — the criteria changed since; read again for the current ones' : ''}. Shown as{' '}
               {view.shown[0].map((x) => `№${x}`).join(', ')} and then as {view.shown[1].map((x) => `№${x}`).join(', ')}.
             </p>
-            <div class="rounded-md border border-line bg-surface-overlay px-3.5 py-2.5 text-[13px] leading-5 text-ink" role="status">
+            <div class="rounded-md border border-line bg-surface-overlay px-3.5 py-2.5 text-note leading-5 text-ink" role="status">
               {view.orderAgree
                 ? 'The two readings agree on the whole order.'
                 : view.firstAgree
@@ -245,11 +245,11 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
                       <td class={`${td} text-ink`}>{c.label}</td>
                       <td class={td}>
                         <Ranking ranking={c.rankings[0]} names={names} />
-                        {c.why[0] && <div class="mt-0.5 text-[13px] text-ink-muted">{c.why[0]}</div>}
+                        {c.why[0] && <div class="mt-0.5 text-note text-ink-muted">{c.why[0]}</div>}
                       </td>
                       <td class={td}>
                         <Ranking ranking={c.rankings[1]} names={names} />
-                        {c.why[1] && <div class="mt-0.5 text-[13px] text-ink-muted">{c.why[1]}</div>}
+                        {c.why[1] && <div class="mt-0.5 text-note text-ink-muted">{c.why[1]}</div>}
                       </td>
                       <td class={`${td} whitespace-nowrap`}>
                         {c.picks[0] !== null && c.picks[1] !== null && <Badge tone={c.agree ? 'ok' : 'warn'}>{c.agree ? 'agree' : 'differ'}</Badge>}
@@ -262,7 +262,7 @@ export const ScreenComparePage: FC<ScreenCompareProps> = ({ screening, side, com
             {view.criteria.some((c) => c.quotes.length > 0) && (
               <details>
                 <summary class="cursor-pointer text-label text-ink">The lines behind the rankings</summary>
-                <ul class="mt-2 space-y-2 text-[13px]">
+                <ul class="mt-2 space-y-2 text-note">
                   {view.criteria
                     .filter((c) => c.quotes.length > 0)
                     .map((c) => (

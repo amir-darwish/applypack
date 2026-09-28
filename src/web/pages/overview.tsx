@@ -170,7 +170,7 @@ export const OverviewPage: FC<OverviewProps> = ({
       {/* What the four numbers cannot say, together under them. */}
       <div class="mb-8 mt-3 space-y-1">
         {fetchingEnabled && held && (
-          <p data-ui="hint" class="text-[13px] leading-5 text-ink-muted">
+          <p data-ui="hint" class="text-note leading-5 text-ink-muted">
             {held.text} —{' '}
             <a
               href={held.href}
@@ -182,7 +182,7 @@ export const OverviewPage: FC<OverviewProps> = ({
           </p>
         )}
         {stageCount(funnelWeek, 'read') > 0 && (
-          <p data-ui="hint" class="text-[13px] leading-5 tabular-nums text-ink-muted">
+          <p data-ui="hint" class="text-note leading-5 tabular-nums text-ink-muted">
             Last 7 days: {FUNNEL_LINE.map((key) => `${stageCount(funnelWeek, key).toLocaleString('en-US')} ${FUNNEL_WORD[key]}`).join(' → ')} —{' '}
             <a
               href="/runs#funnel"
@@ -194,7 +194,7 @@ export const OverviewPage: FC<OverviewProps> = ({
           </p>
         )}
         {watched.companies > 0 && (
-          <p data-ui="hint" class="text-[13px] leading-5 text-ink-muted">
+          <p data-ui="hint" class="text-note leading-5 text-ink-muted">
             ★ {watched.companies} watched compan{watched.companies === 1 ? 'y' : 'ies'} ·{' '}
             {watched.newJobs === 0 ? (
               'nothing new in the last 24 hours'
@@ -221,7 +221,7 @@ export const OverviewPage: FC<OverviewProps> = ({
           </p>
         )}
         {!fetchingEnabled && (
-          <p data-ui="hint" class="text-[13px] leading-5 text-ink-muted">
+          <p data-ui="hint" class="text-note leading-5 text-ink-muted">
             Paused means no new jobs or alerts. Fresh installs start paused so a blank profile
             doesn't spend AI credit —{' '}
             <a
@@ -262,7 +262,7 @@ export const OverviewPage: FC<OverviewProps> = ({
                     >
                       <div class="min-w-0 flex-1">
                         <div class="truncate text-sm font-medium text-ink">{j.title}</div>
-                        <div class="mt-0.5 truncate text-[13px] text-ink-faint">
+                        <div class="mt-0.5 truncate text-note text-ink-faint">
                           {j.employer ?? j.company.name} · {j.location || 'Remote'} ·{' '}
                           <When at={j.alertedAt ?? j.fetchedAt} />
                         </div>
@@ -292,7 +292,7 @@ export const OverviewPage: FC<OverviewProps> = ({
                     class={`h-1.5 w-1.5 shrink-0 rounded-full ${run ? TONE_FILL[runTone(run.status)] : 'bg-line-strong'}`}
                     aria-hidden="true"
                   />
-                  <span class="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">{name}</span>
+                  <span class="min-w-0 flex-1 truncate font-mono text-note text-ink">{name}</span>
                   <span class="shrink-0 text-meta tabular-nums text-ink-faint">
                     {run
                       ? `${formatRelative(run.startedAt)} · ${formatDuration(
@@ -308,7 +308,7 @@ export const OverviewPage: FC<OverviewProps> = ({
             <div class="border-t border-line px-5 py-2.5 text-right">
               <a
                 href="/runs"
-                class="text-[13px] font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep"
+                class="text-note font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep"
               >
                 Full history →
               </a>

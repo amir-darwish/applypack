@@ -243,7 +243,7 @@ export const ResumeRenderPage: FC<RenderPageProps> = ({
         ) : (
           <p class="mb-3 text-sm text-ok">No parse problems in the rendered file.</p>
         )}
-        <pre class="max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-surface px-3 py-2 font-mono text-xs text-ink">
+        <pre class="max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-md border border-line bg-surface px-3 py-2 font-mono text-meta text-ink">
           {preview}
         </pre>
       </Card>

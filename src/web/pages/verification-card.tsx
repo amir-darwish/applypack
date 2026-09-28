@@ -91,10 +91,10 @@ export const VerificationCard: FC<VerificationCardProps> = ({
                     {RECOMMENDATION_VIEW[verification.recommendation]?.label ??
                       verification.recommendation}
                   </Badge>
-                  <span class="text-xs tabular-nums text-ink-faint">
+                  <span class="text-meta tabular-nums text-ink-faint">
                     {verification.confidence}% confidence
                   </span>
-                  <span class="text-xs text-ink-faint">
+                  <span class="text-meta text-ink-faint">
                     · <When at={verification.createdAt} />
                     {verificationCount > 1 ? ` · ${verificationCount} runs` : ''}
                   </span>
@@ -158,7 +158,7 @@ export const VerificationCard: FC<VerificationCardProps> = ({
 
           {verification.companySnapshot && (
             <div>
-              <div class="mb-1.5 text-[13px] font-medium text-ink-muted">Company snapshot</div>
+              <div class="mb-1.5 text-note font-medium text-ink-muted">Company snapshot</div>
               <p class="text-sm leading-6 text-ink-muted">
                 {verification.companySnapshot}
               </p>
@@ -167,13 +167,13 @@ export const VerificationCard: FC<VerificationCardProps> = ({
 
           {safeHref(verification.postingUrl) && (
             <div>
-              <div class="mb-1.5 text-[13px] font-medium text-ink-muted">Company's own listing</div>
+              <div class="mb-1.5 text-note font-medium text-ink-muted">Company's own listing</div>
               <div class="flex flex-wrap items-center gap-2">
                 <a
                   href={safeHref(verification.postingUrl)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="break-all font-mono text-xs text-accent-strong transition-colors duration-150 hover:text-accent-deep"
+                  class="break-all font-mono text-meta text-accent-strong transition-colors duration-150 hover:text-accent-deep"
                 >
                   {safeHref(verification.postingUrl)!.replace(/^https?:\/\//, '').slice(0, 80)}
                 </a>
@@ -207,13 +207,13 @@ export const VerificationCard: FC<VerificationCardProps> = ({
 const EvidenceList: FC<{ items: VerificationEvidence[] }> = ({ items }) =>
   items.length === 0 ? null : (
     <div>
-      <div class="mb-1.5 text-[13px] font-medium text-ink-muted">Evidence</div>
+      <div class="mb-1.5 text-note font-medium text-ink-muted">Evidence</div>
       <ul class="divide-y divide-line rounded-md border border-line">
         {items.map((e) => (
           <li class="flex flex-col gap-1 p-3 sm:flex-row sm:items-start sm:gap-3">
             <div class="flex shrink-0 items-center gap-2 sm:w-48">
               <Badge tone={SIGNAL_TONE[e.signal]}>{e.signal}</Badge>
-              <span class="text-xs text-ink-muted">{CHECK_LABEL[e.check]}</span>
+              <span class="text-meta text-ink-muted">{CHECK_LABEL[e.check]}</span>
             </div>
             <div class="min-w-0 text-sm text-ink">
               {e.finding}
@@ -222,7 +222,7 @@ const EvidenceList: FC<{ items: VerificationEvidence[] }> = ({ items }) =>
                   href={safeHref(e.url)!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="ml-2 break-all font-mono text-xs text-accent-strong transition-colors duration-150 hover:text-accent-deep"
+                  class="ml-2 break-all font-mono text-meta text-accent-strong transition-colors duration-150 hover:text-accent-deep"
                 >
                   {safeHref(e.url)!.replace(/^https?:\/\//, '').slice(0, 60)}
                 </a>

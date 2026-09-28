@@ -29,8 +29,8 @@ export const ParsedViewBlock: FC<{ view: ParsedView }> = ({ view }) => (
         {view.roles.map((r) => (
           <li class="flex flex-wrap items-center gap-2">
             <span class="text-ink">{r.company ? `${r.title}, ${r.company}` : r.title}</span>
-            {r.dates ? <span class="text-xs text-ink-faint">{r.dates}</span> : <Badge tone="warn">no dates</Badge>}
-            <span class="text-xs text-ink-faint">{r.bullets === 1 ? '1 bullet' : `${r.bullets} bullets`}</span>
+            {r.dates ? <span class="text-meta text-ink-faint">{r.dates}</span> : <Badge tone="warn">no dates</Badge>}
+            <span class="text-meta text-ink-faint">{r.bullets === 1 ? '1 bullet' : `${r.bullets} bullets`}</span>
           </li>
         ))}
       </ul>

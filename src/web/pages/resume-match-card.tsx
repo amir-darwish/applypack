@@ -120,14 +120,14 @@ const HARD_VIEW: Record<MatchHardRequirement['status'], { label: string; tone: T
   fail: { label: 'fail', tone: 'danger' },
 };
 
-const SUBHEAD = 'mb-2 text-[13px] font-medium text-ink-muted';
+const SUBHEAD = 'mb-2 text-note font-medium text-ink-muted';
 /**
  * The Now / Proposed captions. Micro step (12px/500) — the ramp's floor — and
  * no uppercase tracking: DESIGN.md says nothing in this app is ever set that
  * way, and the caption is a real word the model chose ("Rewrite", "Add"), not
  * a category shouting at the reader.
  */
-const LABEL = 'text-xs font-medium text-ink-faint';
+const LABEL = 'text-meta font-medium text-ink-faint';
 
 export const ResumeMatchCard: FC<ResumeMatchCardProps> = ({
   jobId,
@@ -247,7 +247,7 @@ const ScoreBreakdownChips: FC<{ bd: ScoreBreakdown; keywords: MatchKeyword[]; ha
 }) => {
   const lines = scoreLines({ breakdown: bd, keywords, hard });
   return (
-    <div class="space-y-1.5 text-xs">
+    <div class="space-y-1.5 text-meta">
       <LineGroup heading="what made the number" lines={lines.scored} />
       {/* The split is stated, not implied: a reader who sees "2 of 3 in a
           bullet" under a 100 asks why the 100 is a 100, and the heading
@@ -266,7 +266,7 @@ const ScoreBreakdownChips: FC<{ bd: ScoreBreakdown; keywords: MatchKeyword[]; ha
  */
 export const MainAdviceLine: FC<{ advice: string | null }> = ({ advice }) =>
   advice === null ? null : (
-    <p class="text-[13px] leading-6 text-ink">
+    <p class="text-note leading-6 text-ink">
       <span class="font-medium text-accent-strong">Do this first.</span> {advice}
     </p>
   );
@@ -282,7 +282,7 @@ export const MainAdviceLine: FC<{ advice: string | null }> = ({ advice }) =>
 export const ScoreCeilingLine: FC<{ bd: ScoreBreakdown; class?: string }> = ({ bd, class: className = '' }) =>
   bd.ceiling === undefined ? null : (
     <p
-      class={`text-xs text-ink-muted ${className}`}
+      class={`text-meta text-ink-muted ${className}`}
       title="The match score if the resume said everything it honestly could: every claimable keyword written in, alignment perfect. Going above the ceiling would need experience this resume does not have."
     >
       {bd.ceiling > bd.score ? (
@@ -330,12 +330,12 @@ export const HardRequirementsDigest: FC<{ hard: MatchHardRequirement[] }> = ({ h
   const issues = hard.filter((h) => h.status !== 'pass');
   return (
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-      <span class="text-[13px] font-medium text-ink-muted">Hard requirements</span>
+      <span class="text-note font-medium text-ink-muted">Hard requirements</span>
       <Badge tone={issues.length === 0 ? 'ok' : issues.some((h) => h.status === 'fail') ? 'danger' : 'warn'}>
         {pass}/{hard.length} pass
       </Badge>
       {issues.map((h) => (
-        <span class="inline-flex items-center gap-1.5 text-[13px] text-ink" title={h.note ?? undefined}>
+        <span class="inline-flex items-center gap-1.5 text-note text-ink" title={h.note ?? undefined}>
           <Badge tone={HARD_VIEW[h.status].tone}>{HARD_VIEW[h.status].label}</Badge>
           {h.requirement}
         </span>
@@ -349,7 +349,7 @@ const FactRow: FC<{ k: MatchKeyword; matchId: number; back: string }> = ({ k, ma
   <li class="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3">
     <div class="min-w-0 flex-1 text-sm">
       <span class="font-medium text-ink">{k.term}</span>
-      {k.note && <span class="ml-2 text-xs text-ink-faint">{k.note}</span>}
+      {k.note && <span class="ml-2 text-meta text-ink-faint">{k.note}</span>}
       {k.elsewhere && (
         <Badge tone="neutral" class="ml-2">
           in "{k.elsewhere}"
@@ -367,7 +367,7 @@ const FactRow: FC<{ k: MatchKeyword; matchId: number; back: string }> = ({ k, ma
           maxlength="300"
           placeholder="where / when? (optional)"
           aria-label={`Where or when did you use ${k.term}?`}
-          class="!w-44 !px-2 !py-1 !text-xs"
+          class="!w-44 !px-2 !py-1 !text-meta"
         />
         {/* Saved as a fact and re-scored in code — no AI call, so not violet. */}
         <Button size="sm" variant="secondary">
@@ -413,7 +413,7 @@ export const ConfirmFacts: FC<{ asks: MatchKeyword[]; unproven: MatchKeyword[]; 
       )}
       {unproven.length > 0 && (
         <details id="confirm-unproven" class={`${asks.length > 0 ? 'mt-2 ' : ''}rounded-md border border-line`}>
-          <summary class="cursor-pointer px-3 py-2 text-[13px] text-ink-muted transition-colors duration-150 hover:text-ink">
+          <summary class="cursor-pointer px-3 py-2 text-note text-ink-muted transition-colors duration-150 hover:text-ink">
             <span class="font-medium text-ink">{unproven.length} more</span> the AI found no evidence for —
             write the word into your resume where it is true, or say so here, and it counts
           </summary>
@@ -466,9 +466,9 @@ const MatchReport: FC<{
               {match.resume.name}
             </a>
           )}{' '}
-          {!match.resume.hidden && <span class="font-mono text-xs text-ink-faint">v{match.resumeVersion}</span>}
+          {!match.resume.hidden && <span class="font-mono text-meta text-ink-faint">v{match.resumeVersion}</span>}
         </span>
-        <span class="text-xs text-ink-faint">
+        <span class="text-meta text-ink-faint">
           <When at={match.createdAt} /> · <span class="font-mono">{match.model}</span>
           {match.draft ? ' · draft' : ''}
         </span>
@@ -562,7 +562,7 @@ export const DeltaBox: FC<{ match: MatchWithResume; previous: MatchWithResume | 
   const fresh = freshFrame(match.breakdown);
   if (fresh) {
     return (
-      <div class="rounded-md border border-line bg-surface-overlay/50 px-3 py-2 text-xs leading-5 text-ink-muted">
+      <div class="rounded-md border border-line bg-surface-overlay/50 px-3 py-2 text-meta leading-5 text-ink-muted">
         <span class="font-medium text-ink">Not comparable with {earlierLabel(previous)}: </span>
         {freshFrameNotice(fresh)}
       </div>
@@ -574,7 +574,7 @@ export const DeltaBox: FC<{ match: MatchWithResume; previous: MatchWithResume | 
   );
   if (delta.gained.length === 0 && delta.lost.length === 0 && !delta.components) return null;
   return (
-    <div class="rounded-md border border-line bg-surface-overlay/50 px-3 py-2 text-xs leading-5 text-ink-muted">
+    <div class="rounded-md border border-line bg-surface-overlay/50 px-3 py-2 text-meta leading-5 text-ink-muted">
       <span class="font-medium text-ink">vs {earlierLabel(previous)}: </span>
       {delta.gained.length > 0 && (
         <span>
@@ -613,7 +613,7 @@ const HardRequirementsBlock: FC<{ hard: MatchHardRequirement[] }> = ({ hard }) =
           <li class="flex flex-wrap items-center gap-2">
             <Badge tone={HARD_VIEW[h.status].tone}>{HARD_VIEW[h.status].label}</Badge>
             <span class="text-ink">{h.requirement}</span>
-            {h.note && <span class="text-xs text-ink-faint">— {h.note}</span>}
+            {h.note && <span class="text-meta text-ink-faint">— {h.note}</span>}
           </li>
         ))}
       </ul>
@@ -645,7 +645,7 @@ export const VerificationLine: FC<{ verification: VerificationForHint | null; cl
   }
   const hint = verificationHint(verification);
   return (
-    <p class={`${className} text-[13px] leading-5 ${VERIFICATION_TONE[hint.tone]}`}>
+    <p class={`${className} text-note leading-5 ${VERIFICATION_TONE[hint.tone]}`}>
       {hint.text} {link}.
     </p>
   );
@@ -674,7 +674,7 @@ export const MatchSignals: FC<{ match: MatchWithResume; verification?: Verificat
           <ul class="space-y-1 text-sm text-ink-muted">
             {cautions.map((s) => (
               <li class="flex gap-2">
-                <span class="mt-[3px] h-3.5 w-3.5 shrink-0 text-center text-xs leading-none text-ink-faint" aria-hidden="true">
+                <span class="mt-[3px] h-3.5 w-3.5 shrink-0 text-center text-meta leading-none text-ink-faint" aria-hidden="true">
                   ·
                 </span>
                 <span>{s}</span>
@@ -754,7 +754,7 @@ const SuggestionCard: FC<{
             </p>
           </div>
         )}
-        <div class="mt-1 text-xs leading-5 text-ink-faint">why: {item.why}</div>
+        <div class="mt-1 text-meta leading-5 text-ink-faint">why: {item.why}</div>
         <div class="mt-2 flex flex-wrap items-center gap-2">
           {/* Outlined, not solid: five cards are one region, and the solid button in
               sight is the page's own (DESIGN.md, one primary per region). */}
@@ -804,7 +804,7 @@ const SuggestionCard: FC<{
             </Button>
           )}
           {/* One status line per card: Locate's line number, and what an edit did. */}
-          {interactive && <span class="text-xs text-ink-faint" data-card-status role="status"></span>}
+          {interactive && <span class="text-meta text-ink-faint" data-card-status role="status"></span>}
         </div>
         {canEdit && (
           <div class="mt-2" data-edit-box hidden {...target}>
@@ -873,7 +873,7 @@ export const ActionsBlock: FC<{
         <div class="space-y-4">
           {sections.map((section) => (
             <div>
-              <div class="mb-1.5 text-xs font-semibold text-ink">{section}</div>
+              <div class="mb-1.5 text-meta font-semibold text-ink">{section}</div>
               <ol class="divide-y divide-line rounded-md border border-line">
                 {numbered
                   .filter(({ a }) => a.section === section)
@@ -967,7 +967,7 @@ export const KeywordTable: FC<{
   const matchedKeywords = counted.filter((k) => k.status === 'present');
   return (
     <div class="-mx-5 -mb-5 border-t border-line">
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 text-[13px] font-medium text-ink-muted">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 text-note font-medium text-ink-muted">
         <span>
           Keyword coverage — {matchedKeywords.length} of {counted.length} matched
           {ignored.length > 0 ? ` · ${ignored.length} ignored` : ''}
@@ -1047,7 +1047,7 @@ const RebuildKeywords: FC<{ target: RebuildTarget }> = ({ target }) =>
   );
 
 const KEYWORD_SUMMARY =
-  'cursor-pointer border-t border-line px-5 py-2.5 text-[13px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink';
+  'cursor-pointer border-t border-line px-5 py-2.5 text-note font-medium text-ink-muted transition-colors duration-150 hover:text-ink';
 
 function fmtDelta(n: number): string {
   return `${n > 0 ? '+' : ''}${n}`;
@@ -1055,7 +1055,7 @@ function fmtDelta(n: number): string {
 
 const KeywordRow: FC<{ k: CountedKeyword & { usage?: TermUsage }; edit?: KeywordEditTarget }> = ({ k, edit }) => (
   <Tr class={isIgnored(k) ? 'opacity-60' : ''}>
-    <Td class="text-xs font-medium text-ink">
+    <Td class="text-meta font-medium text-ink">
       <span class="inline-flex flex-wrap items-center gap-1.5">
         {k.term}
         {k.primary && <Badge tone="info">primary</Badge>}
@@ -1074,7 +1074,7 @@ const KeywordRow: FC<{ k: CountedKeyword & { usage?: TermUsage }; edit?: Keyword
         )}
       </span>
     </Td>
-    <Td class="text-xs text-ink-faint">
+    <Td class="text-meta text-ink-faint">
       {edit ? <LevelControls k={k} edit={edit} /> : effectiveRequirement(k)}
     </Td>
     <Td>
@@ -1125,8 +1125,8 @@ const KeywordRow: FC<{ k: CountedKeyword & { usage?: TermUsage }; edit?: Keyword
         )}
       </span>
     </Td>
-    <Td class="text-xs text-ink-muted">{k.where ?? '—'}</Td>
-    <Td class="max-w-md text-xs text-ink-muted">{k.note ?? '—'}</Td>
+    <Td class="text-meta text-ink-muted">{k.where ?? '—'}</Td>
+    <Td class="max-w-md text-meta text-ink-muted">{k.note ?? '—'}</Td>
   </Tr>
 );
 
@@ -1149,7 +1149,7 @@ const LevelControls: FC<{ k: CountedKeyword; edit: KeywordEditTarget }> = ({ k, 
       <input type="hidden" name="op" value="level" />
       <Select
         name="requirement"
-        class="!w-auto py-1 text-xs"
+        class="!w-auto py-1 text-meta"
         data-commit="submit"
         aria-label={`How much the posting wants ${k.term}`}
         title={
@@ -1194,7 +1194,7 @@ const LevelControls: FC<{ k: CountedKeyword; edit: KeywordEditTarget }> = ({ k, 
 };
 
 const ROW_LINK =
-  'cursor-pointer whitespace-nowrap text-xs text-ink-muted underline-offset-2 transition-colors duration-150 hover:text-ink hover:underline';
+  'cursor-pointer whitespace-nowrap text-meta text-ink-muted underline-offset-2 transition-colors duration-150 hover:text-ink hover:underline';
 
 /** A word the model missed. Status is read from the resume text, never guessed. */
 const AddKeywordForm: FC<{ edit: KeywordEditTarget }> = ({ edit }) => (
@@ -1212,10 +1212,10 @@ const AddKeywordForm: FC<{ edit: KeywordEditTarget }> = ({ edit }) => (
         required
         maxlength={60}
         placeholder="a word this posting wants"
-        class="mt-1.5 !w-56 py-1 text-xs"
+        class="mt-1.5 !w-56 py-1 text-meta"
       />
     </label>
-    <Select name="requirement" class="!w-auto py-1 text-xs" aria-label="How much the posting wants it">
+    <Select name="requirement" class="!w-auto py-1 text-meta" aria-label="How much the posting wants it">
       {REQUIREMENT_LEVELS.map((r) => (
         <option value={r} selected={r === 'preferred'}>
           {r}

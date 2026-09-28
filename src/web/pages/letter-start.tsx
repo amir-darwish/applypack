@@ -167,21 +167,21 @@ export const LetterStartPage: FC<LetterStartProps> = ({
 
             <div class="grid gap-2.5 sm:grid-cols-3">
               <label class="block">
-                <span class="block text-xs text-ink-muted">Why this company</span>
-                <Input name="whyCompany" maxlength="300" class="mt-1 !text-xs" value={angles.whyCompany ?? ''} />
+                <span class="block text-meta text-ink-muted">Why this company</span>
+                <Input name="whyCompany" maxlength="300" class="mt-1 !text-meta" value={angles.whyCompany ?? ''} />
               </label>
               <label class="block">
-                <span class="block text-xs text-ink-muted">What problem you'd solve</span>
-                <Input name="problem" maxlength="300" class="mt-1 !text-xs" value={angles.problem ?? ''} />
+                <span class="block text-meta text-ink-muted">What problem you'd solve</span>
+                <Input name="problem" maxlength="300" class="mt-1 !text-meta" value={angles.problem ?? ''} />
               </label>
               <label class="block">
-                <span class="block text-xs text-ink-muted">Your approach</span>
-                <Input name="approach" maxlength="300" class="mt-1 !text-xs" value={angles.approach ?? ''} />
+                <span class="block text-meta text-ink-muted">Your approach</span>
+                <Input name="approach" maxlength="300" class="mt-1 !text-meta" value={angles.approach ?? ''} />
               </label>
             </div>
             <label class="block">
-              <span class="block text-xs text-ink-muted">Anything every letter should mention</span>
-              <Textarea name="notes" rows={2} maxlength="500" class="mt-1 !text-xs" placeholder="e.g. my open-source work matters to me; I can start immediately">
+              <span class="block text-meta text-ink-muted">Anything every letter should mention</span>
+              <Textarea name="notes" rows={2} maxlength="500" class="mt-1 !text-meta" placeholder="e.g. my open-source work matters to me; I can start immediately">
                 {angles.notes ?? ''}
               </Textarea>
             </label>
@@ -191,7 +191,7 @@ export const LetterStartPage: FC<LetterStartProps> = ({
             </Hint>
 
             <details class="rounded-md border border-line px-3 py-2">
-              <summary class="cursor-pointer text-[13px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
+              <summary class="cursor-pointer text-note font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
                 Analyze first — slower, sharper
               </summary>
               <div class="mt-2.5 space-y-2">

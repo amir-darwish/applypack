@@ -61,7 +61,7 @@ export const AiSpendCard: FC<AiSpendProps> = ({ period, view, budgetCents, bille
         })}
       </dl>
       {view.notes.map((note) => (
-        <p class="text-[13px] leading-5 text-ink-muted">{note}</p>
+        <p class="text-note leading-5 text-ink-muted">{note}</p>
       ))}
       {empty ? (
         <Hint>
