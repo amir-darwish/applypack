@@ -69,3 +69,12 @@ The scenes and their captions are the `caption(...)` calls in `record.js`.
 The cursor and the click ripple are drawn into the page; the caption band is
 drawn under each frame by `build-gif.py`, so nothing covers the UI.
 `diff_mode=rectangle` and no dithering keep the GIF under 2 MB.
+
+The site serves the same tour as a 20-second video for the launch posts
+(`site/public/tour.webm`, about 0.9 MB): the GIF sped up by a quarter,
+every frame kept.
+
+```bash
+ffmpeg -i docs/screenshots/tour.gif -vf "setpts=0.745*PTS" -c:v libvpx-vp9 -crf 40 -b:v 0 \
+  -row-mt 1 -deadline good -cpu-used 3 -pix_fmt yuv420p -an site/public/tour.webm
+```
