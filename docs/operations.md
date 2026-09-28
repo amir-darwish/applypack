@@ -115,9 +115,28 @@ Every cron has a matching one-shot script for manual runs:
 `npm run <name>:once` while ApplyPack runs, or
 `docker compose exec app node dist/scripts/<name>-once.js`, where `<name>`
 is `fetch`, `digest`, `stale`, `cleanup`, `discovery` or `hn`. The digest
-and stale scripts run whatever the schedule says. The fetch script still
-stops at the pause and at the schedule, like a cron beat; "Fetch now" on
-the dashboard is the run that ignores both.
+and stale scripts run whatever the schedule says. The fetch script is
+"Fetch now" without the dashboard: it asks every source whatever the
+schedule says, stores the jobs unscored while fetching is paused, and shows
+on `/runs` as a `fetch-now` run.
+
+## Logs and health (Docker)
+
+In Docker the worker and the dashboard log one JSON object per line, for
+`docker compose logs` and any log collector; `npm start` keeps readable
+lines. To read the JSON as lines:
+
+```bash
+docker compose logs -f --no-log-prefix app | npx pino-pretty
+```
+
+Both containers carry a healthcheck, so `docker compose ps` says `healthy`
+or `unhealthy`. The dashboard's asks `/health`, which answers 503 when the
+database is gone; it signs in with `WEB_BASIC_AUTH` when that is set. The
+worker's reads the age of a file the worker touches every minute: three
+missed minutes means the process is stuck or gone, and a long fetch tick
+does not count. The reason for an unhealthy state is in
+`docker inspect --format '{{json .State.Health}}' <container>`.
 
 
 ## Your own Postgres, development, and the dashboard's binding

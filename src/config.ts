@@ -57,6 +57,13 @@ export const ConfigSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v && v.length > 0 ? v : undefined)),
+  // production = one JSON object a line (the image and compose set it, for
+  // `docker compose logs` and any log collector); anything else = pino-pretty,
+  // for a person reading `npm start` or a dev watcher in a terminal.
+  NODE_ENV: z.string().default('development'),
+  // The worker touches this file every minute and the container healthcheck
+  // reads its age (heartbeat.ts). compose sets it; unset, nothing is written.
+  HEARTBEAT_FILE: z.string().optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

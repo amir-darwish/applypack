@@ -35,13 +35,17 @@ export const logger = pino({
     censor: '[redacted]',
   },
   timestamp: pino.stdTimeFunctions.isoTime,
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
-      translateTime: 'HH:MM:ss.l',
-      ignore: 'pid,hostname',
-      singleLine: false,
-    },
-  },
+  // JSON in production (Docker); readable lines for a person at a terminal.
+  transport:
+    config.NODE_ENV === 'production'
+      ? undefined
+      : {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'HH:MM:ss.l',
+            ignore: 'pid,hostname',
+            singleLine: false,
+          },
+        },
 });
