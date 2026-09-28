@@ -273,11 +273,20 @@ async function main(): Promise<void> {
           'files',
           new File([`Olena Test — QA Engineer. Phone +380 67 123 45 67.\n${RESUME.replace('Jane Example', 'Olena Test')}\nOrder ref 38067x1234567.`], 'olena.txt', { type: 'text/plain' }),
         );
+        // Two copies of one file no text comes out of: one unreadable row, the copy skipped — not a unique-key 500.
+        body.append('files', new File(['x'], 'scan-a.txt', { type: 'text/plain' }));
+        body.append('files', new File(['x'], 'scan-b.txt', { type: 'text/plain' }));
         return { method: 'POST', headers: ORIGIN, body } satisfies RequestInit;
       })(),
       expect: (res) => {
         const flash = decodeURIComponent(res.headers.get('set-cookie') ?? '');
-        return res.status === 303 && flash.includes('2 applicants added') && flash.includes('1 file already added') && flash.includes('1 held for a look');
+        return (
+          res.status === 303 &&
+          flash.includes('2 applicants added') &&
+          flash.includes('2 files already added') &&
+          flash.includes('1 held for a look') &&
+          flash.includes('1 file could not be read')
+        );
       },
     },
     {

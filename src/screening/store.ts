@@ -161,8 +161,9 @@ const INTAKE_TX_TIMEOUT_MS = 120_000;
  * locked once — two uploads at once would read the same max, and the lock
  * serialises them, so a № is handed out exactly once — numbers in upload
  * order, a `sameAs` to a file earlier in the same upload resolved once its
- * row exists. A file whose text another upload stored since the plan was
- * made is `skipped` (the unique key of ADR 0053 would refuse it anyway).
+ * row exists. A file whose text or bytes are already stored — by another
+ * upload since the plan was made, or earlier in this one (two copies of one
+ * unreadable scan) — is `skipped`: the unique key of ADR 0053 would refuse it.
  */
 export async function createApplicants(
   screeningId: number,
@@ -179,7 +180,12 @@ export async function createApplicants(
       );
       const last = await tx.applicant.aggregate({ where: { screeningId }, _max: { number: true } });
       let next = last._max.number ?? 0;
-      const rows = inputs.flatMap((input, index) => (taken.has(input.textHash) ? [] : [{ input, index, number: ++next }]));
+      // The plan compares texts; two copies of one unreadable file share a byte hash, and the unique key would refuse the second.
+      const rows = inputs.flatMap((input, index) => {
+        if (taken.has(input.textHash)) return [];
+        taken.add(input.textHash);
+        return [{ input, index, number: ++next }];
+      });
       const created: (ApplicantSummary & { input: number })[] = [];
       for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
         const chunk = rows.slice(i, i + INSERT_CHUNK);
