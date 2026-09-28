@@ -2361,7 +2361,7 @@ release-discipline skill, a docs/site block does not.
       per-posting line for the first scoring (the posting does not exist
       yet), a CSV of the ledger.
 
-- [ ] **`small-wins`** (minor, several tags) — the 2026-09 plan's stage A
+- [x] **`small-wins`** (minor, several tags) — the 2026-09 plan's stage A
       remainder. **2026-09-28, v2.22.0:** #290 (a two_stage prefilter "no"
       is stored DISMISSED with its reason, so the next tick does not pay
       for it again), N5 (a third answer, **Not sure**, stops a fact
@@ -2375,8 +2375,12 @@ release-discipline skill, a docs/site block does not.
       to. The employer name now reaches the classifier, the verifier, the
       letter and the alerts instead of the aggregator's. **v2.24.0:** N7
       (the applications board as CSV / Markdown, `src/csv.ts` shared with
-      the screening export) and N11 (above). Next: N8 `needsBrowser` +
-      paste-the-page.
+      the screening export) and N11 (above). **v2.25.0:** N8 — the
+      resolver's dead end (a loading shell) is now `needsBrowser` and can
+      be added as a `BROWSER_PAGE` row, watched and never fetched; the
+      user pastes the page and `watchlist/paste.ts` says what is new and
+      which lines a search would take (ADR 0036 addendum). The renderer
+      the feature-gap analysis scoped stays a later stage with its own ADR.
 
 ### 20.4 Owner items
 

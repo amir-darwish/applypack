@@ -47,6 +47,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for diagrams.
 | PERSONIO           | per-company   | none      | `<slug>.jobs.personio.de/xml?language=en` — documented XML (`<workzag-jobs><position>`), parsed without a dependency; `office` + `additionalOffices` free text for the parser, sections of `jobDescriptions` as the description, employment / seniority / schedule / salary in its head, `createdAt` as the date; an unknown slug is a 307 to personio.com (refused as "no feed") |
 | FEED               | per-company   | none      | A generic RSS / Atom job feed; the atsToken IS the feed URL, re-checked through the posting-URL guards on every tick. The rung below the vendor types — `watchlist/resolve.ts` only reaches it when no board resolves (ADR 0036) |
 | CAREER_PAGE        | per-company   | none      | A careers page with nothing machine-readable on it; the atsToken is the page URL. **Never yields a job** — it hashes the page's text and reports that it changed (ADR 0036) |
+| BROWSER_PAGE       | per-company   | none      | A careers page that draws its jobs in the browser (a loading shell: no board, no feed, almost no text); the atsToken is the page URL. **Never fetched** — the row is watched and inactive, and the user pastes the page's text to see what is new (TASKS N8) |
 | LARAJOBS_RSS       | aggregator    | none      | Single RSS, all jobs under one synthetic Company |
 | REMOTEOK           | aggregator    | none      | First array element is meta (`legal:`) — dropped via `slice(1)` |
 | REMOTIVE           | aggregator    | none      | `?category=software-dev`                        |
@@ -396,6 +397,17 @@ hash advances only once the notice is actually sent: a change seen outside
 the alert hours, while Alerts are off, or refused by every chat waits on the
 row (`pendingContentHash`, *notice waiting* on `/companies`) and goes out from
 the top of the first tick that may send it.
+
+A page with **almost no text** and nothing machine-readable is a loading
+shell: it draws its jobs in the browser, and hashing it would report the
+shell. Such a page resolves to *Needs a browser* and goes on the watchlist
+as `BROWSER_PAGE`, unchecked and never active. Under **Pages drawn in the
+browser** on `/companies` the user pastes the page's text as they see it.
+`watchlist/paste.ts` keeps its lines, says what is new against the last
+paste, and marks the lines a running search would take by its title words.
+No AI is involved and nothing becomes a `Job`. The Overview's watched line
+counts these as *to paste by hand* (TASKS N8, ADR 0036 addendum
+2026-09-28).
 
 Measured on twenty JavaScript-heavy companies and sixteen European ones
 (2026-09-04, [docs/company-watchlist.md](./docs/company-watchlist.md)): 7

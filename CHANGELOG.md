@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.25.0] — 2026-09-28
+
+### Added
+- **Careers pages that draw their jobs in the browser can be watched.**
+  Such a page used to end the company watch with "it probably needs
+  JavaScript" and nothing added. It now goes on your watchlist as *Needs a
+  browser*. Open the page, select all, copy, and paste it into the row's box
+  under **Pages drawn in the browser**: ApplyPack says what is new since
+  your last paste and which lines look like roles your searches want. No
+  AI, and nothing is stored as a job. The Overview counts these pages as
+  "to paste by hand".
+
 ## [2.24.0] — 2026-09-28
 
 ### Added

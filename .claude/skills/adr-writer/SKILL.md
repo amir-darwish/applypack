@@ -94,7 +94,7 @@ of truth when the two disagree.
 - 0033 A search says where its candidate lives; the model decides whether a posting is open to them
 - 0034 A vendor's own licence governs keyed access, and the vendor's terms are code
 - 0035 Many installs, one set of boards: spread the tick, shuffle the walk, revalidate
-- 0036 Watched companies are checked by reading what a site publishes for machines, never by rendering it
+- 0036 Watched companies are checked by reading what a site publishes for machines, never by rendering it — *addendum 2026-09-28: a page drawn in the browser is pasted*
 - 0037 Suggestions carry replacement text; the fact gate decides what is applicable — *extended by 0042; amended by 0044*
 - 0038 Save patches the user's .docx in place; text-only versions are the fallback *(supersedes the text-only consequence of 0010)* — *extended by 0039*
 - 0039 A resume that cannot be patched is re-typeset from JSON Resume, in the user's own typography *(extends 0038)*

@@ -51,8 +51,8 @@ export interface OverviewProps {
   sleepingUntil: string;
   /** Matches waiting to be sent — for the window, for Alerts, for a chat — or null. */
   held: HeldLine | null;
-  /** §17: watched companies, and what they put up in the last 24h (ADR 0036). */
-  watched: { companies: number; newJobs: number };
+  /** §17: watched companies, what they put up in the last 24h (ADR 0036), and the pages only a paste can read (TASKS N8). */
+  watched: { companies: number; newJobs: number; toPaste: number };
   /** The search funnel over the last 7 days — one line, the card is on /runs. */
   funnelWeek: FunnelView;
   /** The manual fetch in flight, if any — the button turns into a link to it. */
@@ -200,6 +200,17 @@ export const OverviewPage: FC<OverviewProps> = ({
               >
                 {watched.newJobs} new posting{watched.newJobs === 1 ? '' : 's'} in the last 24 hours
               </a>
+            )}
+            {watched.toPaste > 0 && (
+              <>
+                {' · '}
+                <a
+                  href="/companies#browser-pages"
+                  class="font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep"
+                >
+                  {watched.toPaste} to paste by hand
+                </a>
+              </>
             )}
             .
           </p>

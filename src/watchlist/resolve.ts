@@ -26,8 +26,10 @@ import { boardMissReason } from './verdict';
  *    job-shaped paths.
  * 5. **Nothing machine-readable, but readable prose** — `changeWatch`: we
  *    cannot know the jobs, so we watch the page's text and say when it
- *    changes (stage C). A page with almost no text is `watchOnly` instead;
- *    hashing a loading shell reports the shell.
+ *    changes (stage C). A page with almost no text is `needsBrowser`
+ *    instead: it draws its jobs with JavaScript, hashing its loading shell
+ *    would report the shell, and the user pastes the page (TASKS N8).
+ *    A redirect onto a board the vendor will not serve stays `watchOnly`.
  * 6. **Refused**, with the reason on screen: an ADR 0005 host, a private
  *    address, a robots.txt that says no, an HTTP error, a bot check.
  *
@@ -55,6 +57,8 @@ export type Resolution =
   | { kind: 'feed'; url: string; items: number; via: string }
   /** No board and no feed, but readable prose — the change watch can hash it. */
   | { kind: 'changeWatch'; url: string; chars: number }
+  /** Almost no text and nothing machine-readable: the page draws its jobs in the browser. */
+  | { kind: 'needsBrowser'; url: string }
   | { kind: 'watchOnly'; reason: string }
   | { kind: 'refused'; reason: string };
 
@@ -186,20 +190,12 @@ export async function resolveCompanyUrl(
   // Rung 5: nothing machine-readable. If the page has prose, the change watch
   // can tell the user when it moves — which is the honest offer, and all the
   // measurement supports (docs/company-watchlist.md §5-§6).
+  if (boardMiss !== null) return { ...named, resolution: { kind: 'watchOnly', reason: boardMiss }, requests };
   const chars = normalisePageText(page.body).length;
-  if (boardMiss === null && chars >= MIN_WATCHABLE_CHARS) {
+  if (chars >= MIN_WATCHABLE_CHARS) {
     return { ...named, resolution: { kind: 'changeWatch', url: page.url, chars }, requests };
   }
-  return {
-    ...named,
-    resolution: {
-      kind: 'watchOnly',
-      reason:
-        boardMiss ??
-        'No job board, no job feed, and almost no text on that page — it probably needs JavaScript. Paste the board URL if you know it.',
-    },
-    requests,
-  };
+  return { ...named, resolution: { kind: 'needsBrowser', url: page.url }, requests };
 }
 
 

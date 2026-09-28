@@ -17,6 +17,8 @@ export function verdictLabel(r: Resolution): string {
       return `RSS feed · ${r.items} ${r.items === 1 ? 'entry' : 'entries'}`;
     case 'changeWatch':
       return 'Change watch';
+    case 'needsBrowser':
+      return 'Needs a browser';
     case 'watchOnly':
       return 'Nothing machine-readable';
     case 'refused':
@@ -28,6 +30,9 @@ export function verdictLabel(r: Resolution): string {
 export function verdictLine(r: Resolution): string {
   if (r.kind === 'ats' || r.kind === 'feed') return verdictLabel(r);
   if (r.kind === 'changeWatch') return 'no board or feed — watching the page for changes';
+  if (r.kind === 'needsBrowser') {
+    return 'no board, no feed and almost no text: it draws its jobs in the browser, which ApplyPack cannot read — add it and paste the page when you look at it';
+  }
   return r.reason;
 }
 

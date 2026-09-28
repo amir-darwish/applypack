@@ -21,6 +21,10 @@ import {
   startWatchlistRun,
 } from '../watchlist-runs';
 import { WatchlistPreviewPage, WatchlistRunPage } from '../pages/watchlist';
+import { newLines, pageLines, pasteSummary, roleLines, titleWordsOf } from '../../watchlist/paste';
+import { listActiveProfiles } from '../../profiles';
+import { isBlankProfile } from '../../profile-guards';
+import { formatDate } from '../format';
 
 /*
  * The watchlist's own routes (TASKS §17 stage A, ADR 0036): paste a list,
@@ -121,8 +125,9 @@ watchlistRoute.post('/companies/watchlist/add', async (c) => {
     const name = (typeof typed === 'string' && typed.trim().length > 0 ? typed.trim() : result.name).slice(0, 100);
     const watch = {
       // Watched rows go in switched ON: unlike a starter pack, the user named
-      // these companies one by one and asked to be told about them.
-      active: true,
+      // these companies one by one and asked to be told about them. A page
+      // drawn in the browser is the exception — the tick has nothing to read.
+      active: source.atsType !== AtsType.BROWSER_PAGE,
       watched: true,
       checkEvery: parsed.data.checkEvery,
       alertPolicy: parsed.data.alertPolicy,
@@ -219,12 +224,55 @@ watchlistRoute.post('/companies/:id/unwatch', async (c) => {
   return flashRedirect('/companies', 'ok', `${company.name} is no longer watched — it stays in the hourly tick.`);
 });
 
+/**
+ * TASKS N8: the text of a page drawn in the browser, as the user copied it.
+ * Read into lines and compared with the last paste; nothing becomes a Job
+ * and nothing spends AI.
+ */
+watchlistRoute.post('/companies/:id/paste', async (c) => {
+  const id = idParam(c.req.param('id'));
+  if (!Number.isFinite(id)) return c.text('Bad id', 400);
+  const company = await prisma.company.findUnique({
+    where: { id },
+    select: { name: true, atsType: true, pastedLines: true, pastedAt: true },
+  });
+  if (!company) return c.text('Not found', 404);
+  if (company.atsType !== AtsType.BROWSER_PAGE) {
+    return flashRedirect('/companies', 'err', `ApplyPack reads ${company.name} on its own — there is nothing to paste.`);
+  }
+  const body = await c.req.parseBody();
+  const lines = pageLines(typeof body.page === 'string' ? body.page : '');
+  if (lines.length === 0) {
+    return flashRedirect(
+      '/companies#browser-pages',
+      'err',
+      `Nothing was read from that paste. Open ${company.name}'s page, select all of it, copy, and paste it here.`,
+    );
+  }
+  const added = company.pastedAt === null ? [] : newLines(company.pastedLines, lines);
+  const searches = titleWordsOf((await listActiveProfiles()).filter((p) => !isBlankProfile(p)));
+  await prisma.company.update({ where: { id }, data: { pastedLines: lines, pastedNew: added, pastedAt: new Date() } });
+  return flashRedirect(
+    '/companies#browser-pages',
+    'ok',
+    pasteSummary({
+      name: company.name,
+      lines: lines.length,
+      since: company.pastedAt === null ? null : formatDate(company.pastedAt),
+      added: added.length,
+      roles: roleLines(company.pastedAt === null ? lines : added, searches),
+    }),
+  );
+});
+
 /** The (atsType, atsToken) a confirmed resolution becomes, or null. */
 function sourceOf(r: ResolvedCompany): { atsType: AtsType; atsToken: string } | null {
   if (r.resolution.kind === 'ats') return { atsType: r.resolution.atsType, atsToken: r.resolution.atsToken };
   if (r.resolution.kind === 'feed') return { atsType: AtsType.FEED, atsToken: r.resolution.url };
-  // The last rung: no postings, just "this page changed" (ADR 0036).
+  // The last rungs: no postings, just "this page changed" (ADR 0036), or a
+  // page drawn in the browser that the user pastes (TASKS N8).
   if (r.resolution.kind === 'changeWatch') return { atsType: AtsType.CAREER_PAGE, atsToken: r.resolution.url };
+  if (r.resolution.kind === 'needsBrowser') return { atsType: AtsType.BROWSER_PAGE, atsToken: r.resolution.url };
   return null;
 }
 

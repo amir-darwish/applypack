@@ -212,3 +212,28 @@ still advances only when the notice is out. With no active chat the row on
 `/companies` is the report, so the change is taken as reported at once. A
 change inside the once-a-day gap keeps no validator, so the next check reads
 the page in full.
+
+## Addendum (2026-09-28): a page drawn in the browser is kept, and pasted
+
+The ladder's dead end — no board, no feed, almost no text — used to answer
+"it probably needs JavaScript" and add nothing, so the company the user
+named was watched by nothing at all. It is now the verdict `needsBrowser`,
+and it can be added (TASKS N8):
+
+- The row is `AtsType.BROWSER_PAGE` with the page as its atsToken, watched
+  and never active. The tick never reads it, and the Sources grid gives it
+  no switch (`web/source-groups.ts:fetchedSource`). A switch on
+  `/companies` refuses to turn it on.
+- The user opens the page in their own browser, copies its text, and
+  pastes it into the row's box. `watchlist/paste.ts` reads the lines, keeps
+  those new against the last paste, and marks the ones a running search
+  would take by its title words (the filter's own whole-word match). The
+  lines live on the row (`pastedLines`, `pastedNew`, `pastedAt`). No AI,
+  and nothing becomes a Job.
+- This decision still holds: ApplyPack itself renders nothing. A human with
+  a browser is not a crawler, and no cookie, session or client of theirs is
+  borrowed. A renderer is the later stage the feature-gap analysis scoped,
+  and it would need its own ADR.
+
+A redirect onto a board the vendor will not serve stays `watchOnly`. Its
+reason is the one thing the user can act on, and a paste box would bury it.
