@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 /*
  * The browser's line diff, on the server (ADR 0038). The change sheet and the
@@ -22,11 +23,12 @@ interface LineDiffModule {
   diffLines(before: string, after: string): DiffOp[];
 }
 
-const MODULE_PATH = path.resolve('src/web/public/line-diff.mjs');
+// A file URL, as keyword-matcher.ts explains.
+const MODULE_URL = pathToFileURL(path.resolve('src/web/public/line-diff.mjs')).href;
 
 let mod: Promise<LineDiffModule> | undefined;
 
 export function loadLineDiff(): Promise<LineDiffModule> {
-  mod ??= import(MODULE_PATH) as Promise<LineDiffModule>;
+  mod ??= import(MODULE_URL) as Promise<LineDiffModule>;
   return mod;
 }

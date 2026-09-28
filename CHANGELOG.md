@@ -23,6 +23,11 @@ All notable changes to this project are documented here. The format follows
   bullet with a figure or a tool your resume does not show is replaced by a
   question about it.
 
+### Fixed
+- **Windows (`npm start`): Compare, the keyword table and Save as vN work.**
+  The dashboard loaded two of its own modules by a Windows path, which Node
+  refuses; they now load by file URL (#309).
+
 ## [2.31.0] — 2026-09-28
 
 ### Changed

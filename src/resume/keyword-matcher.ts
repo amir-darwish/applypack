@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { MatchKeyword } from './prompts';
 
 /*
@@ -33,11 +34,12 @@ export interface KeywordMatcher {
   ): (T & { count: number })[];
 }
 
-const MATCHER_PATH = path.resolve('src/web/public/target.mjs');
+// A file URL, not a path: on Windows `import('C:\\…')` is refused as an unknown URL scheme.
+const MATCHER_URL = pathToFileURL(path.resolve('src/web/public/target.mjs')).href;
 
 let matcher: Promise<KeywordMatcher> | undefined;
 
 export function loadKeywordMatcher(): Promise<KeywordMatcher> {
-  matcher ??= import(MATCHER_PATH) as Promise<KeywordMatcher>;
+  matcher ??= import(MATCHER_URL) as Promise<KeywordMatcher>;
   return matcher;
 }
