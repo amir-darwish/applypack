@@ -1,6 +1,7 @@
 import { GATE_BUCKET_LABELS, type ConfidenceBand, type GateBucket } from './score';
 import type { GateStatus } from './prompts';
 import { calibrationLine, type Calibration } from './calibration';
+import { csvTable } from '../csv';
 
 /*
  * The table as a file for the hiring manager (TASKS §19 stage 3): CSV for
@@ -56,22 +57,7 @@ export const DECISION_LABELS: Record<string, string> = {
   declined: 'Declined',
 };
 
-/*
- * Excel and LibreOffice run a cell that opens with = + - @ (or a tab or CR)
- * as a formula, quoted or not; an apostrophe makes it text and stays out of
- * sight. An applicant chooses their file name and the model quotes their
- * resume, so both reach this table. A plain signed number is left alone.
- */
-const FORMULA_LEADER = /^[=+\-@\t\r]/;
-const PLAIN_NUMBER = /^[-+]?\d+(?:[.,]\d+)?$/;
-
-function csvCell(v: unknown): string {
-  let s = v === null || v === undefined ? '' : String(v);
-  if (FORMULA_LEADER.test(s) && !PLAIN_NUMBER.test(s)) s = `'${s}`;
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-/** RFC 4180 with a BOM, so Excel reads the Cyrillic names. */
+/** RFC 4180 with a BOM (csv.ts): an applicant chooses their file name and the model quotes their resume, so a cell may open like a formula. */
 export function toCsv(screening: ExportScreening, rows: ExportRow[]): string {
   const head = [
     'Applicant',
@@ -94,35 +80,31 @@ export function toCsv(screening: ExportScreening, rows: ExportRow[]): string {
     'Questions',
     'Note',
   ];
-  const lines = rows.map((r) =>
-    [
-      `№${r.number}`,
-      r.name ?? '',
-      r.file,
-      r.status,
-      r.bucket ? GATE_BUCKET_LABELS[r.bucket] : '',
-      r.score ?? '',
-      r.adjustment === 0 ? '' : `${r.adjustment > 0 ? '+' : ''}${r.adjustment}${r.adjustmentNote ? ` (${r.adjustmentNote})` : ''}`,
-      r.adjusted ?? '',
-      r.confidence ?? '',
-      ...screening.gates.map((g) => {
-        const status = r.gates.find((x) => x.gate.toLowerCase() === g.toLowerCase())?.status;
-        return status ? GATE_MARK[status] : '';
-      }),
-      r.mustTotal !== null ? `${r.mustCovered ?? 0}/${r.mustTotal}` : '',
-      r.years ?? '',
-      r.level ?? '',
-      r.career ?? '',
-      r.decision ? (DECISION_LABELS[r.decision] ?? r.decision) : '',
-      r.verdict ?? '',
-      r.standout.join(' | '),
-      r.questions.join(' | '),
-      [r.sameAs !== null ? `another document of №${r.sameAs}` : '', r.note ?? ''].filter(Boolean).join('; '),
-    ]
-      .map(csvCell)
-      .join(','),
-  );
-  return `﻿${[head.map(csvCell).join(','), ...lines].join('\r\n')}\r\n`;
+  const lines = rows.map((r) => [
+    `№${r.number}`,
+    r.name ?? '',
+    r.file,
+    r.status,
+    r.bucket ? GATE_BUCKET_LABELS[r.bucket] : '',
+    r.score ?? '',
+    r.adjustment === 0 ? '' : `${r.adjustment > 0 ? '+' : ''}${r.adjustment}${r.adjustmentNote ? ` (${r.adjustmentNote})` : ''}`,
+    r.adjusted ?? '',
+    r.confidence ?? '',
+    ...screening.gates.map((g) => {
+      const status = r.gates.find((x) => x.gate.toLowerCase() === g.toLowerCase())?.status;
+      return status ? GATE_MARK[status] : '';
+    }),
+    r.mustTotal !== null ? `${r.mustCovered ?? 0}/${r.mustTotal}` : '',
+    r.years ?? '',
+    r.level ?? '',
+    r.career ?? '',
+    r.decision ? (DECISION_LABELS[r.decision] ?? r.decision) : '',
+    r.verdict ?? '',
+    r.standout.join(' | '),
+    r.questions.join(' | '),
+    [r.sameAs !== null ? `another document of №${r.sameAs}` : '', r.note ?? ''].filter(Boolean).join('; '),
+  ]);
+  return csvTable(head, lines);
 }
 
 /** The same table as Markdown, one section per bucket, then the unread files, then how the decisions sit against the order. */
