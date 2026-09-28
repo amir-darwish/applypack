@@ -11,6 +11,7 @@
  */
 
 import { SCORING } from './score.mjs';
+import { evidenceOf } from './evidence.mjs';
 
 // Fallback for keyword rows that predate requirement levels (ADR 0012).
 const PRIORITY_WEIGHT = { 1: 3, 2: 2, 3: 1, 4: 1 };
@@ -205,7 +206,8 @@ export function findTerm(text, term, aliases = []) {
  * it — and a term earns its weight when the text spells it (ADR 0045). Only a
  * zero-weight "context" term is `excluded`. Every row still carries
  * found/count for highlighting, and the full rows feed entriesFromLive() in
- * score.mjs for the live score.
+ * score.mjs for the live score — with `evidence`, how strongly the text shows
+ * the term (evidence.mjs), because a term only on a skills line earns less.
  */
 export function scoreKeywords(keywords, text) {
   const rows = [];
@@ -220,7 +222,7 @@ export function scoreKeywords(keywords, text) {
       total += weight;
       if (found) earned += weight;
     }
-    rows.push({ ...k, count: spans.length, found, weight, excluded });
+    rows.push({ ...k, count: spans.length, found, weight, excluded, evidence: evidenceOf(text, spans) });
   }
   const score = total === 0 ? 0 : Math.round((earned / total) * 100);
   return { score, rows, earned, total };

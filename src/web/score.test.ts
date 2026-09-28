@@ -8,6 +8,7 @@ import {
   type ScoreEntry,
 } from '../resume/score';
 import { anchorStatuses } from '../resume/keyword-anchor';
+import { annotateEvidence } from '../resume/evidence';
 import type { KeywordMatcher } from '../resume/keyword-matcher';
 import { readKeywords, type MatchKeyword } from '../resume/prompts';
 
@@ -203,16 +204,19 @@ test('the live number is the server score of the same text, edit by edit', async
   const OFF: MatchAlignment = { title: 'off', summary: 'off', recent_role: 'off' };
   const body = 'Skills: PHP, MySQL, HTML5, SASS, JS, jQuery, Git, JIRA\nBuilt e-commerce checkouts in PHP.';
   const judged = `WordPress Developer | Go & React\n${body}`;
+  // Score v6 (ADR 0058): the six terms only on the skills line earn 0.85 each,
+  // and "BEM, Ajax" typed as a list is a list — BEM alone on its line was not.
   const texts: [string, string, number, number | null][] = [
-    ['without the title line', body, 41, SCORING_TS.caps.halfOrMore],
-    ['as the model judged it', judged, 52, null],
-    ['BEM typed in', `${judged}\nBEM`, 57, null],
-    ['Ajax typed in too', `${judged}\nBEM, Ajax`, 60, null],
-    ['PHP deleted', `${judged}\nBEM, Ajax`.replace(/PHP/g, 'Python'), 57, null],
+    ['without the title line', body, 36, SCORING_TS.caps.halfOrMore],
+    ['as the model judged it', judged, 47, null],
+    ['BEM typed in', `${judged}\nBEM`, 52, null],
+    ['Ajax typed in too', `${judged}\nBEM, Ajax`, 54, null],
+    ['PHP deleted', `${judged}\nBEM, Ajax`.replace(/PHP/g, 'Python'), 51, null],
   ];
   for (const [label, text, expected, cap] of texts) {
     const live = computeScore(entriesFromLive(matcher.scoreKeywords(keywords, text).rows), OFF, 0);
-    const anchored = anchorStatuses(keywords, text, matcher).keywords;
+    // The server's own order (match.ts): presence off the text, then how strongly the text shows each term.
+    const anchored = annotateEvidence(anchorStatuses(keywords, text, matcher).keywords, text, matcher).keywords;
     const server = computeScoreTs(entriesFromKeywords(anchored), OFF, 0);
     assert.deepEqual(live, server, label);
     assert.equal(live.score, expected, label);

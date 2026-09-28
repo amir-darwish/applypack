@@ -203,3 +203,19 @@ test('the breakdown reports covered and written primaries separately', () => {
   assert.equal(bd.primaryWritten, 0, 'but the word is not in the text');
   assert.equal(bd.cap, null);
 });
+
+test('v6: a term shown only on a list of terms earns listedCredit, and moves nothing else (ADR 0058)', () => {
+  const listed = { ...kw('present', 'must', true), evidence: 'listed' as const };
+  const described = { ...kw('present', 'must', true), evidence: 'described' as const };
+  const shown = scoreMatch([described, { ...kw('present'), evidence: 'measured' as const }], STRONG, 0);
+  const named = scoreMatch([listed, { ...kw('present'), evidence: 'listed' as const }], STRONG, 0);
+  assert.equal(shown.score, 100);
+  assert.equal(named.keywordEarned, 6 * SCORING.listedCredit);
+  assert.equal(named.score, 91, '60 × 0.85 + 40');
+  assert.equal(named.cap, null, 'the candidate HAS the primary stack — the cap never reads evidence');
+  assert.equal(named.ceiling, 100, 'writing the work it was used for is the edit that lifts it');
+  // A row graded before v6 carries no grade: full credit, as before.
+  assert.equal(scoreMatch([kw('present', 'must', true)], STRONG, 0).score, 100);
+  // Only a written term is discounted: `add` stays at half credit whatever the grade says.
+  assert.equal(scoreMatch([{ ...kw('add'), evidence: 'listed' as const }], OFF, 0).keywordEarned, 1.5);
+});

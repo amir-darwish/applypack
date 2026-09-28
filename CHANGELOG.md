@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.33.0] — 2026-09-28
+
+### Changed
+- **A skill your resume only lists counts a little less than one it shows
+  at work.** A keyword the posting wants that appears only on your skills
+  line now earns 85% of its credit; mention it in a bullet about the work and
+  it earns the rest. Most scores move by a couple of points. The core-stack
+  limit and "what editing can reach" are not affected, and the live score in
+  the editor moves as you write the bullet. Comparisons made before keep
+  their number until they are scored again.
+
+### Added
+- **How long and how lately your roles show each keyword.** In the keyword
+  table, a matched term says how many years your dated roles mention it and
+  whether you use it now ("3.8 yrs at work · 6 yrs ago"). It turns amber when
+  the last role that names it ended more than three years ago. It is shown,
+  not scored.
+
 ## [2.32.0] — 2026-09-28
 
 ### Added

@@ -71,6 +71,7 @@ gets a dated addendum at the end of the ADR.
 - [0055 — Every AI attempt is a ledger row, and a bill, a plan and a local model are never added together](./0055-every-ai-attempt-is-a-ledger-row.md) *(extends 0007)*
 - [0056 — A company can be muted, and a company applied to can rest, before any AI reads its postings](./0056-mute-an-employer-and-a-reapply-window.md)
 - [0057 — A model on this machine is an engine of its own, and it is held to its window](./0057-a-local-model-is-an-engine-of-its-own.md) *(extends 0013/0014)*
+- [0058 — How strongly the text shows a term counts, a little (score v6)](./0058-evidence-strength-counts-a-little.md) *(amends 0012/0045)*
 
 ## When to write a new one
 

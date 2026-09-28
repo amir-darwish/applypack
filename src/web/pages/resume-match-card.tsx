@@ -36,6 +36,7 @@ import { hashShortId } from '../../text-utils';
 import { readMatchEvidence, readMatchMode, type MatchMode } from '../../resume/match-mode';
 import { verificationCautions, verificationHint, type VerificationForHint, type VerificationHint } from '../../resume/verification-hint';
 import type { CountedKeyword } from '../../resume/keyword-matcher';
+import { STALE_MONTHS, usageLine, type TermUsage } from '../../resume/usage';
 import { effectiveRequirement, isIgnored, confirmable } from '../../resume/keyword-overrides';
 import { REQUIREMENT_LEVELS, type RequirementLevel } from '../../resume/score';
 import { readBreakdown, type ScoreBreakdown } from '../../resume/score';
@@ -947,7 +948,7 @@ export const ChangeSheetButton: FC<{
  * recomputes the score in code — no AI call.
  */
 export const KeywordTable: FC<{
-  keywords: CountedKeyword[];
+  keywords: (CountedKeyword & { usage?: TermUsage })[];
   edit?: KeywordEditTarget;
   rebuild?: RebuildTarget;
 }> = ({ keywords, edit, rebuild }) => {
@@ -1044,7 +1045,7 @@ function fmtDelta(n: number): string {
   return `${n > 0 ? '+' : ''}${n}`;
 }
 
-const KeywordRow: FC<{ k: CountedKeyword; edit?: KeywordEditTarget }> = ({ k, edit }) => (
+const KeywordRow: FC<{ k: CountedKeyword & { usage?: TermUsage }; edit?: KeywordEditTarget }> = ({ k, edit }) => (
   <Tr class={isIgnored(k) ? 'opacity-60' : ''}>
     <Td class="text-xs font-medium text-ink">
       <span class="inline-flex flex-wrap items-center gap-1.5">
@@ -1085,6 +1086,19 @@ const KeywordRow: FC<{ k: CountedKeyword; edit?: KeywordEditTarget }> = ({ k, ed
           </span>
         )}
         {k.elsewhere && <Badge tone="neutral">in "{k.elsewhere}"</Badge>}
+        {/* TASKS R8: the dated roles that name it — not scored, read by every screener. */}
+        {k.usage && (
+          <span
+            class={`text-meta ${k.usage.monthsSince >= STALE_MONTHS ? 'text-warn' : 'text-ink-faint'}`}
+            title={
+              k.usage.monthsSince >= STALE_MONTHS
+                ? `The roles that mention ${k.term} ended over three years ago. If you have used it since, say where.`
+                : `The dated roles that mention ${k.term}, overlaps counted once.`
+            }
+          >
+            {usageLine(k.usage)}
+          </span>
+        )}
         {k.aliasOnly && (
           <span title={`Written as "${k.aliasOnly}". An ATS that searches for "${k.term}" may not find it — write the posting's spelling once, in a bullet or on the skills line.`}>
             <Badge tone="warn">as "{k.aliasOnly}"</Badge>

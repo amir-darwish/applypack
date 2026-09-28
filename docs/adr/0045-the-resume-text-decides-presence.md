@@ -69,3 +69,12 @@ warning, not the veto.
 If evidence grading enters the score (evidence.ts's own trigger), "written"
 stops being binary and this rule becomes the floor of that scale. Or if a
 homonym shows up on a comparison that matters — one scoring above the noise.
+
+## Addendum (2026-09-28): the text decides strength too
+
+Presence stays one question about the text. Since score v6 (ADR 0058), so is
+strength: whether a written term sits on a list of terms or inside a sentence
+about work is read off the text on both sides, by `evidence.ts` on the server
+and `public/evidence.mjs` under the editor, and a term only listed earns 0.85
+of its credit. The model's own "named, nothing behind it" stays a note, as
+this ADR decided.
