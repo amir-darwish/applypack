@@ -214,6 +214,16 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 303 && res.headers.get('location') === `/resumes/${f.resumeId}`,
     },
     {
+      // TASKS R14: the same resume as another file, read beside the saved one — a page, nothing stored.
+      name: 'POST /resumes/:id/compare-format (the same resume as another file)',
+      init: (() => {
+        const body = new FormData();
+        body.set('file', new File([`${RESUME}\nCertificates: AWS Solutions Architect.`], 'smoke.md', { type: 'text/markdown' }));
+        return { method: 'POST', headers: ORIGIN, body } satisfies RequestInit;
+      })(),
+      expect: (res) => res.status === 200 && (res.headers.get('content-type') ?? '').includes('text/html'),
+    },
+    {
       name: 'POST /settings/fetching-toggle',
       init: form({}),
       expect: (res) => res.status === 303,
@@ -325,6 +335,7 @@ async function main(): Promise<void> {
     '/jobs/new',
     '/resumes',
     '/resumes',
+    `/resumes/${f.resumeId}/compare-format`,
     '/settings/fetching-toggle',
     `/jobs/${f.jobId}/status`,
     `/jobs/${f.jobId}/status`,

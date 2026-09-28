@@ -48,6 +48,9 @@ import { parseWarnings } from '../../resume/parse-warnings';
 import { listProfilesForResume } from '../../profiles';
 import { createProfileFromResume, newProfileDraft } from '../profile-from-resume';
 import { ResumeDetailPage } from '../pages/resume-detail';
+import { FormatComparePage } from '../pages/format-compare';
+import { compareFormats, formatSides } from '../format-compare';
+import { loadLineDiff } from '../../resume/line-diff';
 import { ResumesPage } from '../pages/resumes';
 import { clearFlashCookie, flashRedirect, parseFlashCookie } from '../flash';
 import { claimRun, startRun, updateRun, runFailure } from '../target-runs';
@@ -126,6 +129,20 @@ resumesRoute.post('/resumes/:id/replace', resumeUploadLimit('/resumes'), onceGua
     onScanned: () => `Version ${resume.version} uploaded and scanned. Now re-run Compare on the job.`,
     onFailed: `Version ${resume.version} uploaded, but the AI scan failed — try "Scan".`,
   });
+});
+
+// TASKS R14: the same resume as another file, read beside the saved one — rendered, never stored, no AI.
+resumesRoute.post('/resumes/:id/compare-format', resumeUploadLimit('/resumes'), async (c) => {
+  const id = idParam(c.req.param('id'));
+  if (!Number.isFinite(id)) return c.text('Bad id', 400);
+  const resume = await getResume(id);
+  if (!resume) return c.text('Not found', 404);
+  const upload = await readResumeUpload(await c.req.parseBody());
+  if ('error' in upload) return flashRedirect(`/resumes/${id}#ats`, 'err', upload.error);
+  const [saved, uploaded] = formatSides(resume.sourceFilename, resume.version, upload.sourceFilename);
+  const { diffLines } = await loadLineDiff();
+  const result = compareFormats({ ...saved, text: resume.text }, { ...uploaded, text: upload.text }, diffLines);
+  return c.html(<FormatComparePage resume={resume} files={[resume.sourceFilename, upload.sourceFilename]} result={result} />);
 });
 
 resumesRoute.get('/resumes/:id', async (c) => {

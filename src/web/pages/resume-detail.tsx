@@ -1,5 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
+import { parsedView } from '../parsed-view';
+import { ParsedViewBlock } from './parsed-view-block';
 import { Layout } from '../layout';
 import {
   ActionForm,
@@ -311,6 +313,8 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
 
       <Card class="mt-4" id="ats">
         <SectionTitle>What the ATS sees</SectionTitle>
+        <ParsedViewBlock view={parsedView(resume.text)} />
+        <Hint class="mb-4">Read by a plain parser, no AI: what is missing here, an ATS is likely to miss too.</Hint>
         {warnings.length === 0 ? (
           <Hint>
             Extraction looks clean — selectable text, contact details found, normal length. Parsers
@@ -326,6 +330,30 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
             ))}
           </ul>
         )}
+        <form
+          method="post"
+          action={`/resumes/${resume.id}/compare-format`}
+          enctype="multipart/form-data"
+          onsubmit={SUBMIT_ONCE}
+          class="mt-4 grid gap-3 border-t border-line pt-4 sm:grid-cols-[1.6fr_auto]"
+        >
+          <Field label="The same resume in another format" hint={`${ACCEPTED_EXTENSIONS.join(', ')} · up to ${MAX_UPLOAD_MB} MB`}>
+            <Input
+              type="file"
+              name="file"
+              required
+              accept={ACCEPTED_EXTENSIONS.join(',')}
+              class="file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-surface-overlay file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-ink"
+            />
+          </Field>
+          <div class="flex items-end">
+            <Button variant="secondary" class="w-full">Compare the two files</Button>
+          </div>
+          <Hint class="sm:col-span-2">
+            Have it as a .docx and as a PDF? A parser can read the two differently — a table, a column, dates. This shows
+            what it reads from each and which one to send. No AI, and the file is not kept.
+          </Hint>
+        </form>
         <details class="mt-2">
           <summary class="cursor-pointer select-none text-sm font-semibold text-ink">
             Extracted text ({resume.text.length.toLocaleString()} chars) — exactly what the AI and

@@ -19,6 +19,9 @@ import { emptyResume, JsonResumeSchema, type JsonResume } from './json-resume';
 
 /** A bare line is a heading only if it is short — a shouted sentence is not a section. */
 const MAX_HEADING_CHARS = 44;
+/** "Austin, Texas, 78758" or "Kyiv, Ukraine (open to relocation)": a place is a few short words either side of a comma. */
+const MAX_PLACE_CHARS = 60;
+const MAX_PLACE_WORDS = 4;
 const BULLET = /^\s*[-•*·‣▪]\s+/;
 const MD_HEADING = /^\s*#{1,6}\s+(.+?)\s*$/;
 /** Contact-ish separators the corpus uses between the parts of one line. */
@@ -148,9 +151,17 @@ function basicsFrom(header: string[]): JsonResume['basics'] {
     if (url) { if (!basics.url) basics.url = url[0]; else basics.profiles.push(url[0]); continue; }
     if (part === basics.label || part === basics.name) continue;
     // A comma-joined place is the likeliest remaining part of a contact line.
-    if (!basics.location && /,/.test(part)) basics.location = part;
+    if (!basics.location && looksLikePlace(part)) basics.location = part;
   }
   return basics;
+}
+
+/** Not a sentence: a resume with no headings is all header, and its prose has commas too. */
+function looksLikePlace(part: string): boolean {
+  // A full stop ends a sentence, except after a lone capital: "Washington, D.C.".
+  if (part.length > MAX_PLACE_CHARS || /%|[;:!?]$|(?<!\b\p{Lu})\.$/u.test(part)) return false;
+  const pieces = part.split(',').map((p) => p.trim());
+  return pieces.length > 1 && pieces.every((p) => p.length > 0 && p.split(/\s+/).length <= MAX_PLACE_WORDS);
 }
 
 /* ---------- sections ---------- */
