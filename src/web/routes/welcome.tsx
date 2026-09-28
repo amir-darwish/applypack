@@ -50,6 +50,7 @@ import {
   stepDone,
   summarizeScoreRun,
 } from '../welcome-steps';
+import { spendHint } from '../cost-hint';
 
 const TOP_MATCHES = 5;
 const AI_STEP = '/welcome?step=ai';
@@ -121,6 +122,7 @@ welcomeRoute.get('/welcome', async (c) => {
         seniority: profile?.seniority ?? [],
         resumes: resumes.map((r) => ({ id: r.id, name: r.name })),
         draft,
+        scanCost: await spendHint('resume-scan'),
       }}
       sources={{ suggestions, packs }}
       matches={{
@@ -130,6 +132,7 @@ welcomeRoute.get('/welcome', async (c) => {
         top: top.map((j) => ({ id: j.id, title: j.title, companyName: j.employer ?? j.company.name, fitScore: j.fitScore })),
         waiting,
         runningRunId: findLiveRun(SCORE_RUN_KEY)?.id ?? null,
+        scoreCost: await spendHint('classifier'),
       }}
       flash={parseFlashCookie(c.req.header('cookie'))}
     />,

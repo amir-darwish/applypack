@@ -7,6 +7,7 @@ import type { FlashMessage } from '../flash';
 import type { FetchRun } from '../fetch-runs';
 import type { HeldLine } from '../held-line';
 import { stageCount, type FunnelView } from '../../funnel';
+import type { NextThing } from '../next-things';
 import { FetchNowButton } from './fetch-run';
 import {
   formatDuration,
@@ -58,6 +59,8 @@ export interface OverviewProps {
   fetchRun: FetchRun | null;
   /** A wizard step is still undone (skipped or not) — show the way back to /welcome. */
   finishSetup: boolean;
+  /** TASKS N11: open a match → compare → tailor, until the first comparison; null hides the card. */
+  next: NextThing[] | null;
   flash?: FlashMessage | null;
 }
 
@@ -94,6 +97,7 @@ export const OverviewPage: FC<OverviewProps> = ({
   funnelWeek,
   fetchRun,
   finishSetup,
+  next,
   flash,
 }) => {
   const byStatus = mapCounts(counts);
@@ -215,6 +219,8 @@ export const OverviewPage: FC<OverviewProps> = ({
         )}
       </div>
 
+      {next && <NextThingsCard steps={next} />}
+
       <div class="grid items-start gap-6 lg:grid-cols-3">
         <div class="min-w-0 lg:col-span-2">
           <SectionTitle level="section">Recent alerts</SectionTitle>
@@ -315,3 +321,29 @@ export function runLabel(status: CronRunStatus): string {
   if (status === 'FAILED') return 'Failed';
   return 'Running';
 }
+
+/** The loop the product is for, in three steps, until the user has walked it once (TASKS N11). */
+const NextThingsCard: FC<{ steps: NextThing[] }> = ({ steps }) => (
+  <Card class="mb-8">
+    <SectionTitle>Next: three things</SectionTitle>
+    <ol class="mt-3 grid gap-5 md:grid-cols-3">
+      {steps.map((s, i) => (
+        <li class="min-w-0">
+          <div class="text-label text-ink">
+            <span class="tabular-nums text-ink-faint">{i + 1}.</span>{' '}
+            {s.href ? (
+              <a href={s.href} class="font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep">
+                {s.title}
+              </a>
+            ) : (
+              s.title
+            )}
+          </div>
+          <p data-ui="hint" class="mt-1 text-meta text-ink-faint">
+            {s.body}
+          </p>
+        </li>
+      ))}
+    </ol>
+  </Card>
+);

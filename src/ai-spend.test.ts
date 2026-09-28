@@ -4,6 +4,7 @@ import {
   billingNotes,
   budgetAlert,
   budgetAlertText,
+  billingHint,
   costHintText,
   jobSpendText,
   formatUsd,
@@ -175,4 +176,10 @@ test('the report is one tab-separated row per UTC day, engine and model, and a t
     '# billed: 40 calls, 1 aborted; ours $0.08, vendor-reported $0',
     '# plan: 40 calls, 1 aborted; ours $0.01, vendor-reported $0.01',
   ]);
+});
+
+test('before any call is on record, the hint says what kind of money and no figure', () => {
+  assert.equal(billingHint('billed'), 'Billed per token on your API key.');
+  assert.equal(billingHint('plan'), 'Your plan covers it.');
+  assert.equal(billingHint('local'), 'Runs on your local model: free.');
 });
