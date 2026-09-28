@@ -9,6 +9,7 @@ import {
   hiringName,
   isReapplyChoice,
   sourceIsEmployer,
+  withoutMuted,
 } from './employer';
 
 test('two spellings of one company share a key', () => {
@@ -84,4 +85,9 @@ test('a mute turns a posting away; the window spares a watched company that want
 test('the re-apply window takes its listed choices only', () => {
   assert.equal(isReapplyChoice(90), true);
   assert.equal(isReapplyChoice(7), false);
+});
+
+test('withoutMuted keeps the rows that name nobody', () => {
+  assert.equal(withoutMuted([]), null);
+  assert.deepEqual(withoutMuted(['acme']), { OR: [{ employerKey: null }, { employerKey: { notIn: ['acme'] } }] });
 });

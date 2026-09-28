@@ -126,6 +126,15 @@ export function employerGate(key: string | null, rules: EmployerRules, everyPost
   return null;
 }
 
+/**
+ * The rows of muted companies out of a query: `employerKey IS NULL OR NOT IN
+ * (…)`, because NOT IN alone drops every NULL row with them. Null when
+ * nothing is muted — no clause at all.
+ */
+export function withoutMuted(keys: readonly string[]): { OR: ({ employerKey: null } | { employerKey: { notIn: string[] } })[] } | null {
+  return keys.length > 0 ? { OR: [{ employerKey: null }, { employerKey: { notIn: [...keys] } }] } : null;
+}
+
 /** The re-apply window's choices, in days; null is off. */
 export const REAPPLY_CHOICES = [30, 60, 90, 180] as const;
 

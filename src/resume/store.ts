@@ -223,7 +223,7 @@ export async function listMatchesForJob(jobId: number): Promise<MatchWithResume[
 
 /** One run of the resume's history: the scalars the list shows, never the snapshot or the five Json columns (DATA-5). */
 export type MatchRunSummary = Pick<ResumeMatch, 'id' | 'jobId' | 'resumeId' | 'resumeVersion' | 'draft' | 'matchScore' | 'createdAt'> & {
-  job: { id: number; title: string; company: { name: string } };
+  job: { id: number; title: string; employer: string | null; company: { name: string } };
 };
 
 export async function listMatchesForResume(resumeId: number): Promise<MatchRunSummary[]> {
@@ -237,7 +237,7 @@ export async function listMatchesForResume(resumeId: number): Promise<MatchRunSu
       draft: true,
       matchScore: true,
       createdAt: true,
-      job: { select: { id: true, title: true, company: { select: { name: true } } } },
+      job: { select: { id: true, title: true, employer: true, company: { select: { name: true } } } },
     },
     orderBy: { createdAt: 'desc' },
     take: MATCH_LIST_LIMIT,

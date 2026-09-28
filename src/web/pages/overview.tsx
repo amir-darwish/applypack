@@ -25,6 +25,8 @@ interface JobRow {
   fetchedAt: Date;
   alertedAt: Date | null;
   status: 'NEW' | 'ALERTED' | 'APPLIED' | 'DISMISSED' | 'SAVED';
+  /** ADR 0056: who hires, when an aggregator named them. */
+  employer: string | null;
   company: { name: string };
 }
 
@@ -239,7 +241,7 @@ export const OverviewPage: FC<OverviewProps> = ({
                       <div class="min-w-0 flex-1">
                         <div class="truncate text-sm font-medium text-ink">{j.title}</div>
                         <div class="mt-0.5 truncate text-[13px] text-ink-faint">
-                          {j.company.name} · {j.location || 'Remote'} ·{' '}
+                          {j.employer ?? j.company.name} · {j.location || 'Remote'} ·{' '}
                           {formatRelative(j.alertedAt ?? j.fetchedAt)}
                         </div>
                       </div>

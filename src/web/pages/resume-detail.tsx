@@ -277,7 +277,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
                     )}
                   </Td>
                   <Td class="max-w-[14rem] text-ink-muted">
-                    <div class="truncate">{h.job.company.name}</div>
+                    <div class="truncate">{h.job.employer ?? h.job.company.name}</div>
                   </Td>
                   <Td class="whitespace-nowrap font-mono text-xs text-ink-faint">
                     v{h.latest.resumeVersion}

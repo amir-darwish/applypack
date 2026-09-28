@@ -49,8 +49,10 @@ where the employer should be.
   the name as the user saw it, an optional reason and the date. A posting
   whose key is muted is turned away in the tick like a filter reject: no
   classification, no row, no alert. The funnel counts it as "from companies
-  you muted". Stored postings of a muted company are **hidden** on `/jobs`
-  by default, with one line saying how many and a link to show them. Their
+  you muted". "Save & re-classify" and the wizard's scoring pass skip its
+  stored rows too. Stored postings of a muted company are **hidden** on
+  `/jobs` and the Overview by default, with one line saying how many and a
+  link to show them. Their
   status never changes: an application stays an application. Unmuting
   undoes both. The next tick meets the postings as new and scores them, and
   the list shows the stored ones again.

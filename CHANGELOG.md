@@ -9,8 +9,9 @@ All notable changes to this project are documented here. The format follows
 ### Added
 - **Mute a company.** From a posting's page (with a reason if you like), or
   by name under Companies → Muted companies. Its new postings are skipped
-  before any AI reads them, from every source, and the job list hides the
-  ones already stored. It says how many and lets you show them. Nothing
+  before any AI reads them, from every source, and are never scored again
+  by "Save & re-classify". The job list and the Overview hide the ones
+  already stored. It says how many and lets you show them. Nothing
   changes status, and Unmute undoes both. Two spellings of one company,
   "Acme, Inc." and "ACME", are one mute.
 - **A re-apply window.** Settings → General → Application tracking can rest
@@ -20,7 +21,8 @@ All notable changes to this project are documented here. The format follows
   Arbeitnow, Adzuna, HN and the rest carry many employers. The list, the
   job page, the alerts and the digest now name the employer, "Acme · via
   Remotive", instead of the feed. Postings stored before this version get
-  their employer at the next start.
+  their employer at the next start, except those from the three feeds that
+  never recorded it (RemoteOK, Remotive, Arbeitnow).
 
 ### Fixed
 - **The AI was told the feed's name as the company.** For aggregator

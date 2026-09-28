@@ -87,7 +87,7 @@ import { buildLetterPdf } from '../../resume/pdf-write';
 import { setCoverAngles } from '../../settings';
 import { stageChangeEvent, type StageEventData } from '../stage-events';
 import { findMute, mutedKeys } from '../../jobs/employer-store';
-import { employerKey, hiringName } from '../../employer';
+import { employerKey, hiringName, withoutMuted } from '../../employer';
 
 const PAGE_SIZE = 50;
 
@@ -213,11 +213,10 @@ jobsRoute.get('/jobs', async (c) => {
   // ★ Only the companies the user put on the watchlist (ADR 0036).
   if (watched === '1') where.company = { watched: true };
   // ADR 0056: a muted company's postings stay stored and out of sight until
-  // "Muted companies" or an unmute. A row that names nobody is never hidden,
-  // and NOT IN alone would drop it: NULL NOT IN (…) is not true in SQL.
+  // "Muted companies" or an unmute. A row that names nobody is never hidden.
   const hiddenKeys = muted === '1' ? [] : await mutedKeys();
-  const hide: Prisma.JobWhereInput[] =
-    hiddenKeys.length > 0 ? [{ OR: [{ employerKey: null }, { employerKey: { notIn: hiddenKeys } }] }] : [];
+  const unmuted = withoutMuted(hiddenKeys);
+  const hide: Prisma.JobWhereInput[] = unmuted ? [unmuted] : [];
   if (hide.length > 0) where.AND = hide;
   // The facet counts come from the rows matching everything above; each
   // facet then applies the others' selections in tallyFacets. Four narrow
