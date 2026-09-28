@@ -38,6 +38,7 @@ applicationsRoute.get('/applications', async (c) => {
     select: {
       id: true,
       title: true,
+      employer: true,
       fitScore: true,
       recruiterContact: true,
       pipelineStage: true,
@@ -81,7 +82,7 @@ applicationsRoute.get('/applications', async (c) => {
     byStage[stage]!.push({
       id: j.id,
       title: j.title,
-      companyName: j.company.name,
+      companyName: j.employer ?? j.company.name,
       fitScore: j.fitScore,
       recruiterContact: j.recruiterContact,
       stageLine: stageTimeLine(

@@ -5,6 +5,7 @@ import { Layout } from '../layout';
 import { ActionForm, Badge, Button, Card, Code, Empty, Field, FILE_INPUT_CLASS, Flash, Hint, Input, More, PageHeader, PillCheckbox, Radio, SectionTitle, Select, Table, Tag, Td, Textarea, ToggleRow, Tr, TagListInput } from '../ui';
 import { formatDate, formatRelative } from '../format';
 import { isNewer } from '../../versions';
+import { REAPPLY_CHOICES } from '../../employer';
 import type { FlashMessage } from '../flash';
 import { describeCount, type SourceGroup } from '../source-groups';
 import { dotClassFor, MAX_WORK_STAGES } from '../stage-config';
@@ -146,6 +147,8 @@ export interface SettingsProps {
   /** Full funnel order with job counts; fixed rows carry no edit controls. */
   pipelineStages: { key: string; label: string; count: number; fixed: boolean }[];
   staleApplicationsDigestEnabled: boolean;
+  /** ADR 0056: turn postings away at a company applied to in the last N days; null = off. */
+  reapplyDays: number | null;
   /** TASKS N9: the optional weekly look at GitHub's releases, and what it last saw. */
   updates: { enabled: boolean; current: string; latest: string | null; checkedAt: Date | null };
   sourceHealthAlerts: boolean;
@@ -367,6 +370,7 @@ export const SettingsPage: FC<SettingsProps> = ({
   applicationTrackingEnabled,
   pipelineStages,
   staleApplicationsDigestEnabled,
+  reapplyDays,
   updates,
   sourceHealthAlerts,
   disabledSources,
@@ -710,6 +714,33 @@ export const SettingsPage: FC<SettingsProps> = ({
               A daily nudge for applications with no recruiter contact for 14+ days; off while
               alerts are off.
             </ToggleRow>
+          </div>
+          <div class="border-t border-line pt-5">
+            <form method="post" action="/settings/reapply" class="flex flex-wrap items-end gap-3">
+              <Field
+                label="Re-apply window"
+                hint="New postings at a company you applied to inside it are turned away before any AI."
+                class="min-w-0 flex-1"
+              >
+                <Select name="days">
+                  <option value="" selected={reapplyDays === null}>
+                    Off
+                  </option>
+                  {REAPPLY_CHOICES.map((d) => (
+                    <option value={String(d)} selected={reapplyDays === d}>
+                      {d} days
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Button variant="secondary" size="sm">
+                Save
+              </Button>
+            </form>
+            <More class="mt-1.5">
+              Read from the applications you marked Applied, by company name across every source. A watched company
+              that alerts on every posting is still read in full; a muted one never is. Off by default.
+            </More>
           </div>
         </div>
       </Section>

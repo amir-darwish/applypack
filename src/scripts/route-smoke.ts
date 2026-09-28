@@ -41,7 +41,7 @@ const MAY_404 = new Set([
 /** GETs the route patterns do not reach: a page under its query parameters (`:id` = the fixture job). */
 const QUERY_VARIANTS = [
   // Every /jobs filter at once, the panel open: the where-clause, the facet tally and the status counts together.
-  '/jobs?panel=1&status=NEW&q=node&minFit=10&sort=fitScore_desc&verified=1&watched=1&open=1&country=DE,EU,unknown&workplace=remote,unknown&posted=30d',
+  '/jobs?panel=1&status=NEW&q=node&minFit=10&sort=fitScore_desc&verified=1&watched=1&open=1&muted=1&country=DE,EU,unknown&workplace=remote,unknown&posted=30d',
   // The job page's three other tabs, and a tab nobody offers — that one must fall back, not fail.
   '/jobs/:id?tab=match',
   '/jobs/:id?tab=letter',
@@ -221,6 +221,27 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 303 && (res.headers.get('location') ?? '').startsWith('/settings?tab=ai'),
     },
     {
+      // ADR 0056: the pasted company above, muted from its posting's rail.
+      name: 'POST /companies/mutes',
+      init: form({ name: 'Smoke Two', reason: 'smoke', back: '/jobs' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/jobs',
+    },
+    {
+      name: 'GET /jobs with a company muted (the hiding clause and its count)',
+      init: { method: 'GET', headers: ORIGIN },
+      expect: (res) => res.status === 200,
+    },
+    {
+      name: 'POST /companies/mutes/delete',
+      init: form({ key: 'smoke two', back: '/companies#muted' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/companies#muted',
+    },
+    {
+      name: 'POST /settings/reapply',
+      init: form({ days: '90' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=general',
+    },
+    {
       // The one route that reads files beside dist/: the PDF fonts a build must copy.
       name: 'POST /resumes/:id/render (a clean PDF)',
       init: form({ mode: 'pdf' }),
@@ -236,6 +257,10 @@ async function main(): Promise<void> {
     `/jobs/${f.jobId}/status`,
     '/facts',
     '/settings/ai/budget',
+    '/companies/mutes',
+    '/jobs',
+    '/companies/mutes/delete',
+    '/settings/reapply',
     `/resumes/${f.resumeId}/render`,
   ];
   for (const [i, p] of posts.entries()) {

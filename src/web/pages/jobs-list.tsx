@@ -53,6 +53,8 @@ interface JobRow {
   fetchedAt: Date;
   postedAt: Date;
   techMatch: string[];
+  /** ADR 0056: who hires, when an aggregator named them; the row then says "via" the source. */
+  employer: string | null;
   company: { name: string; atsType: string; atsToken: string; watched: boolean };
   verifications: { verdict: string }[];
   /** Present only when one search is selected: that search's own verdict. */
@@ -75,6 +77,8 @@ export interface JobsListProps {
   profiles: { id: number; name: string }[];
   /** True when the primary profile is blank — classification is idling (issue #50). */
   blankProfileBanner?: boolean;
+  /** Stored postings of muted companies the list leaves out (ADR 0056); 0 when shown or none. */
+  mutedHidden: number;
 }
 
 const STATUS_TABS: { value: JobStatus | ''; label: string }[] = [
@@ -104,6 +108,7 @@ export const JobsListPage: FC<JobsListProps> = ({
   panelOpen,
   statusCounts,
   blankProfileBanner,
+  mutedHidden,
 }) => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -148,6 +153,7 @@ export const JobsListPage: FC<JobsListProps> = ({
           <input type="hidden" name="posted" value={filters.posted} />
           <input type="hidden" name="open" value={filters.open} />
           <input type="hidden" name="watched" value={filters.watched} />
+          <input type="hidden" name="muted" value={filters.muted} />
           <Input
             type="search"
             name="q"
@@ -240,6 +246,13 @@ export const JobsListPage: FC<JobsListProps> = ({
               >
                 Open to me
               </OptionLink>
+              <OptionLink
+                href={inPanel({ muted: filters.muted ? '' : '1' })}
+                selected={filters.muted.length > 0}
+                title="Postings from the companies you muted, which the list hides"
+              >
+                Muted companies
+              </OptionLink>
             </FilterRow>
           </div>
         </Disclosure>
@@ -268,6 +281,20 @@ export const JobsListPage: FC<JobsListProps> = ({
             Clear all
           </a>
         </div>
+      )}
+
+      {mutedHidden > 0 && (
+        <p data-ui="hint" class="mb-3 shrink-0 text-[13px] text-ink-muted">
+          {mutedHidden.toLocaleString()} {mutedHidden === 1 ? 'posting' : 'postings'} from companies you muted{' '}
+          {mutedHidden === 1 ? 'is' : 'are'} hidden.{' '}
+          <a href={jobsHref({ ...filters, muted: '1' })} class="font-medium text-accent-strong hover:text-accent-deep">
+            Show them
+          </a>{' '}
+          ·{' '}
+          <a href="/companies#muted" class="font-medium text-accent-strong hover:text-accent-deep">
+            Manage mutes
+          </a>
+        </p>
       )}
 
       <div class="flex min-h-[320px] min-w-0 flex-1 flex-col">
@@ -340,12 +367,15 @@ export const JobsListPage: FC<JobsListProps> = ({
                           )}
                         </Td>
                         <Td class="text-ink-muted">
-                          <div class="truncate" title={j.company.name}>
+                          <div class="truncate" title={j.employer ?? j.company.name}>
                             {j.company.watched && (
                               <span title="On your watchlist" aria-label="Watched company">★ </span>
                             )}
-                            {j.company.name}
+                            {j.employer ?? j.company.name}
                           </div>
+                          {j.employer && j.company.atsType !== 'ADZUNA' && j.company.atsType !== 'FRANCETRAVAIL' && (
+                            <div class="truncate text-meta text-ink-faint">via {j.company.name}</div>
+                          )}
                           {j.company.atsType === 'ADZUNA' && <AdzunaLabel market={j.company.atsToken} class="mt-0.5" />}
                           {j.company.atsType === 'FRANCETRAVAIL' && <FranceTravailLine updatedAt={j.sourceUpdatedAt} class="mt-0.5" />}
                         </Td>

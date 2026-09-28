@@ -181,6 +181,8 @@ export interface JobsFilters {
   watched: string;
   /** ADR 0033: '1' = only rows a search of mine can take. */
   open: string;
+  /** ADR 0056: '1' = show the postings of muted companies too; hidden by default. */
+  muted: string;
   /** Which search the list is narrowed to; null = all of them. */
   profile: number | null;
   /** ADR 0031 facets: place values (codes or "unknown"), workplace values, posted window. */
@@ -245,6 +247,7 @@ export function activeFilters(filters: JobsFilters, profiles: { id: number; name
   if (filters.verified) add('Verified', '', { verified: '' });
   if (filters.watched) add('★ Watched', '', { watched: '' });
   if (filters.open) add('Open to me', '', { open: '' });
+  if (filters.muted) add('Muted companies shown', '', { muted: '' });
   return out;
 }
 
@@ -254,13 +257,13 @@ export function filterCount(filters: JobsFilters): number {
     (filters.profile === null ? 0 : 1) +
     filters.country.length +
     filters.workplace.length +
-    [filters.posted, filters.verified, filters.watched, filters.open].filter((v) => v.length > 0).length
+    [filters.posted, filters.verified, filters.watched, filters.open, filters.muted].filter((v) => v.length > 0).length
   );
 }
 
 /** The list with every panel filter lifted; status, sort, `q` and the fit floor stay. */
 export function clearFiltersHref(filters: JobsFilters): string {
-  return jobsHref({ ...filters, profile: null, country: [], workplace: [], posted: '', verified: '', watched: '', open: '' });
+  return jobsHref({ ...filters, profile: null, country: [], workplace: [], posted: '', verified: '', watched: '', open: '', muted: '' });
 }
 
 function chip(value: string, count: number, selected: boolean): FacetChip {

@@ -38,6 +38,7 @@ import type { FlashMessage } from '../flash';
 import { StarterPackPicker, type PackSegmentChoice } from './starter-pack';
 import type { SourceSuggestion } from '../../starter-packs/suggest';
 import { AddCompaniesCard, WatchlistSection, type WatchedRow } from './watchlist';
+import { MutedCompaniesSection, type MutedRow } from './muted-companies';
 import type { WatchlistRun } from '../watchlist-runs';
 
 interface CompanyRow {
@@ -71,6 +72,8 @@ export interface CompaniesProps {
   keyedUnlocked: string[];
   flash?: FlashMessage | null;
   fetchingEnabled: boolean;
+  /** ADR 0056: the companies the user does not want to see. */
+  muted: MutedRow[];
 }
 
 const DOT_TONE: Record<HealthTone, string> = {
@@ -245,6 +248,7 @@ export const CompaniesPage: FC<CompaniesProps> = ({
   keyedUnlocked,
   flash,
   fetchingEnabled,
+  muted,
 }) => {
   const empty = companies.length === 0;
   return (
@@ -422,6 +426,8 @@ export const CompaniesPage: FC<CompaniesProps> = ({
         )}
       </div>
     </div>
+
+    <MutedCompaniesSection rows={muted} />
 
     <details class="mt-4 rounded-lg border border-line bg-surface-raised shadow-sm">
       <summary class="cursor-pointer select-none px-5 py-3 text-sm font-medium text-ink transition-colors duration-150 hover:bg-surface-overlay/50">
