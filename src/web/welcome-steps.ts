@@ -60,7 +60,7 @@ export function summarizeScoreRun(stats: Record<string, unknown>): { kind: 'ok' 
     return { kind: 'warn', text: 'Scoring skipped — the profile lists no technologies or role words yet.' };
   }
   if (stats.reason === 'no-active-profile') {
-    return { kind: 'warn', text: 'Scoring skipped — no running search. Create one in Settings → Profile.' };
+    return { kind: 'warn', text: 'Scoring skipped — no running search. Create one in Settings → Searches.' };
   }
   const scored = n('reclassified');
   const matches = n('unchanged') + n('promoted');

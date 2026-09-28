@@ -22,7 +22,7 @@ export function summarizeFetchRun(stats: CronStats, label = 'Fetch now'): { kind
     };
   }
   if (stats.reason === 'no-active-profile') {
-    return { kind: 'err', text: `${label}: no running search — create one on Settings → Profile.` };
+    return { kind: 'err', text: `${label}: no running search — create one on Settings → Searches.` };
   }
   const fetched = num(stats, 'fetched');
   const sources = num(stats, 'sources');
@@ -54,7 +54,7 @@ export function summarizeFetchRun(stats: CronStats, label = 'Fetch now'): { kind
   if (stats.classify === false) {
     return {
       kind: 'ok',
-      text: `${head} unscored, no AI spent while the pipeline is paused.${filteredClause(stats)} Score them later with Save & re-classify on Settings → Profile.`,
+      text: `${head} unscored, no AI spent while the pipeline is paused.${filteredClause(stats)} Score them later with Save & re-classify on Settings → Searches.`,
     };
   }
   if (stats.skippedBlankProfile === 1) {

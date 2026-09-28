@@ -421,7 +421,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                     version of it. This page compares — it does not manage
                     resumes, and every extra "save as…" here ended up as another
                     row on /resumes that nobody asked for. A one-off check from
-                    the Compare page saves nothing at all: its text belongs to
+                    the Tailor resume page saves nothing at all: its text belongs to
                     this comparison, which keeps its own snapshot. */}
                 {!resume.ephemeral && (
                   <form

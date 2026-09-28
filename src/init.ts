@@ -59,7 +59,7 @@ async function failInterruptedCronRuns(): Promise<void> {
 /**
  * On first boot, if no Profile exists, seed a blank starter profile with
  * only stack-neutral defaults, pulling MIN_FIT_SCORE / MIN_SALARY_USD from
- * .env. The user shapes it on /settings → Profile — fastest via
+ * .env. The user shapes it on /settings → Searches — fastest via
  * "Fill from a resume". After this, the /settings page is the source of truth.
  */
 async function bootstrapDefaultProfile(): Promise<void> {

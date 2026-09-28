@@ -164,7 +164,7 @@ export interface AiStatusSummary {
  */
 const SETTINGS_TABS = [
   { id: 'general', label: 'General' },
-  { id: 'profile', label: 'Profile' },
+  { id: 'profile', label: 'Searches' },
   { id: 'ai', label: 'AI engine' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'sources', label: 'Sources' },

@@ -2408,7 +2408,7 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
-- [x] **`ui-finish`** (minor, part 1 v2.36.0) — the 2026-09 plan's W9.
+- [x] **`ui-finish`** (minor, parts 1–2 v2.36.0 … v2.37.0) — the 2026-09 plan's W9.
       U4 `ui.tsx:Notice` replaces ten hand-rolled tone banners; U5 the jobs
       list, the Comparisons card and the board use `Empty`; U6 a failed run
       reads as a sentence (`runs-summary.ts:failedRunLine` over
@@ -2422,6 +2422,13 @@ release-discipline skill, a docs/site block does not.
       flash offers Download .docx; R28 the legend says benefits and EEO text
       stay unmarked; S28 the browser's time zone until one is saved. U9 and
       U10 had already been done.
+
+      **v2.37.0 (part 2, Q11):** U17 — one name each. The flow is **Tailor
+      resume** (the menu and the launcher; "Compare" is its button), the
+      resume ↔ posting number is the **match score**, the posting ↔ search
+      number is **fit**, Settings → **Searches**; the glossary is DESIGN.md
+      → Words. U19's long hints carry costs and gates, so their trimming goes
+      with U1's Hint + More pass.
 
 - [x] **`screening-fixes`** (minor, parts 1–2 v2.34.0 … v2.35.0) — the 2026-09 plan's
       W8. E1 had shipped in v2.19.0 (a skill's "within N months" in its

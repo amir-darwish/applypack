@@ -25,7 +25,7 @@ Thirteen fictional postings with fit scores and statuses (no AI call), one
 running search ("Senior full-stack (TypeScript)", Lisbon, Europe, remote or
 hybrid), the Claude Code CLI as the engine, the setup wizard marked done.
 The install's default blank search must not stay primary: make the seeded
-one primary on `/settings` → Profile and delete the blank one, or the jobs
+one primary on `/settings` → Searches and delete the blank one, or the jobs
 page shows the "every running search is empty" banner.
 
 ## 3. The hero posting, for real

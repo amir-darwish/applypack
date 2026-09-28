@@ -157,6 +157,25 @@ not a component rewrite.
 - Dense 4px-grid spacing; 14px body type; tables and forms carry the work
 - Drawn stroke icons (Lucide-style), never emoji or Unicode glyphs
 
+
+## Words
+
+One name for each thing, on every page, in every flash and in the docs
+(TASKS U17, the plan's Q11). A second word for the same thing reads as a
+second thing.
+
+| Say | For | Never |
+| --- | --- | --- |
+| **Tailor resume** | the flow that fits a resume to one posting: the launcher (`/target`, "Tailor resume" in the menu) and the editor it opens (`/jobs/:id/target`) | "targeted view", "optimise" |
+| **Compare** | the button that runs one comparison — the action, never the flow | "Compare page" for the launcher |
+| **match score** | how well a resume answers a posting, 0–100, the deterministic number of ADR 0012 (the ring, the Resume match tab, "editing can reach a match of 92") | "fit" for this number |
+| **a match**, **matches** | a posting that clears a search's fit floor — what an alert sends, "the best match" on the Overview | a posting under the floor |
+| **fit**, **fit score** | how well a posting suits a search, 0–100, the classifier's verdict (the Fit column, the fit floor) | "match" for this number |
+| **search** | one search profile: what to hunt, where, and with which resume (Settings → **Searches**) | "profile" in a label |
+| **posting** / **job** | a posting is the text an employer wrote; a job is our row that holds it | "vacancy", "listing" in a label |
+| **screening**, **applicant** | employer mode: the position and the people who applied to it | "candidate" for an applicant |
+| **strength review** | a resume judged on its own, no posting | "resume score" |
+
 ## Colors
 
 A near-neutral field, faintly green, with a single emerald voice and a
@@ -438,7 +457,7 @@ null renders an em dash.
 - **Sidebar:** the subtle surface, one step off the canvas, hairline right
   edge; 56px brand row (emerald 28px "AP" mark + 15px/600 wordmark). Overview
   stands alone, then four groups with sentence-case labels at the label step
-  in faint ink — *Work* (Jobs, Applications), *Tools* (Resumes, Compare, Cover
+  in faint ink — *Work* (Jobs, Applications), *Tools* (Resumes, Tailor resume, Cover
   letter), *Research* (Companies, Discovery), *System* (Runs, and Screening
   while employer mode is on). Links are 14px, 6px radius, 6×10px padding, 18px
   icon + label; active = selected surface, emerald-strong text and icon at

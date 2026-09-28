@@ -545,7 +545,7 @@ const ProfileStep: FC<WelcomeProps> = ({ profile, steps }) => {
           </div>
           <Hint class="mt-3">
             {d.asNew
-              ? 'Nothing is saved until you press Create. The search you already set up keeps running — switch to the new one on Settings → Profile.'
+              ? 'Nothing is saved until you press Create. The search you already set up keeps running — switch to the new one on Settings → Searches.'
               : 'Nothing is saved until you press one of these.'}
           </Hint>
         </>
@@ -696,7 +696,7 @@ const SourcesStep: FC<WelcomeProps> = ({ sources, steps }) => {
         <p data-ui="hint" class="text-sm text-ink-muted">
           {sources.packs.length > 0
             ? 'No board feed fits where your searches hunt yet — the starter packs below do.'
-            : 'Your searches hunt where the boards already switched on look — nothing to add. Name a country in Settings → Profile and the boards for it show up here.'}
+            : 'Your searches hunt where the boards already switched on look — nothing to add. Name a country in Settings → Searches and the boards for it show up here.'}
         </p>
       ) : (
         <>

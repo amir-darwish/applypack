@@ -108,7 +108,7 @@ resumesRoute.post('/resumes', resumeUploadLimit('/resumes'), onceGuard(() => 're
   return startScanRun(c, resume, {
     subtitle: `"${name}" — headline, tools, seniority. About half a minute.`,
     onScanned: () =>
-      `Uploaded and scanned "${name}". "Run strength review" on this page grades it on its own; Settings → Profile → "Fill from a resume" updates your search profile from it.`,
+      `Uploaded and scanned "${name}". "Run strength review" on this page grades it on its own; Settings → Searches → "Fill from a resume" updates your search profile from it.`,
     onFailed: `Uploaded "${name}", but the AI scan failed — check the web logs, then try "Scan".`,
   });
 });
@@ -225,12 +225,12 @@ resumesRoute.post('/resumes/:id/draft', async (c) => {
   if (text.length > MAX_DRAFT_CHARS) {
     return flashRedirect(`/resumes/${id}`, 'err', `The draft is longer than a resume (${MAX_DRAFT_CHARS.toLocaleString()} characters at most).`);
   }
-  // A one-off check from the Compare page is not a resume: its text belongs to
+  // A one-off check from the Tailor resume page is not a resume: its text belongs to
   // the comparison, which keeps its own snapshot of it. Saving one used to mint
   // a row on /resumes named after the company — the surest way to end up with
   // six resumes and no idea which is the real one.
   if (current.hidden) {
-    return flashRedirect(`/resumes`, 'err', 'A one-off check from the Compare page is not saved as a resume — upload the file on Resumes to keep it.');
+    return flashRedirect(`/resumes`, 'err', 'A one-off check from the Tailor resume page is not saved as a resume — upload the file on Resumes to keep it.');
   }
   // What the edits are relative to — the text the editor started from. Without
   // it a .docx cannot be patched (the diff would be against nothing) and the
@@ -390,7 +390,7 @@ resumesRoute.post('/resumes/:id/profile', async (c) => {
   return flashRedirect(
     `/settings?tab=profile&profile=${profile.id}`,
     'ok',
-    `Created the search "${profile.name}" from "${resume.name}". It is not hunting yet — press Run on it under Settings → Profile → Searches.`,
+    `Created the search "${profile.name}" from "${resume.name}". It is not hunting yet — press Run on it under Settings → Searches → Searches.`,
   );
 });
 

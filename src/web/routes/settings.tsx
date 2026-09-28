@@ -451,7 +451,7 @@ settingsRoute.post('/settings/fetching-toggle', async (c) => {
     return flashRedirect(
       back,
       'warn',
-      'Job fetching resumed, but no running search has a required stack or role types — every fetched job goes to the AI classifier. Fill one in first (Settings → Profile).',
+      'Job fetching resumed, but no running search has a required stack or role types — every fetched job goes to the AI classifier. Fill one in first (Settings → Searches).',
     );
   }
   return flashRedirect(back, 'ok', 'Job fetching resumed — next hourly tick will pull new jobs.');

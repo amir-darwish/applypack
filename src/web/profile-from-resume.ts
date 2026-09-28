@@ -34,7 +34,7 @@ export function newProfileDraft(resume: ResumeSummary): ProfileDraft {
 /**
  * Born inactive, like every other new profile (issue #50): creating a search
  * must never silently switch the one the pipeline is scoring against. The
- * user activates it on /settings → Profile when they want to hunt with it.
+ * user activates it on /settings → Searches when they want to hunt with it.
  */
 export async function createProfileFromResume(resume: ResumeSummary): Promise<Profile> {
   return createProfile({
