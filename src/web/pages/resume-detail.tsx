@@ -351,8 +351,8 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
             <Button variant="secondary" class="w-full">Compare the two files</Button>
           </div>
           <Hint class="sm:col-span-2">
-            Have it as a .docx and as a PDF? A parser can read the two differently — a table, a column, dates. This shows
-            what it reads from each and which one to send. No AI, and the file is not kept.
+            Have it as a .docx and as a PDF? A parser reads them differently; this shows what it reads from each and which
+            one to send. No AI, and the file is not kept.
           </Hint>
         </form>
         <details class="mt-2">

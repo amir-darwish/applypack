@@ -131,6 +131,8 @@ export interface EngineServer {
   envVar: string;
   label: string;
   hint: string;
+  /** The rest of the explanation, folded under the hint. */
+  more?: string;
   value: string;
   stored: boolean;
   local: boolean;
@@ -1486,6 +1488,7 @@ const EngineServerRow: FC<{ server: EngineServer }> = ({ server }) => (
       </Button>
     </form>
     <Hint class="mt-2">{server.hint}</Hint>
+    {server.more && <More class="mt-1">{server.more}</More>}
     {server.context && (
       <form method="post" action={server.action} class="mt-3 flex flex-wrap items-end gap-2">
         <Field

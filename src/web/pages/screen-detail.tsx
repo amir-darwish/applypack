@@ -12,6 +12,7 @@ import {
   Flash,
   Hint,
   Input,
+  More,
   Notice,
   PageHeader,
   SectionTitle,
@@ -219,9 +220,12 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
           <Hint class="mt-2">
             A <span class="text-ink">gate</span> buckets (pass / unknown / fail, never points), the
             <span class="text-ink"> stars</span> weigh a scored criterion, a <span class="text-ink">note</span> is shown and
-            not counted. Rows the posting wrote say so; edit the words, change the mode, tick Remove — and add your own in
-            the last row, in your own words.
+            not counted.
           </Hint>
+          <More class="mt-1">
+            Rows the posting wrote say so; edit the words, change the mode, tick Remove — and add your own in the last row,
+            in your own words.
+          </More>
           {rubricEmpty && (
             <div class="mt-3 flex flex-wrap items-center gap-3">
               <Hint>The posting could not be read into a draft. Add criteria below, or read the posting again.</Hint>
@@ -583,11 +587,14 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
         )}
       </Card>
       <Hint class="mt-3">
-        Created <When at={screening.createdAt} />. "Priority to talk to" means every gate passed; "Ask first" means one is unknown and the scorecard has the
-        question. A failed gate is a fact about the posting's conditions, never a verdict on the person. A score
-        with a small +N or −N beside it carries your own adjustment from the scorecard; the computed number is in
-        its tooltip and in the export.
+        Created <When at={screening.createdAt} />. A failed gate is a fact about the posting's conditions, never a
+        verdict on the person.
       </Hint>
+      <More class="mt-1">
+        "Priority to talk to" means every gate passed; "Ask first" means one is unknown and the scorecard has the
+        question. A score with a small +N or −N beside it carries your own adjustment from the scorecard; the
+        computed number is in its tooltip and in the export.
+      </More>
       <style dangerouslySetInnerHTML={{ __html: RUN_BADGE_CSS + DISCLOSURE_CSS }} />
       <script
         type="module"

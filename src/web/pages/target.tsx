@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { Badge, Button, Card, FitBadge, Flash, Hint, HistoryChip, SUBMIT_ONCE, TONE_TEXT, When } from '../ui';
+import { Badge, Button, Card, FitBadge, Flash, Hint, HistoryChip, More, SUBMIT_ONCE, TONE_TEXT, When } from '../ui';
 import type { FlashMessage } from '../flash';
 import { FIT_OK_FLOOR, fitTone } from '../format';
 import type { MatchWithResume } from '../../resume/store';
@@ -555,10 +555,12 @@ export const TargetPage: FC<TargetPageProps> = ({
           ></div>
           <Hint class="mt-2">
             A dashed underline means nothing in your resume backs the word yet — write it in where
-            it is true and it counts, or confirm it below; the number reads your text, not our guess
-            about you. Benefits and equal-opportunity text stay unmarked on purpose: nobody is
-            screened on them.
+            it is true and it counts, or confirm it below.
           </Hint>
+          <More class="mt-1">
+            The number reads your text, not our guess about you. Benefits and equal-opportunity text
+            stay unmarked on purpose: nobody is screened on them.
+          </More>
         </Card>
 
         <Card class="pane-resume">

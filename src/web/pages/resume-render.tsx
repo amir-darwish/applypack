@@ -36,7 +36,7 @@ export interface RenderPageProps {
 
 const ORIGIN_NOTE: Record<RenderPageProps['origin'], string> = {
   ai: 'Read by the AI as data, then checked line by line against your own words — anything it did not copy exactly was dropped.',
-  text: 'Read from the resume text by the built-in reader — the AI reading was not stored, or did not answer. The AI pairs a skills table back into groups and keeps every line.',
+  text: 'Read by the built-in reader — no AI reading is stored. An AI reading pairs a skills table back into groups and keeps every line.',
 };
 
 const STYLE_NOTE: Record<RenderPageProps['styleSource'], string> = {
@@ -215,8 +215,8 @@ export const ResumeRenderPage: FC<RenderPageProps> = ({
             </Button>
           </div>
           <Hint class="mt-2">
-            Saving keeps the .docx as a resume of its own, beside this one — the loop then continues on a file the
-            editor can write into. This resume is not touched by any of the four.
+            Saving keeps the .docx as a new resume beside this one, one the editor can write into. This resume is not
+            touched by any of the four.
           </Hint>
         </Card>
       </form>

@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import type { ResumeReview } from '@prisma/client';
-import { ActionForm, Badge, Button, Card, FitBadge, Hint, Input, SectionTitle, When } from '../ui';
+import { ActionForm, Badge, Button, Card, FitBadge, Hint, Input, More, SectionTitle, When } from '../ui';
 import type { Tone } from '../format';
 
 import { readReviewAdvice, readReviewGrades, type ReviewAdvice } from '../../resume/prompts';
@@ -102,11 +102,11 @@ const ReviewExplainer: FC = () => (
         </li>
       ))}
     </ul>
-    <Hint>
-      One AI call, about a minute. Nothing runs on its own and nothing is rewritten for you: where
-      a stronger line would need a number your resume doesn't have, the advice asks you for it
-      instead of inventing one.
-    </Hint>
+    <Hint>One AI call, about a minute; nothing runs on its own.</Hint>
+    <More>
+      Nothing is rewritten for you: where a stronger line would need a number your resume doesn't
+      have, the advice asks you for it instead of inventing one.
+    </More>
   </div>
 );
 
