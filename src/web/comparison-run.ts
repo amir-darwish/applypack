@@ -2,7 +2,7 @@ import type { Context } from 'hono';
 import { hashShortId } from '../text-utils';
 import { briefForPosting, briefLine } from '../resume/brief';
 import { findReusableMatch, matchResumeToJob } from '../resume/match';
-import type { MatchMode } from '../resume/match-mode';
+import type { MatchEvidence, MatchMode } from '../resume/match-mode';
 import { reuseNotice } from '../resume/match-reuse';
 import type { MatchJobInput } from '../resume/prompts';
 import { flashRedirect } from './flash';
@@ -26,6 +26,8 @@ export interface ComparisonRequest {
   /** The text to judge: the stored version, the editor's draft, or a fresh upload. */
   text: string;
   mode: MatchMode;
+  /** R1: the owner's facts and other resumes, or the text alone — a file on the Compare page may not be theirs. */
+  evidence: MatchEvidence;
   rebuild: boolean;
   force: boolean;
   /** Where a finished run sends the user. */
@@ -50,7 +52,7 @@ export async function startComparison(c: Context, req: ComparisonRequest): Promi
   // replace. A full report asked of a stored quick check needs only the
   // suggestions call.
   if (!req.force && !rebuild) {
-    const reused = await findReusableMatch(jobId, resume.id, text, mode);
+    const reused = await findReusableMatch(jobId, resume.id, text, mode, req.evidence);
     if (reused?.decision === 'reuse') {
       return flashRedirect(req.resultUrl(reused.row.id), 'warn', reuseNotice(formatRelative(reused.row.createdAt)), {
         rerun: true,
@@ -88,7 +90,7 @@ export async function startComparison(c: Context, req: ComparisonRequest): Promi
  */
 export async function runComparison(runId: string, req: ComparisonRequest, lead: RunStep[] = []): Promise<void> {
   if (!req.force && !req.rebuild) {
-    const reused = await findReusableMatch(req.jobId, req.resume.id, req.text, req.mode);
+    const reused = await findReusableMatch(req.jobId, req.resume.id, req.text, req.mode, req.evidence);
     if (reused?.decision === 'reuse') {
       updateRun(runId, {
         stage: 'done',
@@ -132,6 +134,7 @@ async function compare(runId: string, req: ComparisonRequest): Promise<void> {
   const row = await matchResumeToJob({ id: resume.id, name: resume.name, version: resume.version, text }, job, {
     draft: req.draft ?? text !== resume.text,
     mode,
+    evidence: req.evidence,
     rebuild,
     brief: briefed,
     onError: (r) => {

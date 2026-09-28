@@ -8,7 +8,7 @@
  */
 
 export const SCORING = {
-  version: 4,
+  version: 5,
   keywordMax: 60,
   requirementWeight: { must: 3, preferred: 2, nice: 1, context: 0 },
   statusCredit: { present: 1, add: 0.5, ask_user: 0, cannot_claim: 0 },
@@ -166,11 +166,13 @@ export function entriesFromLive(rows) {
     const primary = r.primary === true && r.requirement === 'must';
     const written = r.found === true;
     const has = written || r.status === 'present' || r.status === 'add';
+    // v5 (R2): only another resume backs an unwritten `add` — half credit, and no cover for the primary stack.
+    const borrowed = !written && r.status === 'add' && Boolean(r.elsewhere);
     return {
       requirement: r.requirement ?? 'preferred',
       primary,
       credit: written ? 1 : has ? 0.5 : 0,
-      primaryHit: primary && has,
+      primaryHit: primary && has && !borrowed,
       primaryWritten: primary && written,
       ceilCredit: has ? 1 : 0,
       ceilPrimaryHit: primary && has,

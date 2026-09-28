@@ -2408,6 +2408,15 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
+- [x] **`resume-honesty`** (minor, part 1 v2.31.0) — the 2026-09 plan's
+      W7. R1: a one-off file is judged on its text alone unless it is the
+      person's own (a checkbox on both launchers, or the same text as a saved
+      resume); R2: a skill only another resume backs keeps half credit but
+      covers nothing in the primary stack (score v5, ADR 0012 addendum); S20:
+      a posting not in English says the comparison and the letter are written
+      for English; R16: a re-upload of the same text is refused, and a new
+      version that reads like the old one is not made — no scan paid for.
+
 - [x] **`ai-provider-hardening`** (patch, v2.28.1) — the 2026-09 plan's AI-4
       rest (H40–H46; H44 had shipped). A refused key or sign-in is its own
       outcome (`unauthorized`): never retried, the engine left alone until

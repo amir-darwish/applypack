@@ -1,5 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import { Hono, type Context } from 'hono';
+import { sameTextAs } from '../../resume/duplicate';
 import { idParam } from '../params';
 import { onceGuard } from '../once-guard';
 import { logger } from '../../logger';
@@ -11,6 +12,7 @@ import { matchResumeToJob } from '../../resume/match';
 import { prisma } from '../../db';
 import {
   createResume,
+  findResumeWithText,
   deleteImpact,
   deleteResume,
   getLatestReviewForResume,
@@ -89,6 +91,11 @@ resumesRoute.post('/resumes', resumeUploadLimit('/resumes'), onceGuard(() => 're
   const form = await c.req.parseBody();
   const upload = await readResumeUpload(form);
   if ('error' in upload) return flashRedirect('/resumes', 'err', upload.error);
+  // R16: the same text again is not a second resume, and not a second scan to pay for.
+  const same = await findResumeWithText(upload.text);
+  if (same) {
+    return flashRedirect(`/resumes/${same.id}`, 'warn', `This file reads exactly like "${same.name}" (v${same.version}), so nothing was added — it is already here.`);
+  }
   const name =
     typeof form.name === 'string' && form.name.trim().length > 0
       ? form.name.trim().slice(0, MAX_RESUME_NAME_CHARS)
@@ -105,9 +112,14 @@ resumesRoute.post('/resumes', resumeUploadLimit('/resumes'), onceGuard(() => 're
 resumesRoute.post('/resumes/:id/replace', resumeUploadLimit('/resumes'), onceGuard((c) => `resumes:replace:${c.req.param('id')}`, (c) => `/resumes/${c.req.param('id')}`), async (c) => {
   const id = idParam(c.req.param('id'));
   if (!Number.isFinite(id)) return c.text('Bad id', 400);
-  if (!(await getResume(id))) return c.text('Not found', 404);
+  const current = await getResume(id);
+  if (!current) return c.text('Not found', 404);
   const upload = await readResumeUpload(await c.req.parseBody());
   if ('error' in upload) return flashRedirect(`/resumes/${id}`, 'err', upload.error);
+  // R16: a new version that reads like the one in place changes nothing, and would pay for a scan of it.
+  if (sameTextAs(upload.text, [current])) {
+    return flashRedirect(`/resumes/${id}`, 'warn', `This file reads exactly like v${current.version}, the version you have, so no new version was made.`);
+  }
   const resume = await replaceResumeFile(id, upload);
   return startScanRun(c, resume, {
     subtitle: `"${resume.name}" v${resume.version} — re-reading headline, tools, seniority.`,

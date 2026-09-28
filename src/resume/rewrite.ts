@@ -1,4 +1,5 @@
 import type { ResumeMatch } from '@prisma/client';
+import { readMatchEvidence } from './match-mode';
 import { logger } from '../logger';
 import { getAiRuntime } from '../ai-runtime';
 import { askForJson } from '../ai-json';
@@ -38,7 +39,11 @@ export async function rewriteAction(
   if (!action) return null;
 
   const keywords = readKeywords(match.keywords);
-  const [facts, briefed] = await Promise.all([listFacts(), briefForPosting(job)]);
+  // A comparison judged on its text alone keeps its rewrites to it too (TASKS R1).
+  const [facts, briefed] = await Promise.all([
+    readMatchEvidence(match.breakdown) === 'own' ? listFacts() : [],
+    briefForPosting(job),
+  ]);
   const answer = await askForJson(
     await getAiRuntime(),
     {

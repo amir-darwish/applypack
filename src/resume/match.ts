@@ -30,7 +30,7 @@ import { dropMalformedKeywords } from './keyword-shape';
 import { annotateEvidence } from './evidence';
 import { planKeywordFrame } from './keyword-frame';
 import { loadKeywordMatcher } from './keyword-matcher';
-import { readMatchMode, type MatchMode } from './match-mode';
+import { readMatchEvidence, readMatchMode, type MatchEvidence, type MatchMode } from './match-mode';
 import { pickReusable, readPromptVersion, readVerificationId } from './match-reuse';
 import { scoreMatch } from './score';
 import {
@@ -73,18 +73,25 @@ export async function matchResumeToJob(
     rebuild?: boolean;
     /** Already read by the caller, so it can show the reading as its own step. */
     brief?: BriefResult | null;
+    /**
+     * R1: the owner's confirmed facts and other resumes join the judgment
+     * (`own`, the default), or the text is judged alone (`text`) — a file on
+     * the Compare page may be a friend's or an old one.
+     */
+    evidence?: MatchEvidence;
     onError?: (reason: string) => void;
   } = {},
 ): Promise<ResumeMatch | null> {
   const mode = opts.mode ?? 'fast';
+  const judgedOn = opts.evidence ?? 'own';
   // The posting read on its own (ADR 0044): the keyword frame and the
   // requirement groups come from here, and the second comparison of an edited
   // resume reuses the stored reading instead of paying for it again. A failure
   // is not fatal — without it the call derives the frame itself, as before.
   const briefed = opts.brief !== undefined ? opts.brief : await briefForPosting(job, { onError: opts.onError });
   const [facts, otherSkills, previousMatch, matcher, verification, refreshedAt, industries] = await Promise.all([
-    listFacts(),
-    listOtherResumeSkills(resume.id),
+    judgedOn === 'own' ? listFacts() : [],
+    judgedOn === 'own' ? listOtherResumeSkills(resume.id) : [],
     getLatestMatchForJob(job.id),
     loadKeywordMatcher(),
     // The full analysis reads what the verifier learned about the company as
@@ -206,6 +213,7 @@ export async function matchResumeToJob(
     mode,
     frame: frame.reason,
     verificationId: verification?.id ?? null,
+    evidence: judgedOn,
   });
   if (shaped.dropped.length > 0) {
     logger.info({ jobId: job.id, dropped: shaped.dropped }, 'resume: keywords that were not terms');
@@ -280,6 +288,7 @@ export async function findReusableMatch(
   resumeId: number,
   text: string,
   mode: MatchMode,
+  evidence: MatchEvidence = 'own',
 ): Promise<{ row: ResumeMatch; decision: 'reuse' | 'suggest' } | null> {
   const refreshedAt = await getPostingRefreshedAt(jobId);
   const [rows, verification] = await Promise.all([
@@ -292,7 +301,8 @@ export async function findReusableMatch(
     promptVersion: readPromptVersion(match.breakdown),
     mode: readMatchMode(match.breakdown),
     verificationId: readVerificationId(match.breakdown),
+    evidence: readMatchEvidence(match.breakdown),
   }));
-  const best = pickReusable(stored, text, PROMPT_VERSION, mode, verification?.id ?? null);
+  const best = pickReusable(stored, text, PROMPT_VERSION, mode, verification?.id ?? null, evidence);
   return best ? { row: best.row.match, decision: best.decision } : null;
 }

@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { sameTextAs } from './duplicate';
 import type { CandidateFact, CoverLetter, Resume, ResumeMatch, ResumeReview } from '@prisma/client';
 import { prisma } from '../db';
 import { withGlobalWriteLock } from '../settings';
@@ -8,7 +9,7 @@ import { readFrameReason, type FrameReason } from './keyword-frame';
 import { loadKeywordMatcher } from './keyword-matcher';
 import { effectiveKeywords } from './keyword-overrides';
 import type { JsonResume } from './json-resume';
-import { readMatchMode, storedBreakdown, withSuggestionsMode, type MatchMode } from './match-mode';
+import { readMatchEvidence, readMatchMode, storedBreakdown, type MatchEvidence, withSuggestionsMode, type MatchMode } from './match-mode';
 import { comparedResumeName } from './match-name';
 import { readPromptVersion, readVerificationId } from './match-reuse';
 import type { MatchAction, MatchKeyword, MatchSuggestions, ResumeMatchResult, ResumeReviewResult, ResumeScan } from './prompts';
@@ -42,6 +43,13 @@ export async function getResumeOriginal(
     where: { id },
     select: { sourceFilename: true, mimeType: true, original: true },
   });
+}
+
+/** One of the user's resumes whose text is this text (TASKS R16): a re-upload, or their own file on a launcher. */
+export async function findResumeWithText(text: string): Promise<{ id: number; name: string; version: number } | null> {
+  const rows = await prisma.resume.findMany({ where: { hidden: false }, select: { id: true, name: true, version: true, text: true } });
+  const hit = sameTextAs(text, rows);
+  return hit ? { id: hit.id, name: hit.name, version: hit.version } : null;
 }
 
 export async function createResume(input: {
@@ -436,11 +444,13 @@ export async function createMatch(input: {
   result: ResumeMatchResult;
   /** Computed by score.ts — the model never sets the number (ADR 0012). */
   breakdown: ScoreBreakdown;
-  /** All four ride inside the breakdown JSON — the memo key (match-reuse.ts), the row's shape (ADR 0029), where its keyword frame came from (keyword-frame.ts) and which verification's company context it read (ADR 0042). */
+  /** All five ride inside the breakdown JSON — the memo key (match-reuse.ts), the row's shape (ADR 0029), where its keyword frame came from (keyword-frame.ts), which verification's company context it read (ADR 0042) and whose evidence it used (TASKS R1). */
   promptVersion: number;
   mode: MatchMode;
   frame: FrameReason;
   verificationId: number | null;
+  /** R1: whether the owner's facts and other resumes were used, or the text alone. */
+  evidence: MatchEvidence;
 }): Promise<ResumeMatch> {
   const r = input.result;
   return prisma.resumeMatch.create({
@@ -549,6 +559,7 @@ export async function rescoreMatchKeywords<T>(
           mode: readMatchMode(match.breakdown),
           frame: readFrameReason(match.breakdown),
           verificationId: readVerificationId(match.breakdown),
+          evidence: readMatchEvidence(match.breakdown),
         }) as Prisma.InputJsonValue,
         matchScore: next.score,
       },

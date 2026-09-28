@@ -13,6 +13,20 @@ import type { ScoreBreakdown } from './score';
 export const MATCH_MODES = ['fast', 'full'] as const;
 export type MatchMode = (typeof MATCH_MODES)[number];
 
+/**
+ * Whose evidence a comparison may use beside the text it judges (TASKS R1):
+ * `own` — the owner's confirmed facts and their other resumes, as always;
+ * `text` — the text alone, for a file that may not be theirs (a friend's, an
+ * old one): lent the owner's facts, it scored higher than it should.
+ */
+export type MatchEvidence = 'own' | 'text';
+
+/** No marker is a row from before it, and every one of those used the owner's evidence. */
+export function readMatchEvidence(breakdown: unknown): MatchEvidence {
+  if (typeof breakdown !== 'object' || breakdown === null) return 'own';
+  return (breakdown as { evidence?: unknown }).evidence === 'text' ? 'text' : 'own';
+}
+
 /** A form value → mode; anything unrecognised is the quick check. */
 export function parseMatchMode(v: unknown): MatchMode {
   return v === 'full' ? 'full' : 'fast';
@@ -38,9 +52,17 @@ export function storedBreakdown(
     frame: FrameReason | null;
     /** The verification whose company context a full row read; null for a quick check or none stored (#162 stage 2). */
     verificationId: number | null;
+    evidence: MatchEvidence;
   },
 ): Record<string, unknown> {
-  return { ...bd, promptVersion: meta.promptVersion, mode: meta.mode, frame: meta.frame, verificationId: meta.verificationId };
+  return {
+    ...bd,
+    promptVersion: meta.promptVersion,
+    mode: meta.mode,
+    frame: meta.frame,
+    verificationId: meta.verificationId,
+    evidence: meta.evidence,
+  };
 }
 
 /** The same JSON after suggestions were added — the row is now a full analysis, read with this verification's context. */

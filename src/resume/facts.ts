@@ -77,9 +77,11 @@ export function applyFacts(
 }
 
 /**
- * Point unclaimable keywords at another stored resume that evidences them,
- * via the scanned skill tags. Annotation only — the status stays honest for
- * THIS resume; the UI shows "in <resume>" as a safe-to-surface opportunity.
+ * Point keywords at another stored resume that evidences them, via the
+ * scanned skill tags. On an unclaimable keyword it is an opportunity ("in
+ * <resume>"); on an `add` it says where the evidence came from — and a skill
+ * this resume only borrows does not cover the primary stack (TASKS R2,
+ * score.ts). A confirmed fact is the candidate's own word, never borrowed.
  */
 export function annotateElsewhere(
   keywords: MatchKeyword[],
@@ -92,7 +94,8 @@ export function annotateElsewhere(
     if (key.length > 0 && !byPart.has(key)) byPart.set(key, s.resumeName);
   }
   return keywords.map((k) => {
-    if (k.status !== 'ask_user' && k.status !== 'cannot_claim') return k;
+    const borrowable = k.status === 'add' && !k.note?.startsWith('user-confirmed');
+    if (k.status !== 'ask_user' && k.status !== 'cannot_claim' && !borrowable) return k;
     const hit = names(k)
       .map((n) => byPart.get(n))
       .find((r) => r !== undefined);

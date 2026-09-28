@@ -1,4 +1,4 @@
-import type { MatchMode } from './match-mode';
+import type { MatchEvidence, MatchMode } from './match-mode';
 
 /*
  * When a stored comparison already answers a request (docs/target-plan.md
@@ -22,6 +22,8 @@ export interface StoredMatch {
   mode: MatchMode;
   /** The verification a full row read its company context from; null = none stored, or a row from before the marker. */
   verificationId?: number | null;
+  /** Whose evidence it used (R1): a text-only judgment never answers for one with the owner's facts, or back. */
+  evidence?: MatchEvidence;
 }
 
 /** reuse = show the row; suggest = the row lacks only suggestions; none = a new analysis. */
@@ -34,8 +36,10 @@ export function reuseDecision(
   mode: MatchMode,
   /** The verification a full request would read now; a full row that read another one is stale for a full request (#162 stage 2). */
   verificationId: number | null = null,
+  evidence: MatchEvidence = 'own',
 ): ReuseDecision {
   if (previous === null || previous.promptVersion !== promptVersion || previous.resumeText !== text) return 'none';
+  if ((previous.evidence ?? 'own') !== evidence) return 'none';
   if (mode === 'full' && previous.mode === 'full' && (previous.verificationId ?? null) !== verificationId) return 'none';
   return previous.mode === 'full' || mode === 'fast' ? 'reuse' : 'suggest';
 }
@@ -52,10 +56,11 @@ export function pickReusable<T extends StoredMatch>(
   promptVersion: number,
   mode: MatchMode,
   verificationId: number | null = null,
+  evidence: MatchEvidence = 'own',
 ): { row: T; decision: Exclude<ReuseDecision, 'none'> } | null {
   let suggest: T | null = null;
   for (const row of rows) {
-    const decision = reuseDecision(row, text, promptVersion, mode, verificationId);
+    const decision = reuseDecision(row, text, promptVersion, mode, verificationId, evidence);
     if (decision === 'reuse') return { row, decision };
     if (decision === 'suggest' && suggest === null) suggest = row;
   }

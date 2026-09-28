@@ -86,3 +86,9 @@ test('pickReusable: a full row behind a newer quick check on the same text is sh
   assert.equal(pickReusable([{ ...fast, promptVersion: 6 }], text, 7, 'full', 1), null);
   assert.equal(pickReusable([], text, 7, 'full', 1), null);
 });
+
+test('a text-only judgment never answers for one with the owner\'s evidence, or back (R1)', () => {
+  assert.equal(reuseDecision({ ...full, evidence: 'text' }, TEXT, 5, 'full', null, 'own'), 'none');
+  assert.equal(reuseDecision(full, TEXT, 5, 'full', null, 'text'), 'none', 'a row from before the marker used the owner\'s evidence');
+  assert.equal(reuseDecision({ ...full, evidence: 'text' }, TEXT, 5, 'full', null, 'text'), 'reuse');
+});

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFrameReason } from './keyword-frame';
-import { parseMatchMode, readMatchMode, storedBreakdown, withSuggestionsMode } from './match-mode';
+import { readMatchEvidence, parseMatchMode, readMatchMode, storedBreakdown, withSuggestionsMode } from './match-mode';
 import { scoreMatch } from './score';
 
 test('parseMatchMode: only an explicit "full" upgrades; everything else is the quick check', () => {
@@ -20,9 +20,9 @@ test('readMatchMode: the marker, and "full" for rows written before it', () => {
   assert.equal(readMatchMode(null), 'full');
 });
 
-test('storedBreakdown carries the score parts and all four markers', () => {
+test('storedBreakdown carries the score parts and all five markers', () => {
   const bd = scoreMatch([], null, 0);
-  const stored = storedBreakdown(bd, { promptVersion: 6, mode: 'fast', frame: 'rebuild', verificationId: 12 });
+  const stored = storedBreakdown(bd, { promptVersion: 6, mode: 'fast', frame: 'rebuild', verificationId: 12, evidence: 'text' });
   assert.equal(stored.score, bd.score);
   assert.equal(stored.promptVersion, 6);
   assert.equal(stored.mode, 'fast');
@@ -30,7 +30,10 @@ test('storedBreakdown carries the score parts and all four markers', () => {
   assert.equal(stored.verificationId, 12);
   assert.equal(readMatchMode(stored), 'fast');
   assert.equal(readFrameReason(stored), 'rebuild');
-  assert.equal(storedBreakdown(bd, { promptVersion: 6, mode: 'fast', frame: null, verificationId: null }).verificationId, null);
+  assert.equal(readMatchEvidence(stored), 'text');
+  // A row from before the marker used the owner's evidence (R1).
+  assert.equal(readMatchEvidence({ mode: 'full' }), 'own');
+  assert.equal(storedBreakdown(bd, { promptVersion: 6, mode: 'fast', frame: null, verificationId: null, evidence: 'own' }).verificationId, null);
 });
 
 test('withSuggestionsMode flips a stored JSON to full, stamps the verification and keeps everything else', () => {

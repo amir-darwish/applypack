@@ -80,3 +80,25 @@ test — then generate one artifact from a single source instead.
 - "Two copies of the formula (TS + browser mjs)": there are three.
   `site/public/demo/score.mjs` is a byte copy of `src/web/public/score.mjs`
   for the landing page's demo, held equal by `src/web/site-vendor.test.ts`.
+
+## Addendum (2026-09-28): evidence that is not this resume's (score v5)
+
+Two ways the number rose on evidence the resume itself does not show — fixes 1
+and 2 of the inflation analysis (TASKS R1, R2):
+
+- **A one-off file is judged on its own text.** A file or a paste on the
+  Compare or Cover letter launcher may be a friend's resume or an old one, yet
+  it was judged with the owner's confirmed facts and the skills of their other
+  resumes, and a letter from it could claim them. It is now judged on its text
+  alone unless the person ticks "my own resume", or the file reads exactly
+  like one of theirs. The choice is stored as the comparison's fifth marker
+  (`evidence`); the memo never answers across the two, and the card says
+  which it was.
+- **A skill another resume backs covers nothing in the primary stack.** The
+  match prompt lets the model call such a skill `add`, and `add` counted
+  toward the primary-stack cap, so a resume that never names React could clear
+  a React posting's cap because another resume does. Its keyword keeps the half
+  credit `add` earns; the cap reads only what this resume shows, or what the
+  candidate confirmed. Writing the word in lifts it, so the ceiling does not
+  move. `SCORING.version` 5, on both sides of the parity test.
+

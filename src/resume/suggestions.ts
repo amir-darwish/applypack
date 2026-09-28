@@ -1,4 +1,5 @@
 import type { ResumeMatch } from '@prisma/client';
+import { readMatchEvidence } from './match-mode';
 import { logger } from '../logger';
 import { getAiRuntime } from '../ai-runtime';
 import { askForJson } from '../ai-json';
@@ -37,7 +38,8 @@ export async function suggestForMatch(
   owed?: string | null,
 ): Promise<ResumeMatch | null> {
   const [facts, verification, briefed, previous, matcher, industries] = await Promise.all([
-    listFacts(),
+    // A comparison judged on its text alone keeps its suggestions to it too (TASKS R1).
+    readMatchEvidence(match.breakdown) === 'own' ? listFacts() : [],
     getLatestVerificationContext(job.id),
     // Written by the comparison this row came from, so this is normally a
     // stored read: who this employer is and what its first reader scans for.

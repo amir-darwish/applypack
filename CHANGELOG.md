@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.31.0] — 2026-09-28
+
+### Changed
+- **A file or pasted text on the Compare and Cover letter pages is judged on
+  its own text.** It may be a friend's resume or an old one, so your
+  confirmed facts and your other resumes no longer lift its score or back its
+  letter. Tick **A file or pasted text here is my own resume** to use them —
+  or upload a file that matches one of your saved resumes, which counts as
+  yours.
+- **A skill that only another of your resumes shows counts half and does not
+  lift the core-stack limit.** The screener reads this resume. Write the word
+  in and it counts in full.
+
+### Added
+- **A posting that is not in English says so** on the Resume match and Cover
+  letter tabs: the comparison and the letter are written for English.
+- **The same resume uploaded twice is not added twice,** and a "new version"
+  that reads exactly like the current one is not made. Neither pays for a
+  scan.
+
 ## [2.30.0] — 2026-09-28
 
 ### Added

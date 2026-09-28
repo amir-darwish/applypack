@@ -27,7 +27,7 @@ export interface MatchAlignment {
 
 export const SCORING = {
   /** v4: either/or requirement groups count once (ADR 0044). */
-  version: 4,
+  version: 5,
   /** Keyword coverage: up to 60 points, weighted by how hard the posting wants each term. */
   keywordMax: 60,
   requirementWeight: { must: 3, preferred: 2, nice: 1, context: 0 } as Record<RequirementLevel, number>,
@@ -45,6 +45,10 @@ export const SCORING = {
    * with the same resume and the same TypeScript called `add`.
    */
   primaryCovered: ['present', 'add'] as readonly KeywordStatus[],
+  // v5 (TASKS R2): an `add` whose only evidence is another of the candidate's
+  // resumes (`elsewhere`) keeps its half credit and does NOT cover the primary
+  // stack — the screener reads this resume, not the other one. Writing the
+  // word in lifts the cap, so the ceiling is unchanged.
   /** Alignment: title 10 + summary 10 + most recent role 20. */
   titleMax: 10,
   summaryMax: 10,
@@ -275,22 +279,33 @@ export function computeScore(
   };
 }
 
+/** What the formula reads off a stored keyword. */
+export interface ScoredKeyword {
+  requirement: RequirementLevel;
+  primary: boolean;
+  status: KeywordStatus;
+  group?: string | null;
+  /** Another of the candidate's resumes evidences it (facts.ts:annotateElsewhere). */
+  elsewhere?: string | null;
+}
+
 /**
  * Server-side entries: credit from the AI's status judgment on the analysed
  * text. A "primary" mark only counts when the keyword is a must requirement —
  * a preferred technology must never cap the score (v3).
  */
 export function entriesFromKeywords(
-  keywords: { requirement: RequirementLevel; primary: boolean; status: KeywordStatus; group?: string | null }[],
+  keywords: ScoredKeyword[],
 ): ScoreEntry[] {
   return keywords.map((k) => {
     const primary = k.primary && k.requirement === 'must';
     const claimable = k.status === 'present' || k.status === 'add';
+    const borrowed = k.status === 'add' && Boolean(k.elsewhere);
     return {
       requirement: k.requirement,
       primary,
       credit: SCORING.statusCredit[k.status] ?? 0,
-      primaryHit: SCORING.primaryCovered.includes(k.status),
+      primaryHit: SCORING.primaryCovered.includes(k.status) && !borrowed,
       primaryWritten: k.status === 'present',
       ceilCredit: claimable ? 1 : 0,
       ceilPrimaryHit: primary && claimable,
@@ -300,7 +315,7 @@ export function entriesFromKeywords(
 }
 
 export function scoreMatch(
-  keywords: { requirement: RequirementLevel; primary: boolean; status: KeywordStatus; group?: string | null }[],
+  keywords: ScoredKeyword[],
   alignment: MatchAlignment | null,
   /** Flags that survived `red-flags.ts:countableFlags`. */
   countedFlags: number,
