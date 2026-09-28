@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.30.0] — 2026-09-28
+
+### Added
+- **Start with this computer.** On an `npm start` install, Settings →
+  General has one button that makes ApplyPack start when you log in (a
+  launchd agent on macOS, a user service on Linux, a Startup script on
+  Windows). The same button takes it away again.
+- **A daily copy of your data.** The first start of each day copies the
+  database to `snapshots/<date>` in the data folder, and the last three are
+  kept (`APPLYPACK_SNAPSHOTS` changes how many, 0 turns it off). Restoring
+  is copying it back.
+- **`npm run db:import` moves a Docker install in:** dump the rows on the
+  Docker side, import them here — everything replaced in one go, or nothing
+  if the dump fails part-way. docs/install.md has both commands.
+
+### Fixed
+- **The command-line engines could not start on Windows,** where npm
+  installs them as `.cmd` files Node will not run without a shell. ApplyPack
+  now runs the script inside the file directly — never through `cmd.exe`,
+  which would read a posting's text as commands.
+
 ## [2.29.0] — 2026-09-28
 
 ### Added

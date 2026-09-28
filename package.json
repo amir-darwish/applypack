@@ -1,6 +1,6 @@
 {
   "name": "applypack",
-  "version": "2.29.0",
+  "version": "2.30.0",
   "private": true,
   "description": "Runs on your own computer with npm start: an AI console for the whole job search that finds the postings, checks they're real, scores your resume without flattering it, drafts the cover letter, tracks the application. 33 sources, 5 swappable AI backends, your data in a Postgres of its own, Docker on a VPS if you like.",
   "license": "MIT",
@@ -18,6 +18,7 @@
     "start": "npm run build && node dist/local/launcher.js",
     "db": "npm run build && node dist/local/launcher.js db",
     "stop": "node dist/local/launcher.js stop",
+    "db:import": "npm run build && node dist/scripts/db-import.js",
     "start:worker": "node dist/index.js",
     "start:web": "node dist/web/server.js",
     "dev": "tsx watch src/index.ts",
