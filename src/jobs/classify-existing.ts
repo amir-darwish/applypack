@@ -36,7 +36,7 @@ export async function classifyExistingJob(
   const outcome = await classifyJob(
     {
       title: job.title,
-      companyName: job.company.name,
+      companyName: job.employer ?? job.company.name,
       location: job.location,
       place: { workplace: job.workplace, countries: job.countries, regions: job.regions },
       description: job.description,

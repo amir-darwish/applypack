@@ -4,6 +4,8 @@ import { config } from '../config';
 import { logger } from '../logger';
 import { createLimiter } from '../concurrency';
 import { anyBaseFilterReason } from '../filter';
+import { employerGate, hiringKey } from '../employer';
+import { loadEmployerRules } from './employer-store';
 import { DISMISS_KEY, FILTER_KEY } from '../funnel';
 import { withApplyLinkFlags } from '../apply-link';
 import { validDate } from '../fetchers/dates';
@@ -41,9 +43,11 @@ export interface FetchResult {
   watch?: WatchRules;
 }
 
-/** A fetched row plus its parsed location — read once, used by the filter and the insert. */
+/** A fetched row plus its parsed location and whose it is — read once, used by the gates and the insert. */
 interface Candidate extends FetchResult {
   place: StoredPlace;
+  /** employer.ts:hiringKey — the aggregator's employer, else the source; null when nobody said (ADR 0056). */
+  employerKey: string | null;
 }
 
 export interface ProcessStats {
@@ -81,6 +85,9 @@ export interface ProcessStats {
   rejectedExcluded: number;
   rejectedWorkplace: number;
   rejectedPlace: number;
+  /** Turned away by who hires, before any AI (ADR 0056): a muted company, or one applied to inside the window. */
+  rejectedMuted: number;
+  rejectedApplied: number;
   /** Dismissed by every search after scoring, by the winner's reason — the funnel's second half. */
   dismissedLowFit: number;
   dismissedLocation: number;
@@ -114,6 +121,8 @@ export function emptyProcessStats(): ProcessStats {
     rejectedExcluded: 0,
     rejectedWorkplace: 0,
     rejectedPlace: 0,
+    rejectedMuted: 0,
+    rejectedApplied: 0,
     dismissedLowFit: 0,
     dismissedLocation: 0,
     dismissedSalary: 0,
@@ -187,6 +196,9 @@ export async function processNormalizedJobs(
   // round trips on a cold tick were spent asking "is this stored?" one
   // (companyId, externalId) at a time (audit 2026-09-10, DATA-4).
   const stored = await storedKeys(items.map((i) => i.job));
+  // Read once per tick, like the schedule: whom the user muted, and — with
+  // the re-apply window on — where they applied inside it (ADR 0056).
+  const employers = await loadEmployerRules();
   for (const item of items) {
     if (isCancelled && (await isCancelled())) {
       cancelled = true;
@@ -215,9 +227,14 @@ export async function processNormalizedJobs(
     const rejected = alertsEveryPosting(item.watch)
       ? null
       : anyBaseFilterReason({ ...item.job, ...place }, classify ? profiles : activeProfiles);
-    if (rejected !== null) {
+    // Who hires, before any AI: a muted company, or one applied to inside the
+    // re-apply window, is turned away like a filter reject — no row, no call.
+    // Reversible: after an unmute the next tick meets the posting as new.
+    const employerKey = hiringKey(item.job.employer, item.companyName, item.job.employer !== undefined);
+    const turnedAway = rejected ?? employerGate(employerKey, employers, alertsEveryPosting(item.watch));
+    if (turnedAway !== null) {
       stats.filterRejected++;
-      stats[FILTER_KEY[rejected]]++;
+      stats[FILTER_KEY[turnedAway]]++;
       continue;
     }
     const key = `${item.job.companyId}:${item.job.externalId}`;
@@ -226,7 +243,7 @@ export async function processNormalizedJobs(
       continue;
     }
     seen.add(key);
-    candidates.push({ ...item, place });
+    candidates.push({ ...item, place, employerKey });
   }
   if (cancelled) {
     stats.abortedMidRun = 1;
@@ -261,7 +278,8 @@ export async function processNormalizedJobs(
     outcome: limit(async (): Promise<ClassifyOutcome> => {
       if (cancelled) return { results: new Map(), location: null, preFiltered: false };
       return classifyJob(
-        buildClassifyInput(item.job, item.companyName, item.place),
+        // The employer an aggregator named, not the feed's own name (ADR 0056).
+        buildClassifyInput(item.job, item.job.employer ?? item.companyName, item.place),
         profiles,
         classifierMode,
         (reason) => {
@@ -402,7 +420,7 @@ export async function processNormalizedJobs(
       delivery = await sendAlert(
         {
           title: created.title,
-          companyName: starred(companyName, item.watch),
+          companyName: starred(job.employer ?? companyName, item.watch),
           watched: item.watch?.watched === true,
           attribution: item.source ? attributionLine(item.source.atsType, item.source.atsToken) : null,
           location: created.location,
@@ -539,7 +557,7 @@ type CrossListing = ReturnType<typeof findCrossListing<FingerprintedJob>>;
  * now" can overlap, and the loser of that race holds a duplicate, not an error.
  */
 async function persistJob(
-  { job, companyName, place }: Candidate,
+  { job, companyName, place, employerKey }: Candidate,
   c: ClaudeClassification | null,
   status: JobStatus,
   priorityRulesApplied: string[],
@@ -567,6 +585,8 @@ async function persistJob(
           crossListedOfJobId: crossListing?.job.id ?? null,
         }),
         ...(summary !== null && c === null && { summary }),
+        employer: job.employer ?? null,
+        employerKey,
         alertHeldAt,
         // Every search's verdict, written with the row it belongs to — a
         // second statement could leave a scored Job with no JobScore.

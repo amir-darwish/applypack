@@ -46,7 +46,7 @@ export async function runStaleApplicationsJob(): Promise<{ stats: CronStats }> {
 
   const items: StaleApplicationItem[] = rows.map((j) => ({
     title: j.title,
-    companyName: j.company.name,
+    companyName: j.employer ?? j.company.name,
     url: j.url,
     appliedAt: j.appliedAt as Date,
     daysSince: daysSince(j.appliedAt as Date),

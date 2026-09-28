@@ -44,6 +44,7 @@ export async function deliverHeldAlerts(now: Date, schedule: Schedule): Promise<
     select: {
       id: true,
       title: true,
+      employer: true,
       location: true,
       countries: true,
       workplace: true,
@@ -75,7 +76,7 @@ export async function deliverHeldAlerts(now: Date, schedule: Schedule): Promise<
       title: j.title,
       // The ★ is on the row, not on the send: a held posting from a watched
       // company must read the same as one sent on the spot (ADR 0036).
-      companyName: starred(j.company.name, watchRules(j.company)),
+      companyName: starred(j.employer ?? j.company.name, watchRules(j.company)),
       watched: j.company.watched,
       attribution: attributionLine(j.company.atsType, j.company.atsToken),
       location: j.location,

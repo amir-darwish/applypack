@@ -7,6 +7,7 @@ import { isDiscordWebhookUrl } from './notify/discord';
 import { prisma } from './db';
 import { logger } from './logger';
 import { runSeed } from './seed';
+import { fillEmployerKeys } from './jobs/employer-store';
 import {
   addNotificationTarget,
   getSettings,
@@ -29,6 +30,9 @@ export async function init(): Promise<void> {
 
   await bootstrapDefaultProfile();
   await bootstrapTargetsFromEnv();
+  // ADR 0056, once per install: a failure leaves the flag unset, so the next
+  // boot tries again, and the worker starts either way.
+  await fillEmployerKeys().catch((err: unknown) => logger.warn({ err }, 'init: employer keys not filled; the next boot tries again'));
 }
 
 /**

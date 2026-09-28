@@ -163,7 +163,7 @@ async function reclassify(opts: ReclassifyOptions): Promise<{ stats: CronStats }
             classifyJob(
               {
                 title: j.title,
-                companyName: j.company.name,
+                companyName: j.employer ?? j.company.name,
                 location: j.location,
                 place: { workplace: j.workplace, countries: j.countries, regions: j.regions },
                 description: j.description,

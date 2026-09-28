@@ -1,3 +1,4 @@
+import { EMPLOYER_GATES, type EmployerGate } from './employer';
 import { FILTER_REASONS, type FilterReason } from './filter';
 import type { DismissReason } from './jobs/verdict-merge';
 
@@ -17,6 +18,8 @@ export const FUNNEL_KEYS = [
   'rejectedExcluded',
   'rejectedWorkplace',
   'rejectedPlace',
+  'rejectedMuted',
+  'rejectedApplied',
   'duplicate',
   'preFiltered',
   'classified',
@@ -99,13 +102,18 @@ export interface FunnelView {
   dismissed: FunnelReason[];
 }
 
-/** The counter each filter gate adds to (process-jobs.ts writes it, the funnel reads it). */
+/** Why the tick turned a posting away before any AI: a filter gate, or who hires (ADR 0056). */
+type TurnedAway = FilterReason | EmployerGate;
+
+/** The counter each gate adds to (process-jobs.ts writes it, the funnel reads it). */
 export const FILTER_KEY = {
   title: 'rejectedTitle',
   excluded: 'rejectedExcluded',
   workplace: 'rejectedWorkplace',
   place: 'rejectedPlace',
-} as const satisfies Record<FilterReason, FunnelKey>;
+  muted: 'rejectedMuted',
+  applied: 'rejectedApplied',
+} as const satisfies Record<TurnedAway, FunnelKey>;
 
 /** The counter each dismissal reason adds to, in a tick and in a re-score. */
 export const DISMISS_KEY = {
@@ -114,11 +122,13 @@ export const DISMISS_KEY = {
   'low-salary': 'dismissedSalary',
 } as const satisfies Record<DismissReason, FunnelKey>;
 
-const FILTERED_AS: Record<FilterReason, string> = {
+const FILTERED_AS: Record<TurnedAway, string> = {
   title: 'without a title keyword',
   excluded: 'with an excluded word in the title',
   workplace: 'in an arrangement you did not pick',
   place: 'outside your places',
+  muted: 'from companies you muted',
+  applied: 'at companies you applied to recently',
 };
 
 const DISMISSED_AS: Record<DismissReason, string> = {
@@ -135,9 +145,11 @@ function largestFirst(parts: FunnelReason[]): FunnelReason[] {
   return parts.filter((r) => r.count > 0).sort((a, b) => b.count - a.count);
 }
 
-/** Why the base filter turned postings away, by gate. */
+/** Why the tick turned postings away before any AI, by gate. */
 export function filteredReasons(counts: FunnelCounts): FunnelReason[] {
-  return largestFirst(FILTER_REASONS.map((reason) => ({ label: FILTERED_AS[reason], count: counts[FILTER_KEY[reason]] ?? 0 })));
+  return largestFirst(
+    [...FILTER_REASONS, ...EMPLOYER_GATES].map((reason) => ({ label: FILTERED_AS[reason], count: counts[FILTER_KEY[reason]] ?? 0 })),
+  );
 }
 
 /** Why every search set a scored posting aside, by the winning search's reason. */
