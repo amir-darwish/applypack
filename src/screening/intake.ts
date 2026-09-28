@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { extname } from 'node:path';
+import { basename, dirname, extname } from 'node:path';
 import { ACCEPTED_EXTENSIONS } from '../resume/resume-text';
 import { readZipEntries, ZipError } from '../resume/zip';
 import { hamming64, MAX_HAMMING_DISTANCE, simhash64 } from '../fingerprint';
@@ -195,4 +195,93 @@ export function planIntake(files: ReadFile[], known: KnownApplicant[]): IntakePl
     plan.adds.push({ file: i, sameAs });
   });
   return plan;
+}
+
+/* ---------- cover letters (TASKS E3, Q9) ---------- */
+
+/** A file name that says it is a cover letter, in the languages the corpus writes them. */
+const LETTER_NAME =
+  /cover(?:ing)?[\s_.-]*letter|anschreiben|motivation(?:s)?(?:schreiben|[\s_.-]*letter)|lettre[\s_.-]*de[\s_.-]*motivation|carta[\s_.-]*de[\s_.-]*presentaci|list[\s_.-]*motywacyjny|супровідн|мотиваційн|сопроводительн|мотивационн/iu;
+/** How a letter opens. */
+const SALUTATION =
+  /^(?:dear|hello|hi|to whom it may concern|sehr geehrte|liebe|шановн|добрий день|уважаем|здравствуйте|szanown|dzień dobry|madame|monsieur)(?![\p{L}])/iu;
+/** How a letter closes. */
+const VALEDICTION =
+  /^(?:sincerely|yours (?:sincerely|faithfully|truly)|kind regards|best regards|warm regards|regards|best wishes|mit freundlichen grüßen|viele grüße|з повагою|с уважением|z poważaniem|cordialement)(?![\p{L}])/iu;
+/** A resume's own section headings: two of them make a file a resume, whatever else it says. */
+const RESUME_HEADING =
+  /^#*\s*(?:experience|work experience|professional experience|employment history|education|skills|technical skills|projects|досвід(?: роботи)?|освіта|навички|опыт(?: работы)?|образование|навыки|berufserfahrung|ausbildung|kenntnisse|doświadczenie|wykształcenie|umiejętności)(?![\p{L}])/iu;
+/** Where a salutation is looked for, and a valediction, in non-empty lines. */
+const SALUTATION_LINES = 3;
+const VALEDICTION_LINES = 6;
+const HEADING_MAX_CHARS = 40;
+/** A letter is a page; a longer file that merely opens politely is a resume. */
+const LETTER_MAX_CHARS = 6_000;
+
+/**
+ * Why a file is a cover letter rather than a resume, or null: its file name
+ * says so, or — with no resume heading anywhere — it opens with a salutation
+ * and closes with a valediction. Two resume headings make a file a resume
+ * whatever its name: a letter on top of a CV is still the CV.
+ */
+export function coverLetterSignal(fileName: string, text: string): 'name' | 'text' | null {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const headings = lines.filter((l) => l.length <= HEADING_MAX_CHARS && RESUME_HEADING.test(l)).length;
+  if (headings >= 2) return null;
+  if (LETTER_NAME.test(basename(fileName))) return 'name';
+  const shaped =
+    headings === 0 &&
+    text.length <= LETTER_MAX_CHARS &&
+    lines.slice(0, SALUTATION_LINES).some((l) => SALUTATION.test(l)) &&
+    lines.slice(-VALEDICTION_LINES).some((l) => VALEDICTION.test(l));
+  return shaped ? 'text' : null;
+}
+
+export interface UploadedDocument {
+  /** The file's name with its folder path, as the upload carries it. */
+  name: string;
+  archive: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+/** Words a file name spends on what the document is rather than whose it is. */
+const DOCUMENT_WORDS = new Set(['cv', 'resume', 'résumé', 'lebenslauf', 'curriculum', 'vitae', 'cover', 'covering', 'letter', 'motivation', 'anschreiben', 'final', 'updated', 'new', 'en', 'de', 'ua', 'pl']);
+
+function stem(name: string): string {
+  return basename(name, extname(name))
+    .toLowerCase()
+    .split(/[^\p{L}]+/u)
+    .filter((w) => w.length > 1 && !DOCUMENT_WORDS.has(w))
+    .join(' ');
+}
+
+const folderOf = (d: UploadedDocument): string => `${d.archive ?? ''}::${dirname(d.name.replace(/^\.?\/+/, ''))}`;
+const digitsOf = (s: string | null): string => (s ?? '').replace(/\D/g, '');
+
+/**
+ * Whose each cover letter is, or null: the only resume in its folder (a
+ * folder per candidate, or an upload of one CV and one letter), else the
+ * resume with its email or phone — this upload's first, then the ones already
+ * stored — else the only resume whose file name has the same stem once "CV"
+ * and "cover letter" are taken out ("Ann_Lee_CV.pdf", "Ann_Lee_Cover_Letter.pdf").
+ * `add` indexes `resumes`.
+ */
+export function letterOwners(letters: UploadedDocument[], resumes: UploadedDocument[], known: KnownApplicant[]): SameAs[] {
+  const byFolder = new Map<string, number[]>();
+  resumes.forEach((r, i) => byFolder.set(folderOf(r), [...(byFolder.get(folderOf(r)) ?? []), i]));
+  const samePerson = (a: { email: string | null; phone: string | null }, b: { email: string | null; phone: string | null }): boolean =>
+    (a.email !== null && b.email !== null && a.email.toLowerCase() === b.email.toLowerCase()) ||
+    (digitsOf(a.phone).length >= 9 && digitsOf(a.phone) === digitsOf(b.phone));
+  return letters.map((letter) => {
+    const inFolder = byFolder.get(folderOf(letter)) ?? [];
+    if (inFolder.length === 1) return { add: inFolder[0]! };
+    const byContact = resumes.findIndex((r) => samePerson(letter, r));
+    if (byContact !== -1) return { add: byContact };
+    const stored = known.find((k) => samePerson(letter, k));
+    if (stored) return { id: stored.id };
+    const own = stem(letter.name);
+    const byStem = own === '' ? [] : resumes.flatMap((r, i) => (stem(r.name) === own ? [i] : []));
+    return byStem.length === 1 ? { add: byStem[0]! } : null;
+  });
 }

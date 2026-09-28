@@ -227,18 +227,21 @@ export async function createApplicants(
 }
 
 /** A table row: everything but the file and the two texts — three hundred applicants twice over is what the page used to load (DATA-5). */
-export type ApplicantRow = Omit<ApplicantWithVerdict, 'text' | 'redactedText'>;
+export type ApplicantRow = Omit<ApplicantWithVerdict, 'text' | 'redactedText'> & {
+  /** Cover letters attached to this applicant (TASKS E3). */
+  letters: number;
+};
 
 export async function listApplicants(screeningId: number, rubricVersion: number): Promise<ApplicantRow[]> {
   const rows = await prisma.applicant.findMany({
     where: { screeningId },
     orderBy: { number: 'asc' },
     omit: { original: true, text: true, redactedText: true },
-    include: { verdicts: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    include: { verdicts: { orderBy: { createdAt: 'desc' }, take: 1 }, _count: { select: { letters: true } } },
   });
-  return rows.map(({ verdicts, ...a }) => {
+  return rows.map(({ verdicts, _count, ...a }) => {
     const verdict = verdicts[0] ?? null;
-    return { ...a, verdict, stale: verdict !== null && verdict.rubricVersion !== rubricVersion };
+    return { ...a, letters: _count.letters, verdict, stale: verdict !== null && verdict.rubricVersion !== rubricVersion };
   });
 }
 
@@ -276,6 +279,47 @@ export async function getApplicant(id: number): Promise<(ApplicantWithVerdict & 
   const { verdicts, ...a } = row;
   const verdict = verdicts[0] ?? null;
   return { ...a, verdict, stale: verdict !== null && verdict.rubricVersion !== row.screening.rubricVersion };
+}
+
+export interface NewLetter {
+  applicantId: number;
+  sourceFilename: string;
+  mimeType: string;
+  original: Buffer;
+  text: string;
+}
+
+/** Cover letters found in an upload, each on the applicant it belongs to (TASKS E3); one already attached is not attached twice. */
+export async function createLetters(letters: NewLetter[]): Promise<number> {
+  if (letters.length === 0) return 0;
+  const existing = await prisma.applicantLetter.findMany({
+    where: { applicantId: { in: [...new Set(letters.map((l) => l.applicantId))] } },
+    select: { applicantId: true, text: true },
+  });
+  const seen = new Set(existing.map((e) => `${e.applicantId}\u0000${e.text}`));
+  const fresh = letters.filter((l) => {
+    const key = `${l.applicantId}\u0000${l.text}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (fresh.length === 0) return 0;
+  const out = await prisma.applicantLetter.createMany({ data: fresh.map((l) => ({ ...l, original: new Uint8Array(l.original) })) });
+  return out.count;
+}
+
+/** An applicant's letters for the scorecard — the text to read, the bytes left in the database. */
+export async function listLetters(applicantId: number): Promise<{ id: number; sourceFilename: string; text: string; createdAt: Date }[]> {
+  return prisma.applicantLetter.findMany({
+    where: { applicantId },
+    orderBy: { id: 'asc' },
+    select: { id: true, sourceFilename: true, text: true, createdAt: true },
+  });
+}
+
+export async function getLetterFile(id: number): Promise<{ applicantId: number; original: Buffer; sourceFilename: string; mimeType: string } | null> {
+  const row = await prisma.applicantLetter.findUnique({ where: { id }, select: { applicantId: true, original: true, sourceFilename: true, mimeType: true } });
+  return row ? { ...row, original: Buffer.from(row.original) } : null;
 }
 
 export async function getApplicantFile(id: number): Promise<{ original: Buffer; sourceFilename: string; mimeType: string } | null> {

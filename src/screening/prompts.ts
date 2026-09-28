@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SECTORS } from './sectors';
 import { fence, untrustedDirective } from '../prompt-fence';
 import { extractJson, jsonFailure, type ParseResult } from '../text-utils';
 import type { MatchJobInput } from '../resume/prompts';
@@ -25,8 +26,13 @@ import {
  * Pure: no I/O.
  */
 
-/** v4: v3 with the evidence ladder spelled out for lists — a stack line is at most "role"; a term the text never spells is absent. */
-export const SCREEN_PROMPT_VERSION = 4;
+/**
+ * v4: v3 with the evidence ladder spelled out for lists — a stack line is at most "role"; a term the text never spells is absent.
+ * v5: a role's sector is picked from the sector vocabulary (sectors.ts, TASKS E6) — free words only when none fits.
+ */
+export const SCREEN_PROMPT_VERSION = 5;
+/** The version that began reading stand-out facts: a verdict from before it has none to show. */
+export const STANDOUT_SINCE = 3;
 /** The answer: one entry per criterion, the roles with dates, three stand-out facts, a few quotes and five questions. */
 export const SCREEN_MAX_TOKENS = 7_500;
 /** Stand-out facts per applicant — enough to say what the criteria missed, few enough to read in a row. */
@@ -141,7 +147,7 @@ const RULE_ANSWERS = `"answers" — one entry per criterion in the SCREENING RUB
    - overall: the whole resume against the whole posting, in "overall": "exceptional" (would be shortlisted at any company for this role), "strong", "partial", "weak", "none" — with three "reasons" and up to three "concerns", each one clause, and the single line that most supports the grade in "quote". This is the one place you weigh everything at once; the other criteria are answered on their own.
    - roles: no entry — the application reads years, sectors and company types off "roles".`;
 
-const RULE_ROLES = `"roles" — every job in the resume, most recent first: "position", "employer", "start" and "end" copied CHARACTER FOR CHARACTER (the application parses the dates and drops any string it cannot find); "relevant" true when the role is the kind of work the position asks for, "why" in one clause; "sector" the employer's sector in two or three words as the text gives it (null when it does not); "companyType" one of product | agency | consultancy | startup | enterprise | public sector | non-profit, or null. Internships and study projects are roles too, marked as such in "why".`;
+const RULE_ROLES = `"roles" — every job in the resume, most recent first: "position", "employer", "start" and "end" copied CHARACTER FOR CHARACTER (the application parses the dates and drops any string it cannot find); "relevant" true when the role is the kind of work the position asks for, "why" in one clause; "sector" the employer's sector — the closest of ${SECTORS.map((s) => s.label).join(', ')}; two or three words of the text's own when none fits, null when the text does not say; "companyType" one of product | agency | consultancy | startup | enterprise | public sector | non-profit, or null. Internships and study projects are roles too, marked as such in "why".`;
 
 const RULE_STANDOUT = `"standout" — up to ${MAX_STANDOUT} facts a hiring manager would want to know that NO criterion asked about, most notable first: a technology or a domain beyond the rubric, a number the person quotes (users, revenue, scale, savings), a publication, a patent, open source, a conference talk, a language, an award. "fact" in eight words or fewer, "quote" the line that carries it, copied character for character — a fact without a located quote is dropped. These are never scored; they are what the person reads before deciding.`;
 

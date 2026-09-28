@@ -2408,7 +2408,7 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
-- [x] **`screening-fixes`** (minor, part 1 v2.34.0) — the 2026-09 plan's
+- [x] **`screening-fixes`** (minor, parts 1–2 v2.34.0 … v2.35.0) — the 2026-09 plan's
       W8. E1 had shipped in v2.19.0 (a skill's "within N months" in its
       text). E5: religion and health fields are redacted. E4 (Q6): an
       applicant the leak check flags is held — no model reads it until a
@@ -2416,6 +2416,13 @@ release-discipline skill, a docs/site block does not.
       decided whole (`intake.ts:planIntake`) and written in one transaction
       (`store.ts:createApplicants`) instead of one locked transaction per
       file.
+
+      **v2.35.0 (part 2):**
+      - E6 (#217): one sector vocabulary (`screening/sectors.ts`) for the
+        industry criterion and the career line, and prompt v5 asks for its
+        labels.
+      - E3 (Q9): a cover letter in an upload is attached to its applicant
+        (`applicant_letter`), shown on the scorecard, never scored.
 
 - [x] **`resume-honesty`** (minor, parts 1–3 v2.31.0 … v2.33.0) — the 2026-09 plan's
       W7. R1: a one-off file is judged on its text alone unless it is the

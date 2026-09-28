@@ -72,6 +72,8 @@ export interface ApplicantRowView {
   decision: string | null;
   /** Another document of an applicant already in the list — that one's №. */
   sameAs: number | null;
+  /** Cover letters attached to this applicant, read by a person only (TASKS E3). */
+  letters: number;
   /** The person's correction and its reason (ADR 0047 addendum); 0 = none. */
   adjustment: number;
   adjustmentNote: string | null;
@@ -130,6 +132,7 @@ export function rowView(a: ApplicantRow & { sameAsNumber?: number | null }, now 
     note: a.parseNote,
     decision: a.decision,
     sameAs: a.sameAsNumber ?? null,
+    letters: a.letters,
     adjustment: a.scoreAdjustment,
     adjustmentNote: a.adjustmentNote,
     stale: a.stale,

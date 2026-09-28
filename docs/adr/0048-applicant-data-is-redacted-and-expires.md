@@ -86,3 +86,11 @@ no protected-group data by design).
   names what kind of thing leaked (never the value) beside the redacted text.
   **Score it anyway** releases it: the person has read what the model would
   read.
+- **A cover letter is kept for the person, not the model** (TASKS E3, the
+  plan's Q9). A letter in an upload was scored as a second document of its
+  writer ("also №K") — the model read a page of self-description as if it
+  were a resume. It is now attached to its applicant's row in
+  `applicant_letter`, shown on the scorecard, never scored and never sent to
+  a model, so it needs no redaction. It is deleted with its applicant, and so
+  with the screening's retention. A letter whose writer's resume did not come
+  with it is not kept.

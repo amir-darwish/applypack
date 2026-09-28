@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { adjustedScore, calibrationRows, exportRows, groupRows, rowView, scoredBeforePosting } from './screen-view';
 import type { ApplicantWithVerdict } from '../screening/store';
 
-function applicant(over: Partial<ApplicantWithVerdict> & { verdict?: ApplicantWithVerdict['verdict'] }): ApplicantWithVerdict {
+function applicant(over: Partial<ApplicantWithVerdict & { letters: number }> & { verdict?: ApplicantWithVerdict['verdict'] }): ApplicantWithVerdict & { letters: number } {
   return {
     id: 1,
+    letters: 0,
     screeningId: 1,
     number: 1,
     name: 'A',

@@ -761,6 +761,7 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
         )}
         <div class="truncate text-xs text-ink-faint" title={r.file}>
           {r.file}
+          {r.letters > 0 ? ` · + cover letter${r.letters === 1 ? '' : 's'}` : ''}
           {r.status !== 'ok' && r.note ? ` — ${r.note}` : ''}
           {r.stale && r.verdict ? ` — scored ${r.verdict.score} under an earlier rubric` : ''}
         </div>

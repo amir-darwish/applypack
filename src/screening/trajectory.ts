@@ -1,4 +1,5 @@
 import { parseRange, yearsCovered, type DateRange } from './dates';
+import { sectorLabels } from './sectors';
 import type { ScreenRole } from './prompts';
 
 /*
@@ -54,7 +55,8 @@ export function trajectoryOf(roles: ScreenRole[], now: Date): Trajectory {
     yearsRelevant: relevant.length > 0 ? yearsCovered(relevant) : null,
     averageTenure: dated.length > 0 && yearsTotal !== null ? Math.round((dated.reduce((n, d) => n + yearsCovered([d.range]), 0) / dated.length) * 10) / 10 : null,
     inRoleNow: dated.some((d) => d.range.to.year * 12 + ((d.range.to.month ?? 12) - 1) >= nowIndex),
-    sectors: distinct(roles.map((r) => r.sector)),
+    // One vocabulary (sectors.ts, TASKS E6): three runs' spellings of a sector read as one.
+    sectors: distinct(roles.flatMap((r) => sectorLabels(r.sector))),
     companyTypes: distinct(roles.map((r) => r.companyType)),
   };
 }

@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.35.0] — 2026-09-28
+
+### Changed
+- **Screening: a cover letter is attached to its applicant, not scored as a
+  second resume.**
+  - A letter in an upload goes to its writer's row: the resume in the same
+    folder, the one with the same email or phone, or the file with the same
+    name ("Ann_Lee_CV.pdf" and "Ann_Lee_Cover_Letter.pdf").
+  - The scorecard shows it, and the table row says "+ cover letter". No AI
+    reads it.
+  - A letter whose writer's resume did not come with it is left out, and
+    the upload says so.
+- **Screening: sectors are read the same way every time.** "Banking" counts
+  for a "payments / fintech" criterion, and "e-commerce/fitness" and
+  "fitness/e-commerce" are one career. Scores already stored pick this up
+  when scored again, or all at once with
+  `node dist/scripts/rescore-screenings.js --write` (no AI).
+
 ## [2.34.0] — 2026-09-28
 
 ### Changed

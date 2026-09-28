@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { sectorMatches } from './sectors';
 import { monthsSinceLatest, parseRange, parseResumeDate, yearsCovered, type DateRange } from './dates';
 import { answerShape, type ImpactGrade, type OverallGrade, type ScreenAnswer, type ScreenReply, type ScreenRole } from './prompts';
 import { coreCriteria, CRITERION_MODES, EVIDENCE_RUNGS, SCREEN_LEVELS, type Criterion, type EvidenceRung, type Rubric } from './rubric';
@@ -122,14 +123,6 @@ function roleFacts(reply: ScreenReply, now: Date): RoleFacts {
     years: ranges.length > 0 ? yearsCovered(ranges) : null,
     recentMonths: monthsSinceLatest(ranges, now),
   };
-}
-
-/** Sector words overlap, plurals folded — "fintech, payments" against "payment processing". */
-export function sectorMatches(sector: string | null, items: string[]): boolean {
-  if (!sector) return false;
-  const words = (s: string) => new Set((s.toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}-]+/gu) ?? []).map((w) => w.replace(/s$/, '')));
-  const have = words(sector);
-  return items.some((item) => [...words(item)].some((w) => w.length > 2 && have.has(w)));
 }
 
 export function scoreScreening(input: ScreenScoreInput): ScreenBreakdown {

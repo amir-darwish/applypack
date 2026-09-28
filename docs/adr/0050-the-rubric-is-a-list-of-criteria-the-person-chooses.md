@@ -88,3 +88,16 @@ more (or less) than two stars.
   `src/screening/anchor.ts:anchorScreenReply` enforces it: a quote that is a
   list of terms supports at most "listed", or "role" on a job's own stack
   line, and a term the text never spells is "absent" (CLAUDE.md gotcha 18).
+
+## Addendum (2026-09-28): one sector vocabulary (TASKS E6, issue #217)
+
+The industry criterion read the model's free words for a role's sector, and
+the same resume read three times gave three careers. The worst case was a
+"payments technology / fintech" criterion that swung between 6.3 years and
+none. `src/screening/sectors.ts` holds one vocabulary: groups of names for
+one sector, where payments and banking are fintech but never a neighbour.
+The criterion matches a known item by meaning and an unknown one by a
+shared word, generic words ("services", "software") aside. The career line
+names known sectors by the vocabulary's label, and prompt v5 asks the model
+for the closest label. `rescore-screenings.js --write` re-reads stored
+verdicts with it, without a call.
