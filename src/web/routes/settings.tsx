@@ -133,7 +133,7 @@ import { isBlankProfile } from '../../profile-guards';
 import type { Profile } from '@prisma/client';
 import { isSettingsTab, SettingsPage, type EngineServer, type SourceKeyRow } from '../pages/settings';
 import { sourceLabel } from '../source-names';
-import { clearFlashCookie, firstIssue, flashRedirect, parseFlashCookie } from '../flash';
+import { clearFlashCookie, firstIssue, flashRedirect, parseFlashCookie, refusedField } from '../flash';
 import { describeDestination } from '../../notify/targets';
 import { isDiscordWebhookUrl, testDiscordWebhook } from '../../notify/discord';
 import { missingLinkMessage } from '../profile-links';
@@ -485,7 +485,7 @@ settingsRoute.post('/settings/schedule', async (c) => {
   };
   const parsed = ScheduleSchema.safeParse(candidate);
   if (!parsed.success) {
-    return flashRedirect('/settings?tab=general', 'err', `Schedule not saved (${firstIssue(parsed.error.issues)}). The stored schedule is unchanged; fix that field and save again.`);
+    return flashRedirect('/settings?tab=general', 'err', `Schedule not saved (${firstIssue(parsed.error.issues)}). The stored schedule is unchanged; fix that field and save again.`, refusedField(c.req.path, parsed.error.issues));
   }
   await setSchedule(parsed.data);
   const held = await loadHeldLine(parsed.data);
@@ -1249,7 +1249,7 @@ settingsRoute.post('/settings/profiles/:id/save', async (c) => {
       { errors: parsed.error.flatten().fieldErrors, form },
       'profile form: validation failed',
     );
-    return flashRedirect('/settings?tab=profile', 'err', `${firstIssue(parsed.error.issues)}. Profile not saved; fix that field and save again.`);
+    return flashRedirect('/settings?tab=profile', 'err', `${firstIssue(parsed.error.issues)}. Profile not saved; fix that field and save again.`, refusedField(c.req.path, parsed.error.issues));
   }
   const f = parsed.data;
 

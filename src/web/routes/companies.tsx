@@ -20,7 +20,7 @@ import { resolvePack } from '../../starter-packs/probe';
 import { activeWatchlistRun } from '../watchlist-runs';
 import { installAiTokens } from '../../watchlist/resolve';
 import { currentSuggestions, waitingSuggestions } from '../source-suggestions';
-import { firstIssue, flashRedirect, safeBack } from '../flash';
+import { firstIssue, flashRedirect, refusedField, safeBack } from '../flash';
 import {
   boardUrl,
   buildPreview,
@@ -202,7 +202,7 @@ companiesRoute.post('/companies/mutes', async (c) => {
   const body = await c.req.parseBody();
   const back = safeBack(body.back, '/companies#muted');
   const parsed = MuteFormSchema.safeParse(body);
-  if (!parsed.success) return flashRedirect(back, 'err', `Nothing was muted: ${firstIssue(parsed.error.issues)}.`);
+  if (!parsed.success) return flashRedirect(back, 'err', `Nothing was muted: ${firstIssue(parsed.error.issues)}.`, refusedField(c.req.path, parsed.error.issues));
   const mute = await muteEmployer(parsed.data.name, parsed.data.reason);
   if (!mute) return flashRedirect(back, 'err', 'Nothing was muted: that name has no letters or digits to match.');
   const hidden = await prisma.job.count({ where: { employerKey: mute.key } });

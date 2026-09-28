@@ -139,6 +139,7 @@ export const Notice: FC<PropsWithChildren<{ tone: keyof typeof MESSAGE_TONE; cla
 /** `children` is the message's one action, if any — a form or a button after the text. */
 export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ flash, children }) =>
   flash ? (
+    <>
     <div
       role="status"
       class={`mb-4 flex items-start gap-2.5 rounded-md border px-3.5 py-2.5 text-sm ${FLASH_TONE[flash.kind]}`}
@@ -172,7 +173,7 @@ export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ 
           </>
         )}
       </svg>
-      <span class="min-w-0 flex-1">{flash.text}</span>
+      <span id="flash-text" class="min-w-0 flex-1">{flash.text}</span>
       {flash.download && (
         <a href={flash.download} class="shrink-0 font-medium underline">
           Download .docx
@@ -180,6 +181,18 @@ export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ 
       )}
       {children}
     </div>
+    {/* TASKS U15: the field the message is about says so itself — invalid, described by the message, focused.
+        Looked up inside the form that posted; both parts passed flash.ts's patterns, so neither can close a quote.
+        Focused on load: the jump to a redirect's #fragment comes after this script and takes the focus back. */}
+    {flash.field && (
+      <script
+        type="module"
+        dangerouslySetInnerHTML={{
+          __html: `const f = document.querySelector('form[action=${JSON.stringify(flash.field.form)}] [name=${JSON.stringify(flash.field.name)}]'); if (f) { f.setAttribute('aria-invalid', 'true'); f.setAttribute('aria-describedby', ['flash-text', f.getAttribute('aria-describedby')].filter(Boolean).join(' ')); const focus = () => f.focus(); if (document.readyState === 'complete') focus(); else addEventListener('load', focus, { once: true }); }`,
+        }}
+      />
+    )}
+    </>
   ) : null;
 
 const CARD_VARIANT = {
@@ -653,7 +666,7 @@ export const Field: FC<PropsWithChildren<{ label: string; hint?: string; more?: 
 );
 
 const CONTROL =
-  'w-full rounded-md border border-line-strong bg-surface-raised px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint shadow-sm transition-colors duration-150 hover:border-ink-faint focus:border-accent-strong focus:outline-none focus:ring-2 focus:ring-accent/25';
+  'w-full rounded-md border border-line-strong bg-surface-raised px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint shadow-sm transition-colors duration-150 hover:border-ink-faint focus:border-accent-strong focus:outline-none focus:ring-2 focus:ring-accent/25 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-danger/20';
 
 export const Input: FC<Record<string, unknown> & { mono?: boolean }> = ({
   mono,
