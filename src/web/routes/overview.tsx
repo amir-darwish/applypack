@@ -19,6 +19,8 @@ async function watchedSummary(): Promise<{ companies: number; newJobs: number }>
   return { companies, newJobs };
 }
 import { loadHeldLine, loadNextCheck } from '../schedule-view';
+import { withoutMuted } from '../../employer';
+import { mutedKeys } from '../../jobs/employer-store';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RECENT_LIMIT = 8;
@@ -33,18 +35,21 @@ overviewRoute.get('/', async (c) => {
   if (needsWelcome(settings)) return c.redirect('/welcome', 303);
 
   const since24h = new Date(Date.now() - DAY_MS);
+  // The numbers link to /jobs, which hides a muted company's rows (ADR 0056): they count what it shows.
+  const unmuted = withoutMuted(await mutedKeys()) ?? {};
   const [countsRows, last24hRows, recentAlerts, latestRunRows] = await Promise.all([
     prisma.job.groupBy({
       by: ['status'],
       _count: { _all: true },
+      where: unmuted,
     }),
     prisma.job.groupBy({
       by: ['status'],
       _count: { _all: true },
-      where: { fetchedAt: { gte: since24h } },
+      where: { fetchedAt: { gte: since24h }, ...unmuted },
     }),
     prisma.job.findMany({
-      where: { status: { in: [JobStatus.ALERTED, JobStatus.NEW] } },
+      where: { status: { in: [JobStatus.ALERTED, JobStatus.NEW] }, ...unmuted },
       orderBy: [{ alertedAt: 'desc' }, { fetchedAt: 'desc' }],
       take: RECENT_LIMIT,
       include: { company: { select: { name: true } } },

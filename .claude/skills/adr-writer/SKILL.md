@@ -114,6 +114,7 @@ of truth when the two disagree.
 - 0053 Uniqueness lives in the database, and a row's state is written with the row
 - 0054 `npm start` runs ApplyPack with a built-in Postgres; Docker is the server option
 - 0055 Every AI attempt is a ledger row, and a bill, a plan and a local model are never added together *(extends 0007)*
+- 0056 A company can be muted, and a company applied to can rest, before any AI reads its postings
 
 Check a proposal against these before touching process layout, sources,
 scheduling, profiles, how the AI is called, the resume score or employer

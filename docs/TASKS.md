@@ -2362,10 +2362,15 @@ release-discipline skill, a docs/site block does not.
       for it again), N5 (a third answer, **Not sure**, stops a fact
       question without claiming or denying anything), N9 (the version in
       the sidebar; an update check, off by default, one GitHub request a
-      week). Next: N6 company mute + re-apply cooldown (needs a
-      `Job.employer` column — aggregators keep the employer only inside
-      the description), N7 board export, N11 the Overview's next-three
-      card, N8 `needsBrowser` + paste-the-page.
+      week). **v2.23.0:** N6 (ADR 0056) — who hires is stored
+      (`Job.employer` / `employerKey`, set by every aggregator's mapper,
+      filled once for older rows), a company can be muted from its
+      posting or by name (turned away before any AI, hidden on `/jobs`,
+      reversible), and an opt-in re-apply window rests a company applied
+      to. The employer name now reaches the classifier, the verifier, the
+      letter and the alerts instead of the aggregator's. Next: N7 board
+      export, N11 the Overview's next-three card, N8 `needsBrowser` +
+      paste-the-page.
 
 ### 20.4 Owner items
 

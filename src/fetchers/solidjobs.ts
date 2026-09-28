@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { fetchWithRetry, sleep, stripHtml } from '../http';
 import type { WorkplaceCode } from '../location';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 /**
  * solid.jobs — the Polish IT board (stage 3c, plan §4.2). Its public offers
@@ -101,6 +102,7 @@ export function mapSolidJobsPage(raw: unknown, companyId: number): { jobs: Norma
 function toNormalized(j: SolidJob, companyId: number): NormalizedJob {
   return {
     companyId,
+    employer: cleanEmployer(j.company),
     externalId: j.jobOfferKey,
     title: j.title.trim(),
     url: j.url,

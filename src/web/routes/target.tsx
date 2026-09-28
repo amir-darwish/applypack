@@ -112,7 +112,7 @@ targetRoute.post('/target', resumeUploadLimit('/target'), async (c) => {
     if ('error' in resume) return flashRedirect(back, 'err', resume.error);
     return startComparison(c, {
       jobId: job.id,
-      job: { id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description },
+      job: { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description },
       resume,
       text: resume.text,
       mode: f.mode,

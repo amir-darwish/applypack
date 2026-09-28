@@ -6,6 +6,7 @@ import type { LocationHints, WorkplaceCode } from '../location';
 import { feedItemKey } from '../text-utils';
 import type { NormalizedJob } from '../types';
 import { firstText, nested } from './xml-text';
+import { cleanEmployer } from '../employer';
 
 /**
  * Landing.jobs — the Portuguese tech board (stage 3c, plan §4.2). Its Atom
@@ -76,6 +77,7 @@ export function mapLandingJobsItem(item: LandingJobsItem, companyId: number): No
   const posted = new Date(item.isoDate ?? item.pubDate ?? '');
   return {
     companyId,
+    employer: cleanEmployer(item.author),
     externalId,
     title: (item.title ?? '').trim() || 'Untitled',
     url: link,

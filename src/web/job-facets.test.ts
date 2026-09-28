@@ -145,6 +145,7 @@ const NONE: JobsFilters = {
   verified: '',
   watched: '',
   open: '',
+  muted: '',
   profile: null,
   country: [],
   workplace: [],
@@ -187,6 +188,7 @@ describe('the active-filter row', () => {
     verified: '1',
     watched: '1',
     open: '1',
+    muted: '1',
   };
   const profiles = [{ id: 2, name: 'Laravel remote' }];
 
@@ -194,7 +196,7 @@ describe('the active-filter row', () => {
     const rows = activeFilters(ALL, profiles);
     assert.deepEqual(
       rows.map((f) => f.label),
-      ['Search: Laravel remote', 'United States', 'Place unknown', 'Remote', 'Workplace unknown', 'Posted: last 7 days', 'Verified', '★ Watched', 'Open to me'],
+      ['Search: Laravel remote', 'United States', 'Place unknown', 'Remote', 'Workplace unknown', 'Posted: last 7 days', 'Verified', '★ Watched', 'Open to me', 'Muted companies shown'],
     );
     assert.equal(rows[1]?.flag, '🇺🇸');
     assert.equal(rows[2]?.flag, '');
@@ -228,7 +230,7 @@ describe('the active-filter row', () => {
     assert.equal(filterCount(NONE), 0);
     assert.equal(filterCount({ ...NONE, status: 'NEW', q: 'php', minFit: '70', sort: 'title_asc' }), 0);
     assert.equal(filterCount(ALL), activeFilters(ALL, profiles).length);
-    assert.equal(filterCount(ALL), 9);
+    assert.equal(filterCount(ALL), 10);
   });
 
   it('clear-all lifts the panel and keeps status, search text, fit floor and sort', () => {

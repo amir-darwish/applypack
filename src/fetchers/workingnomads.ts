@@ -3,6 +3,7 @@ import { fetchWithRetry, stripHtml } from '../http';
 import { conditionalHeaders, rememberResponse } from './conditional';
 import { feedItemKey } from '../text-utils';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 const ENDPOINT = 'https://www.workingnomads.com/api/exposed_jobs/';
 
@@ -72,6 +73,7 @@ function toNormalized(j: WorkingNomadsJob, companyId: number): NormalizedJob | n
   const postedAt = j.pub_date ? new Date(j.pub_date) : new Date();
   return {
     companyId,
+    employer: cleanEmployer(j.company_name),
     externalId,
     title: j.title,
     url: j.url,

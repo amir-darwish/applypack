@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { safeDate } from './dates';
 import { fetchWithRetry, stripHtml } from '../http';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 const ALGOLIA_BASE = 'https://hn.algolia.com/api/v1';
 const FRESH_WINDOW_DAYS = 14;
@@ -78,6 +79,7 @@ export function mapHnJobHit(
   const description = stripHtml(bodyRaw);
   return {
     companyId,
+    employer: hnJobEmployer(title),
     externalId: `hn-job-${hit.objectID}`,
     title,
     url: link,
@@ -88,6 +90,17 @@ export function mapHnJobHit(
 }
 
 const TITLE_LOCATION_RE = /\(([^)]+)\)\s*$/;
+
+// Lazy and capped, one line only (gotcha 6): the name ends at the first
+// "is hiring", past an optional "(YC W23)".
+const HIRING_TITLE_RE = /^(.{1,60}?)\s+(?:\(YC\b[^)]{0,20}\)\s+)?(?:is|are)\s+hiring\b/i;
+const NOT_A_NAME = new Set(['we', 'i', 'our', 'you', 'they']);
+
+/** "Infisical (YC W23) Is Hiring …" → "Infisical"; a title of another shape names nobody (ADR 0056). */
+export function hnJobEmployer(title: string): string | null {
+  const name = HIRING_TITLE_RE.exec(title.trim())?.[1];
+  return name && !NOT_A_NAME.has(name.toLowerCase()) ? cleanEmployer(name) : null;
+}
 
 /**
  * HN job titles often look like:

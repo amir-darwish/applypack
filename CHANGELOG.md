@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.23.0] — 2026-09-28
+
+### Added
+- **Mute a company.** From a posting's page (with a reason if you like), or
+  by name under Companies → Muted companies. Its new postings are skipped
+  before any AI reads them, from every source, and are never scored again
+  by "Save & re-classify". The job list and the Overview hide the ones
+  already stored. It says how many and lets you show them. Nothing
+  changes status, and Unmute undoes both. Two spellings of one company,
+  "Acme, Inc." and "ACME", are one mute.
+- **A re-apply window.** Settings → General → Application tracking can rest
+  a company you applied to for 30, 60, 90 or 180 days: its new postings are
+  skipped before any AI. It is off by default.
+- **Who hires, on every aggregator posting.** Remotive, RemoteOK,
+  Arbeitnow, Adzuna, HN and the rest carry many employers. The list, the
+  job page, the alerts and the digest now name the employer, "Acme · via
+  Remotive", instead of the feed. Postings stored before this version get
+  their employer at the next start, except those from the three feeds that
+  never recorded it (RemoteOK, Remotive, Arbeitnow).
+
+### Fixed
+- **The AI was told the feed's name as the company.** For aggregator
+  postings, the classifier, the "Is it real?" web search and the cover
+  letter's greeting all read "Remotive" or "RemoteOK" where the employer
+  belonged. Three feeds never passed the employer on at all. They get the
+  real name now, at no extra token.
+
 ## [2.22.0] — 2026-09-28
 
 ### Fixed

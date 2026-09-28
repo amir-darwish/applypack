@@ -25,6 +25,7 @@ import {
   setPipelineStages,
   setSourceHealthAlerts,
   setStaleApplicationsDigestEnabled,
+  setReapplyDays,
   setUpdateCheck,
   setTelegramEnabled,
   testTelegramTarget,
@@ -72,6 +73,7 @@ import { billingFacts, forgetAiProbe, getAiEngineEnv, probeAiProviders } from '.
 import { APP_VERSION } from '../../app-version';
 import { checkForUpdate } from '../../update-check';
 import { isNewer } from '../../versions';
+import { isReapplyChoice } from '../../employer';
 import { forgetUpdateNotice } from '../update-notice';
 import { billingOf, type AiBilling } from '../../ai-usage';
 import { billingNotes, isSpendPeriod, periodRange, spendView, type SpendPeriod } from '../../ai-spend';
@@ -310,6 +312,7 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
       fixed: s.key === 'applied' || TERMINAL_KEYS.includes(s.key),
     })),
     staleApplicationsDigestEnabled: settings.staleApplicationsDigestEnabled,
+    reapplyDays: settings.reapplyDays,
     updates: {
       enabled: settings.updateCheck,
       current: APP_VERSION,
@@ -870,6 +873,24 @@ settingsRoute.post('/settings/update-check-toggle', async (c) => {
       : isNewer(APP_VERSION, latest)
         ? `Checking weekly. v${latest} is out — you run v${APP_VERSION}.`
         : `Checking weekly. You run the latest release, v${APP_VERSION}.`,
+  );
+});
+
+/** ADR 0056: the re-apply window — one of the listed choices, or off. */
+settingsRoute.post('/settings/reapply', async (c) => {
+  const body = await c.req.parseBody();
+  const raw = typeof body.days === 'string' ? body.days.trim() : '';
+  const days = raw === '' ? null : Number(raw);
+  if (days !== null && !isReapplyChoice(days)) {
+    return flashRedirect('/settings?tab=general', 'err', 'The re-apply window was not changed: pick one of the listed lengths, or Off.');
+  }
+  await setReapplyDays(days);
+  return flashRedirect(
+    '/settings?tab=general',
+    'ok',
+    days === null
+      ? 'Re-apply window off: every company is read again.'
+      : `Re-apply window: ${days} days. New postings at a company you applied to in that time are turned away before any AI.`,
   );
 });
 

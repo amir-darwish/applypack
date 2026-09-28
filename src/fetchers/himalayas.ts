@@ -5,6 +5,7 @@ import { logger } from '../logger';
 import { hashShortId } from '../text-utils';
 import type { NormalizedJob } from '../types';
 import { type FetchContext, EMPTY_CONTEXT } from './fetch-context';
+import { cleanEmployer } from '../employer';
 
 // The browse endpoint caps `limit` at 20 and returns newest-first. One
 // page per hourly tick is plenty; the `offset` param is deprecated
@@ -119,6 +120,7 @@ function toNormalized(j: HimalayasJob, companyId: number): NormalizedJob {
   const rawDescription = j.description.trim().length > 0 ? j.description : (j.excerpt ?? '');
   return {
     companyId,
+    employer: cleanEmployer(j.companyName),
     externalId,
     title: j.title,
     url,

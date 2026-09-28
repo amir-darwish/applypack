@@ -86,6 +86,8 @@ import { buildLetterDocx, DOCX_MIME } from '../../resume/docx-write';
 import { buildLetterPdf } from '../../resume/pdf-write';
 import { setCoverAngles } from '../../settings';
 import { stageChangeEvent, type StageEventData } from '../stage-events';
+import { findMute, mutedKeys } from '../../jobs/employer-store';
+import { employerKey, hiringName, withoutMuted } from '../../employer';
 
 const PAGE_SIZE = 50;
 
@@ -127,6 +129,11 @@ const ListQuerySchema = z.object({
     .string()
     .optional()
     .transform((v) => (v === '1' ? '1' : '')),
+  // ADR 0056: show the postings of muted companies too.
+  muted: z
+    .string()
+    .optional()
+    .transform((v) => (v === '1' ? '1' : '')),
   // Set by the links inside the filter panel: the page they load keeps it open.
   panel: z
     .string()
@@ -162,12 +169,13 @@ jobsRoute.get('/jobs', async (c) => {
     posted: c.req.query('posted'),
     open: c.req.query('open'),
     watched: c.req.query('watched'),
+    muted: c.req.query('muted'),
     panel: c.req.query('panel'),
   });
   if (!parsed.success) {
     return c.text('Invalid query', 400);
   }
-  const { page, status, minFit, q, sort, verified, profile, country, workplace, posted, open, watched, panel } = parsed.data;
+  const { page, status, minFit, q, sort, verified, profile, country, workplace, posted, open, watched, muted, panel } = parsed.data;
   const now = new Date();
 
   const where: Prisma.JobWhereInput = {};
@@ -204,13 +212,19 @@ jobsRoute.get('/jobs', async (c) => {
   }
   // ★ Only the companies the user put on the watchlist (ADR 0036).
   if (watched === '1') where.company = { watched: true };
+  // ADR 0056: a muted company's postings stay stored and out of sight until
+  // "Muted companies" or an unmute. A row that names nobody is never hidden.
+  const hiddenKeys = muted === '1' ? [] : await mutedKeys();
+  const unmuted = withoutMuted(hiddenKeys);
+  const hide: Prisma.JobWhereInput[] = unmuted ? [unmuted] : [];
+  if (hide.length > 0) where.AND = hide;
   // The facet counts come from the rows matching everything above; each
   // facet then applies the others' selections in tallyFacets. Four narrow
   // columns per row — ~1k rows today; past ~50k move the tally into SQL.
   const facetWhere: Prisma.JobWhereInput = { ...where };
   const since = postedSince(posted, now);
   if (since) where.postedAt = { gte: since };
-  const facetAnd: Prisma.JobWhereInput[] = [];
+  const facetAnd: Prisma.JobWhereInput[] = [...hide];
   const place = placeWhere(country);
   if (place) facetAnd.push(place);
   if (workplace.length > 0) facetAnd.push({ workplace: { in: workplace } });
@@ -220,7 +234,7 @@ jobsRoute.get('/jobs', async (c) => {
 
   const orderBy = sortToOrderBy(sort);
 
-  const [jobs, facetRows, statusGroups, activeProfile, activeProfiles] = await Promise.all([
+  const [jobs, facetRows, statusGroups, activeProfile, activeProfiles, mutedHidden] = await Promise.all([
     prisma.job.findMany({
       where,
       orderBy,
@@ -246,6 +260,7 @@ jobsRoute.get('/jobs', async (c) => {
         fetchedAt: true,
         postedAt: true,
         techMatch: true,
+        employer: true,
         company: { select: { name: true, atsType: true, atsToken: true, watched: true } },
         verifications: {
           select: { verdict: true },
@@ -264,6 +279,7 @@ jobsRoute.get('/jobs', async (c) => {
     prisma.job.groupBy({ by: ['status'], where: anyStatusWhere, _count: { _all: true } }),
     getActiveProfile(),
     listActiveProfiles(),
+    hiddenKeys.length > 0 ? prisma.job.count({ where: { employerKey: { in: hiddenKeys } } }) : 0,
   ]);
   // The list's own total is one of those counts (or their sum), so it costs no query of its own.
   const statusCounts: Partial<Record<JobStatus, number>> = Object.fromEntries(statusGroups.map((g) => [g.status, g._count._all]));
@@ -285,6 +301,7 @@ jobsRoute.get('/jobs', async (c) => {
         verified,
         open,
         watched,
+        muted,
         profile: profile ?? null,
         country,
         workplace: workplace.map((w) => w.toLowerCase()),
@@ -295,6 +312,7 @@ jobsRoute.get('/jobs', async (c) => {
       facets={tallyFacets(facetRows, { places: country, workplaces: workplace, posted }, now)}
       profiles={activeProfiles.map((p) => ({ id: p.id, name: p.name }))}
       blankProfileBanner={activeProfile !== null && isBlankProfile(activeProfile)}
+      mutedHidden={mutedHidden}
     />,
   );
 });
@@ -396,6 +414,12 @@ jobsRoute.get('/jobs/:id', async (c) => {
   ]);
   if (!job) return c.text('Not found', 404);
 
+  // Who this company is to the mute list (ADR 0056): the employer an
+  // aggregator named, or the source when it is the employer; nobody else.
+  const hiring = hiringName(job.employer, job.company);
+  const hiringKey = hiring === null ? null : employerKey(hiring);
+  const muted = hiringKey === null ? null : await findMute(hiringKey);
+
   // ?match=<id> shows an older comparison; default is the latest. Same for ?letter.
   const requestedMatch = idParam(c.req.query('match'));
   const selected = matches.find((m) => m.id === requestedMatch) ?? matches[0] ?? null;
@@ -455,6 +479,11 @@ jobsRoute.get('/jobs/:id', async (c) => {
       verificationRun={verifyRunView(id)}
       verifyCostHint={costHintText(verifyCost)}
       aiSpent={jobSpendText(spentHere)}
+      mute={
+        hiring !== null && hiringKey !== null
+          ? { name: hiring, key: hiringKey, muted: muted ? { reason: muted.reason, since: muted.createdAt } : null }
+          : null
+      }
       resumeMatch={{
         jobId: id,
         resumes: resumeOptions,
@@ -462,7 +491,7 @@ jobsRoute.get('/jobs/:id', async (c) => {
         matches,
         selected,
         selectedKeywords,
-        job: { title: job.title, companyName: job.company.name },
+        job: { title: job.title, companyName: job.employer ?? job.company.name },
         verification: verifications[0] ?? null,
         costHint: costHintText(matchCost),
       }}
@@ -474,7 +503,7 @@ jobsRoute.get('/jobs/:id', async (c) => {
         selected: selectedLetter,
         hasCompanyFacts: Boolean(verifications[0]?.companySnapshot?.trim()),
         angles: readCoverAngles(settings.coverAngles),
-        addressee: addresseeFromVerification(verifications[0]?.evidence, job.company.name),
+        addressee: addresseeFromVerification(verifications[0]?.evidence, job.employer ?? job.company.name),
         quickCheck,
         costHint: costHintText(letterCost),
       }}
@@ -591,7 +620,7 @@ jobsRoute.post('/jobs/:id/description/refresh', async (c) => {
   if (plan.unchanged) return flashRedirect(back, 'ok', describeRefresh(plan));
   return c.html(
     <DescriptionRefreshPage
-      job={{ id, title: job.title, companyName: job.company.name }}
+      job={{ id, title: job.title, companyName: job.employer ?? job.company.name }}
       url={url}
       plan={plan}
       rows={foldOps(ops)}
@@ -689,7 +718,7 @@ jobsRoute.post('/jobs/:id/verify', async (c) => {
       {
         id: job.id,
         title: job.title,
-        companyName: job.company.name,
+        companyName: job.employer ?? job.company.name,
         location: job.location,
         url: job.url,
         description: job.description,
@@ -748,7 +777,7 @@ jobsRoute.post('/jobs/:id/match', async (c) => {
   const toTarget = form.next === 'target' || form.next === 'editor';
   return startComparison(c, {
     jobId: id,
-    job: { id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description },
+    job: { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description },
     resume,
     text,
     // The quick check unless the form asked for the full report (ADR 0029).
@@ -789,7 +818,7 @@ jobsRoute.post('/jobs/:id/matches/:matchId/suggestions', async (c) => {
   if (form.rewrite !== '1' && readMatchMode(match.breakdown) === 'full') {
     return flashRedirect(resultUrl, 'warn', 'This analysis already has its suggestions.');
   }
-  const jobInput = { id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description };
+  const jobInput = { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description };
   return c.redirect(startSuggestionsRun({ match, job: jobInput, resumeName: resume.name, resultUrl }), 303);
 });
 
@@ -820,7 +849,7 @@ jobsRoute.post(
   let reason = '';
   const row = await rewriteAction(
     match,
-    { id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description },
+    { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description },
     index,
     (r) => {
       reason = r;
@@ -886,7 +915,7 @@ jobsRoute.post('/jobs/:id/cover', async (c) => {
   startRun(run.id, async () => {
     const outcome = await generateCoverLetter(
       { id: resume.id, text: resume.text, version: resume.version },
-      { id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description },
+      { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description },
       { tone, angles, addressee },
     );
     if (outcome.kind === 'ok') {
@@ -925,7 +954,7 @@ jobsRoute.get('/jobs/:id/cover/:letterId/file/:fmt', async (c) => {
 
   const text = letter.editedText ?? letter.text;
   const slug =
-    job.company.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') ||
+    (job.employer ?? job.company.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') ||
     'company';
   const body = fmt === 'docx' ? buildLetterDocx(text) : buildLetterPdf(text);
   c.header('Content-Type', fmt === 'docx' ? DOCX_MIME : 'application/pdf');
@@ -969,12 +998,12 @@ jobsRoute.post('/jobs/:id/cover/:letterId', async (c) => {
     text,
     sources: coverGateSources(resume.text, {
       title: job.title,
-      companyName: job.company.name,
+      companyName: job.employer ?? job.company.name,
       location: job.location,
       description: job.description,
     }, snapshot),
     facts,
-    addressee: job.company.name,
+    addressee: job.employer ?? job.company.name,
   });
   const reverted = text === letter.text;
   await updateCoverLetterEdit(letter.id, {
@@ -1008,7 +1037,7 @@ jobsRoute.get('/jobs/:id/target', async (c) => {
   }
   const resume = await getResume(match.resumeId);
   if (!resume) return c.text('Not found', 404);
-  const jobInput = { id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description };
+  const jobInput = { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description };
   // What the posting itself carried (§17): with little to go on, the page says
   // so rather than letting inferred advice read like the employer's demands —
   // and, from the same stored reading, whether its sector is one this resume
@@ -1022,7 +1051,7 @@ jobsRoute.get('/jobs/:id/target', async (c) => {
   const fileVerdict = (resume.hidden ? 'A one-off check from the Compare page. ' : '') + file.verdict;
   return c.html(
     <TargetPage
-      job={{ id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description }}
+      job={{ id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description }}
       resume={{ id: resume.id, name: match.resume.name, version: resume.version, ephemeral: resume.hidden }}
       match={match}
       keywords={await orderedKeywords(match, job.description)}
@@ -1066,7 +1095,7 @@ jobsRoute.post('/jobs/:id/target/reupload', async (c, next) => resumeUploadLimit
   // own snapshot of the text (`draft`), and the resume row is untouched.
   return startComparison(c, {
     jobId: id,
-    job: { id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description },
+    job: { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description },
     // A one-off comparison is named after its file, and the file as uploaded is not a draft (match-name.ts).
     resume: resume.hidden ? { ...resume, name: nameFromFilename(upload.sourceFilename) } : resume,
     ...(resume.hidden ? { draft: false } : {}),

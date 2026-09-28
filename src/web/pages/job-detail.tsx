@@ -6,6 +6,7 @@ import {
   ActionForm,
   Button,
   Card,
+  Disclosure,
   Field,
   FitBadge,
   Flash,
@@ -63,6 +64,8 @@ interface JobDetail {
   postedAt: Date;
   alertedAt: Date | null;
   externalId: string;
+  /** ADR 0056: who hires, when an aggregator named them. */
+  employer: string | null;
   company: {
     id: number;
     name: string;
@@ -90,6 +93,12 @@ interface JobDetail {
   // F3 (ADR 0018): the same posting seen at another company's source.
   crossListedOf: CrossListedJob | null;
   crossListings: CrossListedJob[];
+}
+
+export interface MuteState {
+  name: string;
+  key: string;
+  muted: { reason: string | null; since: Date } | null;
 }
 
 export interface CrossListedJob {
@@ -127,6 +136,8 @@ export interface JobDetailProps {
   verifyCostHint: string | null;
   /** What the AI spent on this posting so far (ai-spend.ts:jobSpendText); null when nothing was recorded. */
   aiSpent: string | null;
+  /** Who this posting's company is to the mute list (ADR 0056); null when nobody said who hires. */
+  mute: MuteState | null;
   resumeMatch: ResumeMatchCardProps;
   coverLetters: CoverLetterCardProps;
   /** The tab this request means (job-tabs.ts), and the four labels with what exists behind each. */
@@ -157,6 +168,7 @@ export const JobDetailPage: FC<JobDetailProps> = ({
   verificationRun,
   verifyCostHint,
   aiSpent,
+  mute,
   resumeMatch,
   coverLetters,
   tab,
@@ -241,6 +253,8 @@ export const JobDetailPage: FC<JobDetailProps> = ({
             </FactRow>
           </dl>
         </Card>
+
+        {mute && <MuteCard jobId={job.id} tab={tab} mute={mute} />}
 
         {applicationTrackingEnabled && (
           <Card variant="flat" class="p-5">
@@ -513,7 +527,11 @@ const PageHeaderBlock: FC<{ job: JobDetail; primary: boolean }> = ({ job, primar
         <h1 class="text-title text-ink">{job.title}</h1>
         <div class="mt-1 text-sm text-ink-muted">
           {job.company.watched && <span aria-label="Watched company">★ </span>}
-          {job.company.name} · {job.location || 'Remote'}
+          {job.employer ?? job.company.name}
+          {job.employer && job.company.atsType !== 'ADZUNA' && job.company.atsType !== 'FRANCETRAVAIL' && (
+            <span class="text-ink-faint"> · via {job.company.name}</span>
+          )}{' '}
+          · {job.location || 'Remote'}
         </div>
         {job.company.watched && (
           <div data-ui="hint" class="mt-1 text-xs text-ink-faint">
@@ -701,3 +719,49 @@ const TagRow: FC<{ label: string; items: string[]; tone: 'ok' | 'danger' | 'neut
       ))}
     </div>
   );
+
+/**
+ * ADR 0056: stop seeing a company from the posting that made you want to. A
+ * mute turns its new postings away before any AI and hides the stored ones;
+ * it never changes a status, and Unmute undoes both.
+ */
+const MuteCard: FC<{ jobId: number; tab: JobTab; mute: MuteState }> = ({ jobId, tab, mute }) => {
+  const back = jobHref(jobId, tab);
+  if (mute.muted) {
+    return (
+      <Card variant="flat" class="p-5">
+        <SectionTitle>{mute.name} is muted</SectionTitle>
+        <Hint>
+          Since {formatDate(mute.muted.since)}
+          {mute.muted.reason ? ` — ${mute.muted.reason}` : ''}. Its new postings are turned away before any AI, and
+          the job list hides the stored ones.
+        </Hint>
+        <ActionForm action="/companies/mutes/delete" hidden={{ key: mute.key, back }} class="mt-3">
+          <Button size="sm" variant="secondary">
+            Unmute
+          </Button>
+        </ActionForm>
+      </Card>
+    );
+  }
+  return (
+    <Card variant="flat" class="px-5 py-4">
+      <Disclosure summary={`Mute ${mute.name}`}>
+        <form method="post" action="/companies/mutes" class="mt-3 space-y-3">
+          <input type="hidden" name="name" value={mute.name} />
+          <input type="hidden" name="back" value={back} />
+          <Field label="Why (optional)" hint="Shown beside the mute, so you remember it later.">
+            <Input name="reason" maxlength="300" placeholder="Rejected in September" />
+          </Field>
+          <Hint>
+            Its new postings are turned away before any AI, and the job list hides the stored ones. Nothing changes
+            status; Unmute undoes it.
+          </Hint>
+          <Button size="sm" variant="secondary">
+            Mute {mute.name}
+          </Button>
+        </form>
+      </Disclosure>
+    </Card>
+  );
+};

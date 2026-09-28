@@ -17,6 +17,8 @@ import { rankByProfileFit, SCORE_BATCH, type ScorableJob } from './score-pick';
 
 export { SCORE_BATCH };
 import type { CronStats } from './cron-run';
+import { withoutMuted } from '../employer';
+import { mutedKeys } from './employer-store';
 
 const RECLASSIFY_BATCH_SIZE = 50;
 
@@ -55,7 +57,8 @@ export async function runScoreUnscored(
   const ranker = isBlankProfile(primary) ? profiles[0]! : primary;
 
   const unscored = await prisma.job.findMany({
-    where: { fitScore: null, status: JobStatus.NEW },
+    // A muted company's rows are never scored: a mute promises no AI on them (ADR 0056).
+    where: { fitScore: null, status: JobStatus.NEW, ...withoutMuted(await mutedKeys()) },
     select: {
       id: true,
       title: true,
@@ -111,8 +114,13 @@ async function reclassify(opts: ReclassifyOptions): Promise<{ stats: CronStats }
   }
 
   const { classifierMode } = await getSettings();
-  const scope = { status: { not: JobStatus.APPLIED }, ...(opts.ids && { id: { in: opts.ids } }) };
-  const total = opts.ids ? opts.ids.length : await prisma.job.count({ where: scope });
+  // A muted company's rows are not scored again: a mute promises no AI on them (ADR 0056).
+  const scope = {
+    status: { not: JobStatus.APPLIED },
+    ...withoutMuted(await mutedKeys()),
+    ...(opts.ids && { id: { in: opts.ids } }),
+  };
+  const total = await prisma.job.count({ where: scope });
   logger.info(
     {
       searches: profiles.map((p) => p.name),
@@ -163,7 +171,7 @@ async function reclassify(opts: ReclassifyOptions): Promise<{ stats: CronStats }
             classifyJob(
               {
                 title: j.title,
-                companyName: j.company.name,
+                companyName: j.employer ?? j.company.name,
                 location: j.location,
                 place: { workplace: j.workplace, countries: j.countries, regions: j.regions },
                 description: j.description,

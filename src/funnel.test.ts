@@ -86,9 +86,15 @@ test('a window counts today and the days before it, by UTC day', () => {
   assert.deepEqual(sumDays(rows, 30, now), { fetched: 111 });
 });
 
+/** Counters that began after funnel_day's backfill ran; the runs before them never wrote one. */
+const COUNTED_SINCE_BACKFILL = ['rejectedMuted', 'rejectedApplied'];
+
 test('the backfill reads the same counters the ticks write', () => {
   // The migration that created funnel_day summed the stored runs with its own copy of the list.
   const sql = readFileSync('prisma/migrations/20260928120000_funnel_day/migration.sql', 'utf8');
   const list = /kv\."key" IN \(([^)]*)\)/.exec(sql)?.[1] ?? '';
-  assert.deepEqual([...list.matchAll(/'(\w+)'/g)].map((m) => m[1]), [...FUNNEL_KEYS]);
+  assert.deepEqual(
+    [...list.matchAll(/'(\w+)'/g)].map((m) => m[1]),
+    FUNNEL_KEYS.filter((k) => !COUNTED_SINCE_BACKFILL.includes(k)),
+  );
 });

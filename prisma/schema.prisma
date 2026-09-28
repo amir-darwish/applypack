@@ -143,6 +143,15 @@ model Job {
   companyId              Int
   company                Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   externalId             String
+  // ADR 0056: who hires, when the source is not the employer — an aggregator
+  // names the company in a field of its own (Remotive's company_name, Adzuna's
+  // company.display_name …). A vendor board, a feed and a pasted posting ARE
+  // the employer, so it stays NULL there. `employerKey` is employer.ts:
+  // employerKey of whoever hires (this, else the company row's name), written
+  // with every insert; NULL only when an aggregator did not say. Mutes and the
+  // re-apply window match on it.
+  employer               String?
+  employerKey            String?
   title                  String
   url                    String
   location               String
@@ -254,6 +263,8 @@ model Job {
   @@index([countries], type: Gin)
   @@index([regions], type: Gin)
   @@index([workplace])
+  // The mute gate, the re-apply window and the /jobs hiding (ADR 0056).
+  @@index([employerKey])
   @@map("job")
 }
 
@@ -409,6 +420,12 @@ model AppSettings {
   // `aiBudgetAlerted` is the last warning sent, "YYYY-MM:80" / "YYYY-MM:100".
   aiBudgetCents                  Int?
   aiBudgetAlerted                String?
+  // ADR 0056: turn new postings away at a company applied to in the last N
+  // days (30 / 60 / 90 / 180); null = off. `employersFilledAt` is when
+  // init.ts gave the rows stored before Job.employerKey theirs; null = the
+  // next worker boot does it.
+  reapplyDays                    Int?
+  employersFilledAt              DateTime?
   // F4 (ADR 0019): one digest line when a source crosses the failure
   // streak. Default TRUE — the alert adds a signal, never suppresses a job.
   sourceHealthAlerts             Boolean   @default(true)
@@ -445,6 +462,20 @@ model AppSettings {
   updatedAt                      DateTime  @updatedAt
 
   @@map("app_settings")
+}
+
+// ADR 0056: a company the user does not want to see. `key` is
+// employer.ts:employerKey of the name, so "Acme, Inc." in one feed and "ACME"
+// in another are one mute. It turns new postings away before any AI and hides
+// the stored ones on /jobs; it never changes a job's status, and deleting the
+// row undoes both.
+model CompanyMute {
+  key       String   @id
+  name      String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@map("company_mute")
 }
 
 model CompanyCandidate {

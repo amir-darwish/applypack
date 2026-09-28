@@ -133,6 +133,8 @@ export function mapDjinniItem(
   if (keyword && !(item.categories ?? []).some((c) => c.trim().toLowerCase() === keyword.toLowerCase())) return null;
   return {
     companyId,
+    // An aggregator that does not say who hires: the feed carries no company (ADR 0056).
+    employer: null,
     externalId,
     title: (item.title ?? '').trim() || 'Untitled',
     url: link,

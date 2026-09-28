@@ -3,6 +3,7 @@ import { fetchWithRetry, stripHtml } from '../http';
 import { logger } from '../logger';
 import { parseHnComment } from './hn-parser';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 const ALGOLIA_BASE = 'https://hn.algolia.com/api/v1';
 const THREAD_TIMEOUT_MS = 30_000;
@@ -114,6 +115,7 @@ export async function fetchHnHiring(companyId: number): Promise<NormalizedJob[]>
     parsedOk++;
     out.push({
       companyId,
+      employer: cleanEmployer(parsedComment.companyName),
       externalId: String(child.id),
       title: parsedComment.title,
       url: parsedComment.url ?? `https://news.ycombinator.com/item?id=${child.id}`,

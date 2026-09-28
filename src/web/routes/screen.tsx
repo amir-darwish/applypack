@@ -98,7 +98,7 @@ screenRoute.get('/screen/new', async (c) => {
     orderBy: [{ fetchedAt: 'desc' }],
     take: JOB_PICK_LIMIT,
     // A picker option, not a posting (DATA-5).
-    select: { id: true, title: true, fetchedAt: true, company: { select: { name: true, atsType: true } } },
+    select: { id: true, title: true, employer: true, fetchedAt: true, company: { select: { name: true, atsType: true } } },
   });
   const now = Date.now();
   const manual = (j: (typeof jobs)[number]): boolean => j.company.atsType === 'MANUAL';
@@ -268,7 +268,7 @@ screenRoute.get('/screen/:id', async (c) => {
         rubricVersion: screening.rubricVersion,
         retainUntil: screening.retainUntil,
         createdAt: screening.createdAt,
-        job: { id: screening.job.id, title: screening.job.title, companyName: screening.job.company.name, location: screening.job.location },
+        job: { id: screening.job.id, title: screening.job.title, companyName: screening.job.employer ?? screening.job.company.name, location: screening.job.location },
         postingText: screening.postingText,
         postingUpdatedAt: screening.postingUpdatedAt,
         scoredBeforePosting: scoredBeforePosting(rows, screening.postingUpdatedAt),
@@ -678,7 +678,7 @@ screenRoute.get('/screen/:id/applicants/:aid', async (c) => {
   const breakdown = applicant.verdict ? readScreenBreakdown(applicant.verdict.breakdown) : null;
   return c.html(
     <ScreenApplicantPage
-      screening={{ id: s.id, title: s.title, rubricVersion: s.rubricVersion, job: { id: s.job.id, title: s.job.title, companyName: s.job.company.name } }}
+      screening={{ id: s.id, title: s.title, rubricVersion: s.rubricVersion, job: { id: s.job.id, title: s.job.title, companyName: s.job.employer ?? s.job.company.name } }}
       applicant={{
         id: applicant.id,
         number: applicant.number,
@@ -757,7 +757,7 @@ async function exportData(id: number) {
   const meta = {
     title: screening.title,
     jobTitle: screening.job.title,
-    companyName: screening.job.company.name,
+    companyName: screening.job.employer ?? screening.job.company.name,
     gates: rubricOf(screening).criteria.filter((x) => x.mode === 'gate').map((x) => x.label),
     createdAt: screening.createdAt,
   };

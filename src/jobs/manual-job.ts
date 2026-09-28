@@ -7,6 +7,7 @@ import { parseLocation } from '../location';
 import { logger } from '../logger';
 import { hashShortId } from '../text-utils';
 import { classifyExistingJob, type ClassifiableJob } from './classify-existing';
+import { employerKey } from '../employer';
 
 /*
  * Pasted postings (the /jobs/new form and the /target compare page) become
@@ -79,6 +80,8 @@ export async function createManualJob(
         data: {
           companyId: company.id,
           externalId,
+          // A pasted posting's company row IS the employer (ADR 0056).
+          employerKey: employerKey(company.name),
           title: f.title,
           url: f.url,
           location: f.location,

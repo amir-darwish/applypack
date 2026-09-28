@@ -255,7 +255,7 @@ resumesRoute.post('/resumes/:id/draft', async (c) => {
     scanInBackground(resume);
     const match = await matchResumeToJob(
       resume,
-      { id: job.id, title: job.title, companyName: job.company.name, location: job.location, description: job.description },
+      { id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description },
       { onError: noteReason },
     );
     updateRun(run.id, match

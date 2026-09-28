@@ -35,6 +35,7 @@ export async function runDigestJob(): Promise<{ stats: CronStats }> {
     // the source payload the row also holds (DATA-5).
     select: {
       title: true,
+      employer: true,
       location: true,
       countries: true,
       workplace: true,
@@ -62,7 +63,7 @@ export async function runDigestJob(): Promise<{ stats: CronStats }> {
 
   const alerts: AlertJob[] = jobs.map((j) => ({
     title: j.title,
-    companyName: j.company.name,
+    companyName: j.employer ?? j.company.name,
     location: j.location,
     attribution: attributionLine(j.company.atsType, j.company.atsToken),
     countries: j.countries,

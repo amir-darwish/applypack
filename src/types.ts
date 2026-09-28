@@ -18,6 +18,13 @@ export interface NormalizedJob {
   sourcePayload?: unknown;
   /** The source's own last-update stamp, when it has one. */
   sourceUpdatedAt?: Date | null;
+  /**
+   * Who hires, from an aggregator's own field (ADR 0056): a name, or null
+   * when the feed did not say. Absent on a source that IS the employer — a
+   * vendor board, a feed — so absent and null differ: the source's own name
+   * is the key, or nobody is (employer.ts:hiringKey).
+   */
+  employer?: string | null;
 }
 
 export interface ClaudeClassification {

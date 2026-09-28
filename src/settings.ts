@@ -34,6 +34,10 @@ export interface AppSettingsView {
   /** The last release the check saw, and when; null until it has looked. */
   latestVersion: string | null;
   latestCheckedAt: Date | null;
+  /** ADR 0056: turn postings away at a company applied to in the last N days; null = off. */
+  reapplyDays: number | null;
+  /** When init.ts gave the older rows their employer keys; null = not yet. */
+  employersFilledAt: Date | null;
   /** Raw AppSettings.coverAngles JSON — parse with readCoverAngles. */
   coverAngles: unknown;
   /** Raw AppSettings.pipelineStages JSON — parse with parseStageConfig (ADR 0025). */
@@ -120,6 +124,8 @@ export async function getSettings(): Promise<AppSettingsView> {
     updateCheck: row.updateCheck,
     latestVersion: row.latestVersion,
     latestCheckedAt: row.latestCheckedAt,
+    reapplyDays: row.reapplyDays,
+    employersFilledAt: row.employersFilledAt,
     coverAngles: row.coverAngles,
     pipelineStages: row.pipelineStages,
     schedule: row.schedule,
@@ -318,6 +324,21 @@ export async function setUpdateCheck(enabled: boolean): Promise<void> {
     update: { updateCheck: enabled },
     create: { id: SETTINGS_ID, updateCheck: enabled },
   });
+}
+
+/** ADR 0056: the re-apply window in days, or null to switch it off. The route checks the choice. */
+export async function setReapplyDays(days: number | null): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: SETTINGS_ID },
+    update: { reapplyDays: days },
+    create: { id: SETTINGS_ID, reapplyDays: days },
+  });
+  logger.info({ days }, 'settings: re-apply window set');
+}
+
+/** init.ts filled the older rows' employer keys; it never runs again. */
+export async function markEmployersFilled(at: Date): Promise<void> {
+  await prisma.appSettings.update({ where: { id: SETTINGS_ID }, data: { employersFilledAt: at } });
 }
 
 /** What the update check saw: the latest release (null = none it could read) and when it looked. */

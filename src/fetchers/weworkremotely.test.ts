@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mapWwrItem, type WwrItem } from './weworkremotely';
+import { mapWwrItem, wwrEmployer, type WwrItem } from './weworkremotely';
 
 const COMPANY_ID = 617;
 
@@ -56,5 +56,14 @@ describe('mapWwrItem', () => {
 
   it('skips an item nothing identifies', () => {
     assert.equal(mapWwrItem({ title: '' }, COMPANY_ID), null);
+  });
+});
+
+describe('wwrEmployer', () => {
+  it('reads the company off the "Company: Role" title', () => {
+    assert.equal(mustMap(item()).employer, 'Collaboration.Ai');
+    assert.equal(wwrEmployer('Acme Inc: Staff Engineer'), 'Acme Inc');
+    assert.equal(wwrEmployer('Staff Engineer'), null);
+    assert.equal(wwrEmployer(': Staff Engineer'), null);
   });
 });

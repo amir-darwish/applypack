@@ -81,7 +81,7 @@ welcomeRoute.get('/welcome', async (c) => {
       where: { fitScore: { not: null }, status: { not: JobStatus.DISMISSED } },
       orderBy: [{ fitScore: 'desc' }, { fetchedAt: 'desc' }],
       take: TOP_MATCHES,
-      select: { id: true, title: true, fitScore: true, company: { select: { name: true } } },
+      select: { id: true, title: true, employer: true, fitScore: true, company: { select: { name: true } } },
     }),
     profile && facts.profileReady ? countWaitingUnscored(profile) : 0,
   ]);
@@ -127,7 +127,7 @@ welcomeRoute.get('/welcome', async (c) => {
         scoredCount: facts.scoredCount,
         matchCount,
         minFitScore: profile?.minFitScore ?? 0,
-        top: top.map((j) => ({ id: j.id, title: j.title, companyName: j.company.name, fitScore: j.fitScore })),
+        top: top.map((j) => ({ id: j.id, title: j.title, companyName: j.employer ?? j.company.name, fitScore: j.fitScore })),
         waiting,
         runningRunId: findLiveRun(SCORE_RUN_KEY)?.id ?? null,
       }}

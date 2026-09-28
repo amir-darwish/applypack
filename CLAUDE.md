@@ -58,6 +58,15 @@
   match whole words through `titleHasKeyword`, never a run inside one.
   `baseFilterReason` / `anyBaseFilterReason` are the same gates naming the
   one that turned a posting away — the search funnel counts them.
+- `employer.ts` is pure — who hires (ADR 0056): `employerKey` is the one
+  normaliser (accents, case, punctuation, trailing legal forms; never fuzzy),
+  `hiringKey` reads `NormalizedJob.employer` — set by every aggregator's
+  mapper from its own field, null when the feed does not say, ABSENT on a
+  source that is the employer — and `employerGate` is the tick's mute /
+  re-apply decision. `Job.employerKey` is written at every insert;
+  `jobs/employer-store.ts` is the only file that touches `company_mute`, and
+  its `fillEmployerKeys` is the one-time fill `init.ts` runs. A page or a
+  prompt that names a posting's company reads `employer ?? company.name`.
 - `apply-link.ts` is pure — no I/O. It flags apply links, never rejects a
   row, and the company name is deliberately not an input (ADR 0023).
   `withApplyLinkFlags` is called at every site that persists `redFlags`.
@@ -291,6 +300,8 @@ When the question is **"where does X live?"**, save yourself a `find`:
 | A run on `/runs` as a sentence instead of its stats JSON | `src/web/runs-summary.ts:summarizeRun(name, stats)` (pure): a `reason` code becomes a sentence, a raised 0/1 flag too, known counts follow in a fixed order ("0 new" always, the rest only when they happened, "0 alerted" whenever something new was stored), a count it has never heard of is humanised, and the routine ones (`filterRejected`, `preFiltered`, `dismissed` and the funnel's reason counters) plus everything that is not a number stay in the raw block. `pages/runs.tsx` draws the dots, folds the JSON and the per-source list behind **Details**, and folds runs past the latest fifty (`RECENT_RUNS`) behind a button that names and opens on a failure. A new job's stat shows up humanised without an edit; a new `reason` code wants a line in `REASON` |
 | Why a search finds little: the search funnel (read → past the filter → new → scored → matches → alerted), the filter's reasons, what each source brought | `src/funnel.ts` (pure: `FUNNEL_KEYS`, `funnelView`, the reasons in words, `FILTER_KEY` / `DISMISS_KEY` — the counters `process-jobs.ts` and `reclassify-job.ts` add to) over `filter.ts:anyBaseFilterReason` (with several searches, the furthest gate any of them reached) and the winner's `dismissReason`; `jobs/funnel-store.ts:addToFunnel` sums each fetch / HN run into `funnel_day` (one row per UTC day, never pruned; the migration backfilled it from `cron_run`, totals only, and `funnel.test.ts` holds its key list to `FUNNEL_KEYS`), `loadFunnel` / `loadSourceYield` read it for `pages/funnel-card.tsx` on `/runs` and the Overview line. Zero AI |
 | What the compared postings keep asking for and the resume lacks ("Missing across postings") | `src/resume/coverage.ts` (pure, `MIN_POSTINGS` = 5) over `store.ts:listLatestKeywordTables` (the latest saved comparison per posting, one SQL `DISTINCT ON`): the user's overrides and the confirmed facts applied, presence re-read off the resume's current text (`anchorStatuses`, ADR 0045), a met "any of" group and `context` rows skipped; the card on `/resumes/:id`. Zero AI |
+| Who hires an aggregator's posting, and the key two spellings of a company share | `src/employer.ts` (pure, ADR 0056): `cleanEmployer`, `employerKey`, `hiringKey`, `hiringName`, `sourceIsEmployer` (MANUAL counts as the employer, unlike `web/source-groups.ts:isAggregator`); each aggregator's mapper sets `NormalizedJob.employer` (`weworkremotely.ts:wwrEmployer` and `hn-jobs.ts:hnJobEmployer` read it off the title); `Job.employer` / `employerKey`, filled once for older rows by `jobs/employer-store.ts:fillEmployerKeys` from the "Hiring company: …" line (`employerFromDescription`) |
+| A muted company, and the re-apply window | `company_mute` + `AppSettings.reapplyDays` → `jobs/employer-store.ts:loadEmployerRules`, read once per tick in `jobs/process-jobs.ts` right after the base filter; `employer.ts:employerGate` turns a posting away before any AI (a watched company on "every posting" is exempt from the window, never from a mute) and the funnel counts `rejectedMuted` / `rejectedApplied`. `/jobs` hides the stored rows (`routes/jobs.tsx`, the `muted=1` panel option; `employerKey IS NULL OR NOT IN`, since NOT IN alone drops the NULLs); the rail's `pages/job-detail.tsx:MuteCard`, `pages/muted-companies.tsx`, routes `POST /companies/mutes` and `/companies/mutes/delete` |
 | Four numbers as one line (Overview) | `ui.tsx:MetricStrip` — a `<dl>` on one surface, hairlines between cells, each value a link to `/jobs?status=…`; `Stat` is gone. "Pipeline health" on the same page reads its badge (Healthy / n failing) off the latest run per job |
 | An empty list, table or card | `ui.tsx:Empty` — `title` (what is missing, required: the compiler names every use), the children (why it matters, one sentence), `action` (one way forward, or the sentence names the control already on the page); `bare` inside a `Card`, so the card stays the one surface. A few empties are still hand-rolled, for example the jobs table (`pages/jobs-list.tsx`), the Comparisons card on `pages/resume-detail.tsx` and `pages/screen-compare.tsx` |
 | An error the user reads: a flash, a failed run | the rule is three parts — what failed, what is safe, the way forward. `flash.ts:firstIssue` names the field a schema refused (no more "Invalid form values"); `target-runs.ts:runFailure(what, reason, next)` makes the caller say the last two, and points at the web log only when the engine gave no reason; `UNEXPECTED_FAILURE` / `LETTER_FAILED` / `fetch-runs.ts:FETCH_FAILED` are the sentences for a chain that threw |
@@ -453,6 +464,8 @@ When the question is **"how does the user toggle / configure X?"**:
 | Pull jobs right now instead of waiting for the hourly tick | Overview header or `/runs` → "Fetch now" (progress page; while paused the jobs land unscored — score them later with Save & re-classify) |
 | See why the search finds little, and which source brings the matches | `/runs` → **Search funnel** (7 and 30 days; the filter's and the scoring's reasons; **By source, last 30 days**); one line of it on the Overview, "where the rest went" |
 | See which keywords the compared postings keep asking for | `/resumes/:id` → **Missing across postings** (from five compared postings on; no AI) |
+| Stop seeing a company | `/jobs/:id` → the rail's **Mute …** (a reason is optional), or `/companies` → **Muted companies** → type the name. Its new postings are turned away before any AI, from every source; `/jobs` hides the stored ones ("N hidden · Show them", or **Filters** → Show → Muted companies). Unmute on either page undoes both; statuses never change (ADR 0056) |
+| Rest a company you applied to | `/settings` General tab → Application tracking → **Re-apply window** (Off / 30 / 60 / 90 / 180 days): new postings at a company you marked Applied inside it are turned away before any AI. Off by default |
 | See which boards stopped answering | `/companies` → "Quiet sources" card (Re-probe to repair) |
 | Telegram line when a source goes quiet | `/settings` Notifications tab → "Source health alerts" |
 | Pick / order AI engines + models, test them | `/settings` AI engine tab (per-engine cards: Enable, ↑ priority, model selects, Test; each card says whether it is billed per token, covered by your plan or local) |
@@ -834,6 +847,7 @@ Always:
 5. Extend `src/text-utils.ts:extractAtsToken` if discoveryEnabled should pick up URLs from this ATS
 6. Extend `src/ats-probe.ts:probeAts` if the new ATS is per-company (so manual /companies add validates tokens)
 7. Add a unit test for the pure mapper if you have a `mapXFeed(parsed, companyId)` helper
+8. An aggregator (one row, many employers) sets `employer` from the feed's own field through `cleanEmployer` — `null` when the feed does not say, never the aggregator's name (ADR 0056); a per-company source leaves it out
 
 ---
 

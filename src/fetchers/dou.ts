@@ -6,6 +6,7 @@ import { conditionalHeaders, rememberResponse } from './conditional';
 import { feedItemKey } from '../text-utils';
 import type { NormalizedJob } from '../types';
 import { insideParens, parseDouTitle } from './dou-title';
+import { cleanEmployer } from '../employer';
 
 /**
  * DOU.ua — the Ukrainian tech job board (stage 3b, plan §4.2). The RSS at
@@ -97,6 +98,7 @@ export function mapDouItem(item: DouItem, companyId: number): NormalizedJob | nu
   const body = stripHtml(item.content ?? item.contentSnippet ?? '');
   return {
     companyId,
+    employer: cleanEmployer(parsed.company),
     externalId,
     title: parsed.title || item.title || 'Untitled',
     url: link,

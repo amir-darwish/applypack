@@ -27,6 +27,7 @@ describe('mapLandingJobsItem', () => {
     assert.equal(job?.location, 'Partial remote · Lisbon, Portugal');
     assert.deepEqual(job?.locationHints, { countries: ['PT'], workplace: 'HYBRID' });
     assert.equal(job?.postedAt.toISOString(), '2026-09-03T14:29:18.000Z');
+    assert.equal(job?.employer, 'INSCALE');
     assert.equal(
       job?.description,
       'Category: QA / Testing.\n\nAt INSCALE (Permanent), in Lisbon, Portugal\nSalary: €39.200 - €47.600\nExpires at: 2027-03-02\nRemote policy: Partial remote\n\nWe are looking for a QA Engineer & more.',

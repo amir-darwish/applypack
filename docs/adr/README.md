@@ -69,6 +69,7 @@ gets a dated addendum at the end of the ADR.
 - [0053 — Uniqueness lives in the database, and a row's state is written with the row](./0053-uniqueness-lives-in-the-database.md)
 - [0054 — `npm start` runs ApplyPack with a built-in Postgres; Docker is the server option](./0054-npm-start-runs-a-built-in-database.md)
 - [0055 — Every AI attempt is a ledger row, and a bill, a plan and a local model are never added together](./0055-every-ai-attempt-is-a-ledger-row.md) *(extends 0007)*
+- [0056 — A company can be muted, and a company applied to can rest, before any AI reads its postings](./0056-mute-an-employer-and-a-reapply-window.md)
 
 ## When to write a new one
 

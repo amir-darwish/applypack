@@ -153,7 +153,7 @@ letterRoute.post('/letter', resumeUploadLimit('/letter'), async (c) => {
         where: { id: existingJob.id },
         include: { company: { select: { name: true } } },
       });
-      job = { id: row.id, title: row.title, companyName: row.company.name, location: row.location, description: row.description, url: row.url, postedAt: row.postedAt };
+      job = { id: row.id, title: row.title, companyName: row.employer ?? row.company.name, location: row.location, description: row.description, url: row.url, postedAt: row.postedAt };
     } else {
       let location = '';
       let salaryMin: number | undefined;

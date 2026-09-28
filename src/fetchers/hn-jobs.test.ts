@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mapHnJobHit, type HnJobHit } from './hn-jobs';
+import { hnJobEmployer, mapHnJobHit, type HnJobHit } from './hn-jobs';
 
 const COMPANY_ID = 11;
 
@@ -135,5 +135,15 @@ describe('mapHnJobHit', () => {
     );
     assert.match(job.title, /Infisical/);
     assert.equal(job.location, 'Remote');
+  });
+});
+
+describe('hnJobEmployer', () => {
+  it('reads the company that opens a YC post, past its batch', () => {
+    assert.equal(hnJobEmployer('Infisical (YC W23) Is Hiring Full Stack Software Engineers (Remote)'), 'Infisical');
+    assert.equal(hnJobEmployer('Acme Is Hiring a Founding Engineer (SF or NYC)'), 'Acme');
+    assert.equal(hnJobEmployer('Nomic (YC Spring 2025) is hiring'), 'Nomic');
+    assert.equal(hnJobEmployer('Senior Rust Engineer at Acme'), null);
+    assert.equal(hnJobEmployer('We Are Hiring engineers'), null);
   });
 });

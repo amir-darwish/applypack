@@ -14,7 +14,7 @@ const PICKABLE: JobStatus[] = ['NEW', 'ALERTED', 'SAVED', 'APPLIED'];
 const DAY_MS = 86_400_000;
 
 /** A picker option, not a posting: five columns instead of the row's forty (DATA-5). */
-const PICK_SELECT = { id: true, title: true, fitScore: true, fetchedAt: true, company: { select: { name: true } } } as const;
+const PICK_SELECT = { id: true, title: true, employer: true, fitScore: true, fetchedAt: true, company: { select: { name: true } } } as const;
 
 export interface JobPickOption {
   id: number;
@@ -25,14 +25,14 @@ export interface JobPickOption {
   ageDays: number;
 }
 
-type PickRow = { id: number; title: string; fetchedAt: Date; company: { name: string } };
+type PickRow = { id: number; title: string; employer: string | null; fetchedAt: Date; company: { name: string } };
 
 /** One stored job as a picker line. */
 export function toPickOption(job: PickRow, note: string | null, now = Date.now()): JobPickOption {
   return {
     id: job.id,
     title: job.title,
-    companyName: job.company.name,
+    companyName: job.employer ?? job.company.name,
     note,
     ageDays: Math.max(0, Math.floor((now - job.fetchedAt.getTime()) / DAY_MS)),
   };

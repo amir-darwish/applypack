@@ -53,6 +53,8 @@ export function mapGolangProjectsItem(
     item.contentSnippet ?? (item.content ? stripHtml(item.content) : '') ?? '';
   return {
     companyId,
+    // An aggregator that does not say who hires: the company is a run of slug words nobody can split (ADR 0056).
+    employer: null,
     externalId,
     title: item.title ?? 'Untitled',
     url: link,

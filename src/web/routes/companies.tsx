@@ -20,7 +20,7 @@ import { resolvePack } from '../../starter-packs/probe';
 import { activeWatchlistRun } from '../watchlist-runs';
 import { installAiTokens } from '../../watchlist/resolve';
 import { currentSuggestions, waitingSuggestions } from '../source-suggestions';
-import { firstIssue, flashRedirect } from '../flash';
+import { firstIssue, flashRedirect, safeBack } from '../flash';
 import {
   boardUrl,
   buildPreview,
@@ -34,6 +34,7 @@ import {
   StarterPackResultPage,
   type PackOrigin,
 } from '../pages/starter-pack';
+import { findMute, listMutes, muteEmployer, unmuteEmployer } from '../../jobs/employer-store';
 
 const FLASH_TTL_SECONDS = 5;
 
@@ -176,10 +177,43 @@ companiesRoute.get('/companies', async (c) => {
       keyedUnlocked={unlockedSources(await getSourceKeys())}
       flash={flash}
       fetchingEnabled={settings.fetchingEnabled}
+      muted={await listMutes()}
     />,
     200,
     { 'Set-Cookie': clearFlashCookie() },
   );
+});
+
+const MuteFormSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  reason: z.string().optional().default(''),
+  back: z.string().optional().default('/companies#muted'),
+});
+
+/** ADR 0056: mute a company by name — from its posting, or from the Muted companies card. */
+companiesRoute.post('/companies/mutes', async (c) => {
+  const body = await c.req.parseBody();
+  const back = safeBack(body.back, '/companies#muted');
+  const parsed = MuteFormSchema.safeParse(body);
+  if (!parsed.success) return flashRedirect(back, 'err', `Nothing was muted: ${firstIssue(parsed.error.issues)}.`);
+  const mute = await muteEmployer(parsed.data.name, parsed.data.reason);
+  if (!mute) return flashRedirect(back, 'err', 'Nothing was muted: that name has no letters or digits to match.');
+  const hidden = await prisma.job.count({ where: { employerKey: mute.key } });
+  return flashRedirect(
+    back,
+    'ok',
+    `Muted ${mute.name}. Its new postings are turned away before any AI, and ${hidden.toLocaleString()} stored ${
+      hidden === 1 ? 'posting is' : 'postings are'
+    } hidden on Jobs.`,
+  );
+});
+
+companiesRoute.post('/companies/mutes/delete', async (c) => {
+  const body = await c.req.parseBody();
+  const back = safeBack(body.back, '/companies#muted');
+  const mute = typeof body.key === 'string' ? await findMute(body.key) : null;
+  if (!mute || !(await unmuteEmployer(mute.key))) return flashRedirect(back, 'err', 'That company was not muted.');
+  return flashRedirect(back, 'ok', `Unmuted ${mute.name}. The next search reads its postings again, and Jobs shows the stored ones.`);
 });
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
