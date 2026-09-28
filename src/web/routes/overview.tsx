@@ -1,6 +1,6 @@
 /** @jsxImportSource hono/jsx */
 import { Hono } from 'hono';
-import { JobStatus, type Prisma } from '@prisma/client';
+import { AtsType, JobStatus, type Prisma } from '@prisma/client';
 import { prisma } from '../../db';
 import { clearFlashCookie, parseFlashCookie } from '../flash';
 import { activeFetchRun } from '../fetch-runs';
@@ -10,13 +10,17 @@ import { OverviewPage } from '../pages/overview';
 import { loadFunnel } from '../../jobs/funnel-store';
 
 /** ★ How many companies the user watches, and what they put up today (ADR 0036). */
-async function watchedSummary(): Promise<{ companies: number; newJobs: number }> {
+async function watchedSummary(): Promise<{ companies: number; newJobs: number; toPaste: number }> {
   const companies = await prisma.company.count({ where: { watched: true } });
-  if (companies === 0) return { companies: 0, newJobs: 0 };
-  const newJobs = await prisma.job.count({
-    where: { company: { watched: true }, fetchedAt: { gte: new Date(Date.now() - DAY_MS) } },
-  });
-  return { companies, newJobs };
+  if (companies === 0) return { companies: 0, newJobs: 0, toPaste: 0 };
+  const [newJobs, toPaste] = await Promise.all([
+    prisma.job.count({
+      where: { company: { watched: true }, fetchedAt: { gte: new Date(Date.now() - DAY_MS) } },
+    }),
+    // TASKS N8: the pages only a paste can read.
+    prisma.company.count({ where: { watched: true, atsType: AtsType.BROWSER_PAGE } }),
+  ]);
+  return { companies, newJobs, toPaste };
 }
 import { loadHeldLine, loadNextCheck } from '../schedule-view';
 import { withoutMuted } from '../../employer';

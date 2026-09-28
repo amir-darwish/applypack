@@ -73,6 +73,8 @@ interface Fixtures {
   resumeId: number;
   screeningId: number;
   applicantId: number;
+  /** TASKS N8: a watched careers page drawn in the browser, for the paste box. */
+  browserPageId: number;
 }
 
 async function fixtures(): Promise<Fixtures> {
@@ -126,7 +128,17 @@ async function fixtures(): Promise<Fixtures> {
   await recordAiCall({ ...call, engine: 'openai_api', model: 'qwen2.5:14b', outcome: 'ok', billing: 'local', spend: { usage, model: 'qwen2.5:14b', reportedUsd: null } });
   await recordAiCall({ ...call, engine: 'openai_api', model: 'mystery-model', outcome: 'ok', billing: 'billed', spend: { usage, model: 'mystery-model', reportedUsd: null } });
   await recordAiCall({ ...call, engine: 'anthropic_api', model: 'claude-opus-5', outcome: 'timeout', billing: 'billed', spend: null });
-  return { jobId: job.job.id, companyId: job.job.companyId, resumeId: resume.id, screeningId: screening.id, applicantId: applicant.id };
+  const browserPage = await prisma.company.create({
+    data: { name: 'Smoke Page', atsType: 'BROWSER_PAGE', atsToken: 'https://smoke.example/careers', watched: true, active: false },
+  });
+  return {
+    jobId: job.job.id,
+    companyId: job.job.companyId,
+    resumeId: resume.id,
+    screeningId: screening.id,
+    applicantId: applicant.id,
+    browserPageId: browserPage.id,
+  };
 }
 
 /** A route pattern with its params filled from the fixtures. */
@@ -221,6 +233,12 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 303 && (res.headers.get('location') ?? '').startsWith('/settings?tab=ai'),
     },
     {
+      // TASKS N8: the text of a page drawn in the browser, read into lines.
+      name: 'POST /companies/:id/paste',
+      init: form({ page: 'Acme careers\nSenior Backend Engineer (Remote)\nSales Manager' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/companies#browser-pages',
+    },
+    {
       // ADR 0056: the pasted company above, muted from its posting's rail.
       name: 'POST /companies/mutes',
       init: form({ name: 'Smoke Two', reason: 'smoke', back: '/jobs' }),
@@ -257,6 +275,7 @@ async function main(): Promise<void> {
     `/jobs/${f.jobId}/status`,
     '/facts',
     '/settings/ai/budget',
+    `/companies/${f.browserPageId}/paste`,
     '/companies/mutes',
     '/jobs',
     '/companies/mutes/delete',

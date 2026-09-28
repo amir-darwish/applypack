@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Code,
+  Disclosure,
   Empty,
   Hint,
   More,
@@ -48,11 +49,21 @@ export interface WatchedRow {
   lastContentAlertAt: Date | null;
   /** A change seen and not reported yet — waiting for the alert hours, for Alerts, or for a retry. */
   changePending: boolean;
+  /** TASKS N8, a page drawn in the browser: the last paste, if any. */
+  paste: { at: Date; lines: number; added: string[]; roles: string[] } | null;
 }
 
 /** A change watch produces no postings, so its row says different things. */
 function isChangeWatch(r: WatchedRow): boolean {
   return r.atsType === 'CAREER_PAGE';
+}
+
+/** How many new lines a page lists under its paste box. */
+const MAX_LISTED_LINES = 20;
+
+/** A page drawn in the browser (TASKS N8): nothing is checked, the user pastes it. */
+function needsPaste(r: WatchedRow): boolean {
+  return r.atsType === 'BROWSER_PAGE';
 }
 
 const INTERVAL_SELECT = (name: string, value: string, company?: string) => (
@@ -160,12 +171,13 @@ const VERDICT_TONE = {
   ats: 'ok',
   feed: 'ok',
   changeWatch: 'info',
+  needsBrowser: 'warn',
   watchOnly: 'warn',
   refused: 'danger',
 } as const;
 
-/** The three verdicts that become a row. */
-const ADDABLE = ['ats', 'feed', 'changeWatch'] as const;
+/** The verdicts that become a row. A page drawn in the browser is one: the user pastes it (TASKS N8). */
+const ADDABLE = ['ats', 'feed', 'changeWatch', 'needsBrowser'] as const;
 
 function isAddable(r: ResolvedCompany): boolean {
   return (ADDABLE as readonly string[]).includes(r.resolution.kind);
@@ -181,6 +193,7 @@ export const WatchlistPreviewPage: FC<{ run: WatchlistRun }> = ({ run }) => {
   const addable = run.results.filter(isAddable);
   const rest = run.results.filter((r) => !isAddable(r));
   const watching = addable.filter((r) => r.resolution.kind === 'changeWatch').length;
+  const browserOnly = addable.filter((r) => r.resolution.kind === 'needsBrowser').length;
   return (
     <Layout title="Add companies" active="companies">
       <PageHeader
@@ -233,6 +246,17 @@ export const WatchlistPreviewPage: FC<{ run: WatchlistRun }> = ({ run }) => {
                   , so they are watched a different way: we hash the page&rsquo;s text and tell
                   you when it changes, at most once a day. Those never produce postings and
                   never cost AI — they say &ldquo;have a look&rdquo;.
+                </>
+              )}
+              {browserOnly > 0 && (
+                <>
+                  {' '}
+                  <strong class="font-medium text-ink">
+                    {browserOnly} draw their jobs in the browser
+                  </strong>
+                  , which ApplyPack cannot read. They go on your watchlist without a check: open the
+                  page when you like, copy its text into the row&rsquo;s &ldquo;Paste the page&rdquo;,
+                  and it says what is new since the last paste.
                 </>
               )}
             </Hint>
@@ -365,20 +389,30 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
               </div>
               <div class="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
                 <Tag>{sourceLabel(r.atsType)}</Tag>
-                {!r.active && <Badge tone="warn">Off</Badge>}
+                {!r.active && !needsPaste(r) && <Badge tone="warn">Off</Badge>}
               </div>
             </Td>
             <Td class="text-ink-muted">
-              <form method="post" action={`/companies/${r.id}/watch`}>
-                {INTERVAL_SELECT('checkEvery', r.checkEvery, r.name)}
-                <input type="hidden" name="alertPolicy" value={r.alertPolicy} />
-                <noscript>
-                  <Button size="sm" variant="secondary">Save</Button>
-                </noscript>
-              </form>
+              {needsPaste(r) ? (
+                <span class="text-[13px]" title="The page draws its jobs in the browser, so there is nothing for a check to read.">
+                  Not checked
+                </span>
+              ) : (
+                <form method="post" action={`/companies/${r.id}/watch`}>
+                  {INTERVAL_SELECT('checkEvery', r.checkEvery, r.name)}
+                  <input type="hidden" name="alertPolicy" value={r.alertPolicy} />
+                  <noscript>
+                    <Button size="sm" variant="secondary">Save</Button>
+                  </noscript>
+                </form>
+              )}
             </Td>
             <Td class="text-ink-muted">
-              {isChangeWatch(r) ? (
+              {needsPaste(r) ? (
+                <a href="#browser-pages" class="text-[13px] font-medium text-accent-strong hover:text-accent-deep">
+                  Paste the page
+                </a>
+              ) : isChangeWatch(r) ? (
                 <span class="text-[13px]" title="This page publishes no board and no feed, so there are no postings to score — we tell you when its text changes, at most once a day.">
                   Page changes
                 </span>
@@ -393,10 +427,18 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
               )}
             </Td>
             <Td class="whitespace-nowrap text-ink-muted">
-              {r.nextCheckAt === null ? 'next tick' : formatUntil(r.nextCheckAt)}
+              {needsPaste(r) ? '—' : r.nextCheckAt === null ? 'next tick' : formatUntil(r.nextCheckAt)}
             </Td>
             <Td class="whitespace-nowrap">
-              {isChangeWatch(r) ? (
+              {needsPaste(r) ? (
+                <span class="text-[13px] text-ink-faint">
+                  {r.paste === null
+                    ? 'not pasted yet'
+                    : r.paste.added.length > 0
+                      ? `${r.paste.added.length} new · ${formatRelative(r.paste.at)}`
+                      : `pasted ${formatRelative(r.paste.at)}`}
+                </span>
+              ) : isChangeWatch(r) ? (
                 <span class="text-[13px] text-ink-faint" title="A change watch never stores postings.">
                   {r.changePending
                     ? 'changed · notice waiting'
@@ -421,11 +463,17 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
                   buttons, so each one names its company. The visible label
                   stays the first words of the accessible one (WCAG 2.5.3). */}
               <div class="flex flex-wrap items-center justify-end gap-2">
-                <ActionForm action={`/companies/${r.id}/check-now`}>
-                  <Button size="sm" variant="secondary" aria-label={`Check ${r.name} now`}>
-                    Check now
+                {needsPaste(r) ? (
+                  <Button href={r.atsToken} target="_blank" rel="noopener" size="sm" variant="secondary" aria-label={`Open ${r.name}'s page`}>
+                    Open ↗
                   </Button>
-                </ActionForm>
+                ) : (
+                  <ActionForm action={`/companies/${r.id}/check-now`}>
+                    <Button size="sm" variant="secondary" aria-label={`Check ${r.name} now`}>
+                      Check now
+                    </Button>
+                  </ActionForm>
+                )}
                 <ActionForm action={`/companies/${r.id}/unwatch`}>
                   <Button
                     size="sm"
@@ -440,7 +488,60 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
           </Tr>
         ))}
       </Table>
+      <BrowserPages rows={rows.filter(needsPaste)} />
       <WatchlistScript />
     </Card>
   );
 };
+
+/**
+ * TASKS N8: the pages that draw their jobs in the browser, each with its
+ * paste box. What was new in the last paste stays listed, the lines a search
+ * would take marked, until the next paste replaces it.
+ */
+const BrowserPages: FC<{ rows: WatchedRow[] }> = ({ rows }) =>
+  rows.length === 0 ? null : (
+    <div id="browser-pages" class="scroll-mt-4 border-t border-line px-5 py-4">
+      <div class="text-label text-ink">Pages drawn in the browser</div>
+      <Hint class="mt-0.5">
+        Their jobs appear only when a browser runs the page, so ApplyPack cannot read them. Open one, select all of it,
+        copy, and paste it here: you see what is new since the last paste and which lines look like roles your searches
+        want. No AI, and nothing is stored as a job.
+      </Hint>
+      <div class="mt-3 space-y-3">
+        {rows.map((r) => (
+          <Disclosure summary={`Paste ${r.name}'s page`} open={r.paste === null && rows.length === 1}>
+            <form method="post" action={`/companies/${r.id}/paste`} class="mt-2 space-y-2">
+              <Textarea
+                name="page"
+                rows={5}
+                required
+                aria-label={`The text of ${r.name}'s careers page`}
+                placeholder="Select all on the careers page, copy, paste here"
+              />
+              <Button size="sm" variant="secondary">
+                Read it
+              </Button>
+            </form>
+            {r.paste && (r.paste.added.length > 0 || r.paste.roles.length > 0) && (
+              <div class="mt-3">
+                <Hint>
+                  {r.paste.added.length > 0
+                    ? `Your last paste (${formatRelative(r.paste.at)}) had these new lines:`
+                    : `Your last paste (${formatRelative(r.paste.at)}) had these lines your searches want:`}
+                </Hint>
+                <ul class="mt-1 space-y-0.5 text-sm text-ink">
+                  {(r.paste.added.length > 0 ? r.paste.added : r.paste.roles).slice(0, MAX_LISTED_LINES).map((line) => (
+                    <li class="flex flex-wrap items-center gap-2">
+                      <span>{line}</span>
+                      {r.paste?.roles.includes(line) && r.paste.added.length > 0 && <Badge tone="ok">your search</Badge>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </Disclosure>
+        ))}
+      </div>
+    </div>
+  );

@@ -35,6 +35,9 @@ import {
   type PackOrigin,
 } from '../pages/starter-pack';
 import { findMute, listMutes, muteEmployer, unmuteEmployer } from '../../jobs/employer-store';
+import { roleLines, titleWordsOf, type TitleWords } from '../../watchlist/paste';
+import { listActiveProfiles } from '../../profiles';
+import { isBlankProfile } from '../../profile-guards';
 
 const FLASH_TTL_SECONDS = 5;
 
@@ -170,7 +173,7 @@ companiesRoute.get('/companies', async (c) => {
   return c.html(
     <CompaniesPage
       companies={rows}
-      watchlist={watchedRows(companies, freshMap)}
+      watchlist={watchedRows(companies, freshMap, titleWordsOf((await listActiveProfiles()).filter((p) => !isBlankProfile(p))))}
       watchlistRun={activeWatchlistRun()}
       packs={packs}
       suggestions={await currentSuggestions()}
@@ -239,9 +242,13 @@ function watchedRows(
     pendingContentHash: string | null;
     lastOkAt: Date | null;
     lastFetchStatus: string | null;
+    pastedLines: string[];
+    pastedNew: string[];
+    pastedAt: Date | null;
     _count: { jobs: number };
   }[],
   fresh: Map<number, number>,
+  searches: readonly TitleWords[],
 ): WatchedRow[] {
   return companies
     .filter((c) => c.watched)
@@ -261,6 +268,16 @@ function watchedRows(
       lastFetchStatus: c.lastFetchStatus,
       jobsTotal: c._count.jobs,
       newJobs: fresh.get(c.id) ?? 0,
+      // The first paste has nothing to be new against, so its role lines are read off the whole page.
+      paste:
+        c.pastedAt === null
+          ? null
+          : {
+              at: c.pastedAt,
+              lines: c.pastedLines.length,
+              added: c.pastedNew,
+              roles: roleLines(c.pastedNew.length > 0 ? c.pastedNew : c.pastedLines, searches),
+            },
     }));
 }
 
@@ -474,9 +491,13 @@ companiesRoute.post('/companies/:id/toggle-active', async (c) => {
 
   const current = await prisma.company.findUnique({
     where: { id },
-    select: { active: true, name: true },
+    select: { active: true, name: true, atsType: true },
   });
   if (!current) return c.text('Not found', 404);
+  // TASKS N8: an active row would put a page nothing can read into every tick.
+  if (!current.active && current.atsType === AtsType.BROWSER_PAGE) {
+    return redirectWithFlash(c, 'err', `${current.name} draws its jobs in the browser, which ApplyPack cannot read — paste the page from the watchlist instead.`);
+  }
 
   await prisma.company.update({
     where: { id },
