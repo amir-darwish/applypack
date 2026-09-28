@@ -447,6 +447,10 @@ model AppSettings {
   // OPENAI_BASE_URL from .env (api.openai.com by default). A local server
   // (Ollama, LM Studio, llama.cpp) needs no key and costs nothing (ADR 0055).
   openAiBaseUrl                  String?
+  // ADR 0057: the local engine's Ollama root (null = OLLAMA_URL) and the
+  // context window it asks for per call (null = 16 384 tokens).
+  localAiUrl                     String?
+  localContextTokens             Int?
   // ADR 0056: turn new postings away at a company applied to in the last N
   // days (30 / 60 / 90 / 180); null = off. `employersFilledAt` is when
   // init.ts gave the rows stored before Job.employerKey theirs; null = the

@@ -1,7 +1,8 @@
 import type { Profile } from '@prisma/client';
 import { prisma } from '../db';
 import { probeAiProviders, type AiProviderStatus } from '../ai-runtime';
-import type { AiProviderId } from '../ai-engine';
+import { aiEngineOrder, parseAiEngineConfig, type AiProviderId } from '../ai-engine';
+import { config } from '../config';
 import { getSettings, type AppSettingsView } from '../settings';
 import { getActiveProfile } from '../profiles';
 import { isBlankProfile } from '../profile-guards';
@@ -26,7 +27,7 @@ export interface WelcomeContext {
 }
 
 export async function loadWelcomeContext(): Promise<WelcomeContext> {
-  const [settings, statuses, profile, jobCount, scoredCount, suggestions] = await Promise.all([
+  const [settings, probed, profile, jobCount, scoredCount, suggestions] = await Promise.all([
     getSettings(),
     probeAiProviders(),
     getActiveProfile(),
@@ -34,6 +35,14 @@ export async function loadWelcomeContext(): Promise<WelcomeContext> {
     prisma.job.count({ where: { fitScore: { not: null } } }),
     currentSuggestions(),
   ]);
+  // Ollama answering on its default address is an offer — the "A model on
+  // this computer" card — until the local engine is in the list: counted as
+  // connected, setup would call step 1 done while nothing would call it.
+  const order = aiEngineOrder(parseAiEngineConfig(settings.aiEngine), config.AI_PROVIDER);
+  const statuses =
+    probed.local_api.ok && !order.includes('local_api')
+      ? { ...probed, local_api: { ok: false, detail: `${probed.local_api.detail} — not in your engine list yet` } }
+      : probed;
   return {
     settings,
     statuses,

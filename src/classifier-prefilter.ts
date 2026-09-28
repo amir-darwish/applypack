@@ -27,6 +27,7 @@ export async function preClassify(
 
   const ai = await getAiRuntime();
   const out = await ai.complete({
+    json: true,
     system: systemPrompt,
     user: userText,
     maxTokens: MAX_TOKENS,

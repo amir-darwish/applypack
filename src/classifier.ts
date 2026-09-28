@@ -239,6 +239,7 @@ async function classifyWithClaude(
   // One retry on a malformed reply: small models occasionally wrap or truncate JSON.
   for (let attempt = 0; attempt < 2; attempt++) {
     const out = await ai.complete({
+      json: true,
       system: systemPrompt,
       user: userText,
       maxTokens: BASE_MAX_TOKENS + MAX_TOKENS_PER_PROFILE * profiles.length,

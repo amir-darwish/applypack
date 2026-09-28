@@ -278,6 +278,22 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 303 && res.headers.get('location') === '/welcome?step=ai',
     },
     {
+      // ADR 0057: the local engine's Ollama root and its context window.
+      name: 'POST /settings/ai/local (an address)',
+      init: form({ baseUrl: 'http://127.0.0.1:9/v1' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=ai',
+    },
+    {
+      name: 'POST /settings/ai/local (the context window)',
+      init: form({ contextTokens: '32768' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=ai',
+    },
+    {
+      name: 'POST /settings/ai/local clear=1 (back to .env)',
+      init: form({ clear: '1' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=ai',
+    },
+    {
       name: 'POST /settings/ai/openai-base clear=1 (back to .env)',
       init: form({ clear: '1' }),
       expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=ai',
@@ -306,6 +322,9 @@ async function main(): Promise<void> {
     '/settings/ai/openai-base',
     '/settings?tab=ai',
     '/welcome/ai/local',
+    '/settings/ai/local',
+    '/settings/ai/local',
+    '/settings/ai/local',
     '/settings/ai/openai-base',
     `/resumes/${f.resumeId}/render`,
   ];

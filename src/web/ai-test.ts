@@ -6,8 +6,9 @@ import {
   type AiProviderId,
 } from '../ai-engine';
 import { resolveAiKey } from '../ai-keys';
-import { billingFacts, getAiEngineEnv, openAiBase } from '../ai-runtime';
-import { listServerModels, listsModel } from '../openai-models';
+import { billingFacts, getAiEngineEnv, localAiBase, openAiBase } from '../ai-runtime';
+import { DEFAULT_LOCAL_CONTEXT_TOKENS } from '../ai-provider-parse';
+import { listOllamaModels, listServerModels, listsModel, preferredModel } from '../server-models';
 import { recordAiCall } from '../ai-ledger';
 import { billingOf } from '../ai-usage';
 import { getAiKeys, getSettings } from '../settings';
@@ -40,20 +41,21 @@ export async function testAiEngine(provider: AiProviderId): Promise<EngineTestRe
   let model = engine.modelFor(provider, 'classifier');
   // TASKS S3: an OpenAI-compatible server says what it runs before anything is
   // asked of it — a wrong address or a model never pulled is named, not guessed.
-  const base = openAiBase(settings.openAiBaseUrl);
+  const base = provider === 'local_api' ? localAiBase(settings.localAiUrl) : openAiBase(settings.openAiBaseUrl);
   let offered: string[] | null = null;
   // Not every compatible server lists its models; the call below is still the test.
   let unlistable = '';
   let pickedForTest = false;
-  if (provider === 'openai_api') {
-    const listed = await listServerModels(base, resolveAiKey(provider, keys));
+  if (provider === 'openai_api' || provider === 'local_api') {
+    const listed = provider === 'local_api' ? await listOllamaModels(base) : await listServerModels(base, resolveAiKey(provider, keys));
     if ('reason' in listed) {
       unlistable = ` Asked for its models: ${listed.reason}.`;
     } else {
       offered = listed.models;
-      // No slot filled and no OPENAI_MODEL: the provider would ask for gpt-5-mini, which no local server has.
-      if (offered.length > 0 && model.trim() === '') {
-        model = offered[0]!;
+      // No slot filled and nothing in .env: the provider would ask for a model no local server has.
+      const first = preferredModel(offered);
+      if (first !== null && model.trim() === '') {
+        model = first;
         pickedForTest = true;
       }
     }
@@ -71,7 +73,8 @@ export async function testAiEngine(provider: AiProviderId): Promise<EngineTestRe
     model,
     timeoutMs: ENGINE_TEST_TIMEOUT_MS,
     apiKey: resolveAiKey(provider, keys),
-    ...(provider === 'openai_api' && { baseUrl: base }),
+    ...((provider === 'openai_api' || provider === 'local_api') && { baseUrl: base }),
+    ...(provider === 'local_api' && { contextTokens: settings.localContextTokens ?? DEFAULT_LOCAL_CONTEXT_TOKENS }),
     onError: (reason) => {
       failure = reason;
     },
@@ -91,7 +94,7 @@ export async function testAiEngine(provider: AiProviderId): Promise<EngineTestRe
   const seconds = ((Date.now() - started) / 1000).toFixed(1);
   const offer = offered === null ? '' : offered.length === 0 ? ' The server lists no models yet — pull one first.' : ` The server offers ${offered.length === 1 ? '1 model' : `${offered.length} models`}: ${offered.slice(0, 5).join(', ')}${offered.length > 5 ? ', …' : ''}.`;
   if (attempt.text !== null) {
-    const picked = pickedForTest ? ' No model is chosen yet, so the test used the first the server offers — pick one below.' : '';
+    const picked = pickedForTest ? ' No model is chosen yet, so the test used one from the server\'s list — pick yours below.' : '';
     return { ok: true, text: `${label} works — replied in ${seconds}s (model ${model || 'CLI default'}).${picked}${offer}` };
   }
   const reason: string = failure ?? 'no reason reported — see the web container logs';

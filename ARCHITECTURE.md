@@ -274,13 +274,13 @@ src/
   ai-failover.ts               ← runChain: the failover loop, a ledger row per attempt, cooldowns; its I/O injected (tested)
   ai-cooldown.ts               ← pure: an engine that keeps failing is skipped for a while
   ai-provider.ts               ← the AiProvider seam: AnthropicApiProvider, OpenAiApiProvider,
-                                 CliProvider (claude_code, gemini_cli, codex_cli)
+                                 LocalApiProvider (Ollama's own API, ADR 0057), CliProvider (claude_code, gemini_cli, codex_cli)
   ai-provider-parse.ts         ← pure: CLI arguments, the child env allowlist, reply parsers, anthropicMaxTokens
   ai-json.ts                   ← askForJson: a call parsed by a schema, one retry unless the reply was cut off
   ai-usage.ts                  ← pure: what an attempt spent (AiUsage, NULL = not reported), the closed feature set, billingOf (ADR 0055),
                                  isLocalUrl + checkOpenAiBaseUrl (a server on this machine takes no key)
-  openai-models.ts             ← GET {base}/models: the OpenAI-compatible server's models, remembered for the fields'
-                                 suggestions; findLocalServers asks Ollama's and LM Studio's default addresses
+  server-models.ts             ← the models a server runs (GET {base}/models, Ollama's /api/tags), remembered for the
+                                 fields' suggestions; findLocalServers asks Ollama's and LM Studio's default addresses
   ai-prices.ts                 ← pure: the dated price table (PRICES_AS_OF), costMicroUsd; an unknown model is not priced
   ai-spend.ts                  ← pure: ledgerRow, the Usage & cost view, periods, the budget warning, billingNotes, the estimates
   ai-ledger.ts                 ← recordAiCall into ai_call (+ the budget warning), the sums the pages read
@@ -743,6 +743,8 @@ erDiagram
     Json aiEngine "engine order + models per role (ADR 0013/0014)"
     Json aiKeys "per-engine API keys, DB first (ADR 0027)"
     String openAiBaseUrl "the OpenAI-compatible engine's server, NULL = OPENAI_BASE_URL"
+    String localAiUrl "the local engine's Ollama root, NULL = OLLAMA_URL (ADR 0057)"
+    Int localContextTokens "the local engine's context window, NULL = 16 384"
     Json sourceKeys "Adzuna and France Travail keys (ADR 0034)"
     Json aiUsage "retired in 2.21.0; the ai_call ledger replaced it"
     Boolean updateCheck "look for a newer release weekly, off by default"

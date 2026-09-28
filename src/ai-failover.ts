@@ -23,12 +23,23 @@ const CHAIN_DEADLINE_FACTOR = 2;
 const MIN_REMAINING_MS = 5_000;
 // Mirrors the provider-internal CLI default timeout.
 const DEFAULT_ATTEMPT_TIMEOUT_MS = 180_000;
+/**
+ * A model on this machine answers in minutes where a hosted one takes
+ * seconds, and waits its turn behind the calls before it (ADR 0057): its
+ * attempt gets this much more of the clock, and the chain's deadline grows
+ * with it so the engine behind still has its own.
+ */
+const ENGINE_TIME_FACTOR: Partial<Record<AiProviderId, number>> = { local_api: 3 };
+const timeFactor = (id: AiProviderId): number => ENGINE_TIME_FACTOR[id] ?? 1;
 
 export interface ChainContext {
   /** The credential each engine calls with (ai-keys.ts), undefined for a sign-in the CLI keeps itself. */
   keyFor(id: AiProviderId): string | undefined;
   /** Where the OpenAI-compatible engine sends its calls (ai-runtime.ts:openAiBase). */
   openAiBase: string;
+  /** The local engine's Ollama root and the context window it asks for (ADR 0057). */
+  localBase: string;
+  localContextTokens: number;
   billingOf(id: AiProviderId): AiBilling;
 }
 
@@ -60,7 +71,7 @@ export async function runChain(
   }
   const tryList = (hot.length > 0 ? hot : chain).slice(0, MAX_ENGINE_SWITCHES);
   const perAttemptMs = req.timeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS;
-  const deadline = deps.now() + perAttemptMs * CHAIN_DEADLINE_FACTOR;
+  const deadline = deps.now() + perAttemptMs * CHAIN_DEADLINE_FACTOR * Math.max(1, ...tryList.map(timeFactor));
   for (let i = 0; i < tryList.length; i++) {
     const id = tryList[i]!;
     const remainingMs = deadline - deps.now();
@@ -83,10 +94,12 @@ export async function runChain(
       maxTokens: req.maxTokens,
       label: req.label,
       model,
-      timeoutMs: Math.min(perAttemptMs, remainingMs),
+      timeoutMs: Math.min(perAttemptMs * timeFactor(id), remainingMs),
       webTools: req.webTools,
+      json: req.json,
       apiKey: ctx.keyFor(id),
       ...(id === 'openai_api' && { baseUrl: ctx.openAiBase }),
+      ...(id === 'local_api' && { baseUrl: ctx.localBase, contextTokens: ctx.localContextTokens }),
       onError: req.onError,
     });
     const viaFallback = id !== engine.chain[0];

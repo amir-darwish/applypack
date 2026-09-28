@@ -36,6 +36,9 @@ export interface AppSettingsView {
   latestCheckedAt: Date | null;
   /** TASKS S1: the OpenAI-compatible engine's server; null = OPENAI_BASE_URL from .env. */
   openAiBaseUrl: string | null;
+  /** ADR 0057: the local engine's Ollama root (null = OLLAMA_URL) and its context window (null = the default). */
+  localAiUrl: string | null;
+  localContextTokens: number | null;
   /** ADR 0056: turn postings away at a company applied to in the last N days; null = off. */
   reapplyDays: number | null;
   /** When init.ts gave the older rows their employer keys; null = not yet. */
@@ -127,6 +130,8 @@ export async function getSettings(): Promise<AppSettingsView> {
     latestVersion: row.latestVersion,
     latestCheckedAt: row.latestCheckedAt,
     openAiBaseUrl: row.openAiBaseUrl,
+    localAiUrl: row.localAiUrl,
+    localContextTokens: row.localContextTokens,
     reapplyDays: row.reapplyDays,
     employersFilledAt: row.employersFilledAt,
     coverAngles: row.coverAngles,
@@ -337,6 +342,25 @@ export async function setOpenAiBaseUrl(url: string | null): Promise<void> {
     create: { id: SETTINGS_ID, openAiBaseUrl: url },
   });
   logger.info({ cleared: url === null }, 'settings: openai base url updated');
+}
+
+/** ADR 0057: the local engine's Ollama root, or null for OLLAMA_URL. The route checks the address. */
+export async function setLocalAiUrl(url: string | null): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: SETTINGS_ID },
+    update: { localAiUrl: url },
+    create: { id: SETTINGS_ID, localAiUrl: url },
+  });
+  logger.info({ cleared: url === null }, 'settings: local ai url updated');
+}
+
+/** ADR 0057: the local engine's context window in tokens, or null for the default. The route checks the choice. */
+export async function setLocalContextTokens(tokens: number | null): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: SETTINGS_ID },
+    update: { localContextTokens: tokens },
+    create: { id: SETTINGS_ID, localContextTokens: tokens },
+  });
 }
 
 /** ADR 0056: the re-apply window in days, or null to switch it off. The route checks the choice. */

@@ -2512,6 +2512,17 @@ options and measurements: [docs/local-install-plan.md](./local-install-plan.md).
       no vendor's robots.txt tokens (ADR 0036 addendum 2026-09-28). Still by
       hand: the context length and `AI_CONCURRENCY=1` (docs/ai-engines.md);
       stage B of the feature-gap analysis makes them the engine's own.
+- [x] **`local-api-engine`** (minor, v2.29.0, ADR 0057) — stage B of the
+      feature-gap analysis: `local_api`, "Local model (Ollama)", an engine of
+      its own over Ollama's `/api/chat`. The context window is sent with every
+      call (`AppSettings.localContextTokens`, 16k default), and a prompt
+      estimated larger is refused before it is sent. JSON mode is asked for
+      where the caller parses JSON. The reply is streamed, one call at a time
+      per server, and the attempt gets three times the clock. Its address is
+      local only (`AppSettings.localAiUrl`), it bills nothing and binds no
+      robots token. The wizard uses Ollama through it and LM Studio through
+      the OpenAI-compatible engine. Stage C (a measured model table, a
+      per-role preset) waits.
 - [ ] **`local-always-on`** (minor, later) — start at login; a dated
       snapshot of the data folder on start; `npm run db:import` from Docker
       (`pg_dump --inserts`); the Windows CLI engines (`.cmd` shims and

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { listsModel, parseModelList, preferredModel } from './openai-models';
+import { listsModel, parseModelList, parseOllamaTags, preferredModel } from './server-models';
 
 test('a model list is its ids, once each and sorted; anything else is no list', () => {
   assert.deepEqual(parseModelList({ object: 'list', data: [{ id: 'qwen2.5:14b' }, { id: 'llama3.1:8b' }, { id: 'llama3.1:8b' }] }), [
@@ -23,4 +23,12 @@ test('a model named without its tag is the one Ollama lists as :latest', () => {
   assert.equal(listsModel(['llama3.1:latest'], 'llama3.1'), true);
   assert.equal(listsModel(['llama3.1:8b'], 'llama3.1:8b'), true);
   assert.equal(listsModel(['llama3.1:8b'], 'llama3.1'), false);
+});
+
+test("Ollama's /api/tags reads as the same list", () => {
+  assert.deepEqual(
+    parseOllamaTags({ models: [{ name: 'qwen2.5:14b', size: 9_000_000_000 }, { name: 'llama3.1:8b', details: { family: 'llama' } }] }),
+    ['llama3.1:8b', 'qwen2.5:14b'],
+  );
+  assert.equal(parseOllamaTags({ data: [{ id: 'x' }] }), null);
 });

@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 /*
- * The models an OpenAI-compatible server offers (TASKS S3): `GET {base}/models`,
+ * The models a model server offers (TASKS S3): `GET {base}/models` on an
+ * OpenAI-compatible server, `GET {root}/api/tags` on Ollama (ADR 0057) —
  * asked by the engine's Test, by the engine probe when the server is on this
  * machine (ai-runtime.ts) and by the wizard's local-model card. What it
  * answered is kept in memory for the model fields' suggestions; a restart
@@ -17,13 +18,15 @@ const MAX_MODELS = 500;
 const MAX_KNOWN_SERVERS = 8;
 
 /**
- * Where the two common local servers listen out of the box (TASKS S1). The
- * second host is the machine itself as a container sees it (Docker Desktop;
- * on Linux, compose's `host-gateway`).
+ * Where the two common local servers listen out of the box (TASKS S1), and
+ * the engine each is used through: Ollama through its own API (the local
+ * engine, ADR 0057), LM Studio through its OpenAI-compatible one. The second
+ * host is the machine itself as a container sees it (Docker Desktop; on
+ * Linux, compose's `host-gateway`).
  */
 const LOCAL_SERVERS = [
-  { name: 'Ollama', port: 11434 },
-  { name: 'LM Studio', port: 1234 },
+  { name: 'Ollama', port: 11434, engine: 'local_api', path: '' },
+  { name: 'LM Studio', port: 1234, engine: 'openai_api', path: '/v1' },
 ] as const;
 const LOCAL_HOSTS = ['127.0.0.1', 'host.docker.internal'] as const;
 
@@ -31,6 +34,7 @@ const LOCAL_HOSTS = ['127.0.0.1', 'host.docker.internal'] as const;
 const NOT_A_CHAT_MODEL = /embed|minilm|rerank|whisper|\bbge\b|\btts\b/i;
 
 const ModelListSchema = z.object({ data: z.array(z.object({ id: z.string() }).passthrough()) }).passthrough();
+const OllamaTagsSchema = z.object({ models: z.array(z.object({ name: z.string() }).passthrough()) }).passthrough();
 
 /** `{ data: [{ id }] }` → the ids, sorted, at most MAX_MODELS; anything else → null. */
 export function parseModelList(raw: unknown): string[] | null {
@@ -46,6 +50,13 @@ export function knownModels(base: string): string[] {
   return known.get(base) ?? [];
 }
 
+/** `{ models: [{ name }] }` from Ollama's /api/tags → the names, as parseModelList reads a /models answer. */
+export function parseOllamaTags(raw: unknown): string[] | null {
+  const parsed = OllamaTagsSchema.safeParse(raw);
+  if (!parsed.success) return null;
+  return parseModelList({ data: parsed.data.models.map((m) => ({ id: m.name })) });
+}
+
 /** Whether the server's list names `model` — Ollama answers "llama3.1" with its ":latest" tag. */
 export function listsModel(models: readonly string[], model: string): boolean {
   return models.includes(model) || models.includes(`${model}:latest`);
@@ -58,6 +69,8 @@ export function preferredModel(models: readonly string[]): string | null {
 
 export interface LocalServer {
   name: string;
+  /** The engine it is used through, and the address that engine takes: Ollama's root, LM Studio's /v1. */
+  engine: 'local_api' | 'openai_api';
   base: string;
   models: string[];
 }
@@ -68,37 +81,56 @@ export interface LocalServer {
  * LOCAL_LIST_TIMEOUT_MS. A server found on both hosts is listed once.
  */
 export async function findLocalServers(): Promise<LocalServer[]> {
-  const candidates = LOCAL_SERVERS.flatMap((s) => LOCAL_HOSTS.map((h) => ({ name: s.name, base: `http://${h}:${s.port}/v1` })));
+  const candidates = LOCAL_SERVERS.flatMap((s) =>
+    LOCAL_HOSTS.map((h) => ({ name: s.name, engine: s.engine, base: `http://${h}:${s.port}${s.path}` })),
+  );
   const answers = await Promise.all(
-    candidates.map(async (c) => ({ ...c, listed: await listServerModels(c.base, undefined, LOCAL_LIST_TIMEOUT_MS) })),
+    candidates.map(async (c) => ({
+      ...c,
+      listed: await (c.engine === 'local_api' ? listOllamaModels(c.base, LOCAL_LIST_TIMEOUT_MS) : listServerModels(c.base, undefined, LOCAL_LIST_TIMEOUT_MS)),
+    })),
   );
   const found: LocalServer[] = [];
   for (const a of answers) {
-    if ('models' in a.listed && !found.some((f) => f.name === a.name)) found.push({ name: a.name, base: a.base, models: a.listed.models });
+    if ('models' in a.listed && !found.some((f) => f.name === a.name)) found.push({ name: a.name, engine: a.engine, base: a.base, models: a.listed.models });
   }
   return found;
 }
 
-/** Asks the server for its models. The reason is a sentence for the flash when it could not. */
+/** Asks an OpenAI-compatible server for its models. The reason is a sentence for the flash when it could not. */
 export async function listServerModels(
   base: string,
   apiKey: string | undefined,
   timeoutMs = LIST_TIMEOUT_MS,
 ): Promise<{ models: string[] } | { reason: string }> {
+  return listModels(`${base}/models`, base, apiKey ? { Authorization: `Bearer ${apiKey}` } : {}, parseModelList, timeoutMs, (status) =>
+    // "http://127.0.0.1:11434" instead of ".../v1" is the usual slip; the address is saved as typed.
+    status === 404 && new URL(base).pathname === '/' ? ` — these servers answer under /v1: try ${base}/v1` : '',
+  );
+}
+
+/** Asks Ollama at its root for the models it has pulled (ADR 0057). */
+export async function listOllamaModels(root: string, timeoutMs = LIST_TIMEOUT_MS): Promise<{ models: string[] } | { reason: string }> {
+  return listModels(`${root}/api/tags`, root, {}, parseOllamaTags, timeoutMs, (status) =>
+    status === 404 ? ' — is this an Ollama server? LM Studio and the like go in the OpenAI-compatible engine' : '',
+  );
+}
+
+async function listModels(
+  url: string,
+  base: string,
+  headers: Record<string, string>,
+  parse: (raw: unknown) => string[] | null,
+  timeoutMs: number,
+  hint: (status: number) => string,
+): Promise<{ models: string[] } | { reason: string }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const resp = await fetch(`${base}/models`, {
-      headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-      signal: ctrl.signal,
-    });
-    if (!resp.ok) {
-      // "http://127.0.0.1:11434" instead of ".../v1" is the usual slip; the address is saved as typed.
-      const hint = resp.status === 404 && new URL(base).pathname === '/' ? ` — these servers answer under /v1: try ${base}/v1` : '';
-      return { reason: `${base}/models answered HTTP ${resp.status}${hint}` };
-    }
-    const models = parseModelList(await resp.json().catch(() => null));
-    if (models === null) return { reason: `${base}/models did not answer with a model list` };
+    const resp = await fetch(url, { headers, signal: ctrl.signal });
+    if (!resp.ok) return { reason: `${url} answered HTTP ${resp.status}${hint(resp.status)}` };
+    const models = parse(await resp.json().catch(() => null));
+    if (models === null) return { reason: `${url} did not answer with a model list` };
     if (!known.has(base) && known.size >= MAX_KNOWN_SERVERS) known.clear();
     known.set(base, models);
     return { models };

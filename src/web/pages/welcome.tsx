@@ -73,7 +73,7 @@ export interface ProfileDraftCard {
 
 /** Step 1's "A model on this computer" card (TASKS S1): the servers found at their default addresses. */
 export interface LocalModelView {
-  servers: { name: string; base: string; host: string; models: string[]; preferred: string | null }[];
+  servers: { name: string; engine: 'local_api' | 'openai_api'; base: string; host: string; models: string[]; preferred: string | null }[];
   /** The address of the found server the engine already uses first, if any. */
   inUse: string | null;
 }
@@ -272,12 +272,15 @@ const LocalModelCard: FC<{ local: LocalModelView; offerInstall: boolean }> = ({ 
       {servers.length > 0 ? (
         servers.map((s) => (
           <form method="post" action="/welcome/ai/local" class="mt-2">
+            <input type="hidden" name="engine" value={s.engine} />
             <input type="hidden" name="base" value={s.base} />
             <p data-ui="hint" class="text-[13px] leading-5 text-ink-faint">
               {s.name} answers at {s.host} with {s.models.length === 1 ? 'one model' : `${s.models.length} models`}. Free and
               private — nothing leaves this machine — but slower than a hosted model, and a small one judges postings less
-              well. Start it with a context of 16k tokens or more (Ollama: <Code>OLLAMA_CONTEXT_LENGTH=16384</Code>), or a
-              long posting is cut.
+              well.{' '}
+              {s.engine === 'local_api'
+                ? 'ApplyPack sets its context window on each call and asks one thing at a time.'
+                : 'Load the model with a context of 16k tokens or more, or a long posting is cut.'}
             </p>
             <div class="mt-2.5 flex flex-wrap items-end gap-2">
               <Select name="model" aria-label={`Model on ${s.name}`} class="min-w-[12rem] flex-1">

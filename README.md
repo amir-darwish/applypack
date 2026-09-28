@@ -184,6 +184,7 @@ Five backends, and you can attach every subscription and key you own:
 | Codex CLI | headless `codex exec` | your ChatGPT Plus/Pro subscription |
 | Anthropic API | Messages API | per token |
 | OpenAI-compatible API | `POST /chat/completions` to any base URL | OpenAI, OpenRouter, Groq, DeepSeek, or a free local model |
+| Local model (Ollama) | Ollama's own API on this machine | free; the text never leaves it |
 
 Enable the ones you have on **Settings → AI engine**, order them, and pick
 models per engine. Engine #1 serves every call; on an error, a rate limit

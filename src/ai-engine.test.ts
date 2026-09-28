@@ -26,6 +26,7 @@ const ENV: AiEngineEnv = {
   resumeModel: 'claude-opus-5',
   coverModel: '',
   openAiModel: '',
+  localModel: '',
 };
 
 describe('resolveAiEngine', () => {
@@ -207,6 +208,7 @@ describe('cover role', () => {
     resumeModel: 'claude-opus-5',
     coverModel: '',
     openAiModel: '',
+    localModel: '',
   };
 
   it('takes the writer by default, whatever the resume slot says, until it is set explicitly', () => {
@@ -299,5 +301,27 @@ describe('a local OpenAI-compatible server', () => {
     const none = { order: [], models: {} };
     assert.deepEqual(withEngineFirst(none, 'openai_api', local, 'm').order, ['openai_api']);
     assert.deepEqual(withEngineFirst(none, 'openai_api', { ...local, hasAnthropicKey: true }, 'm').order, ['openai_api', 'anthropic_api']);
+  });
+});
+
+// ADR 0057: a model on this machine through Ollama's own API.
+describe('the local engine', () => {
+  it('takes no key, any model id, LOCAL_MODEL for an empty slot, and binds no robots token', () => {
+    assert.equal(providerUnusable('local_api', ENV), false);
+    assert.equal(modelFitsProvider('qwen2.5:14b', 'local_api'), true);
+    assert.equal(modelFitsProvider('', 'local_api'), false);
+    const engine = resolveAiEngine({ order: ['local_api'], models: {} }, { ...ENV, localModel: 'llama3.1:8b' });
+    assert.equal(engine.modelFor('local_api', 'resume'), 'llama3.1:8b');
+    assert.deepEqual(bindingProviders(engine, 'anthropic_api'), []);
+    assert.deepEqual(aiCrawlerTokens(['local_api']), []);
+  });
+
+  it('beside a vendor engine, only the vendor binds', () => {
+    const engine = resolveAiEngine({ order: ['local_api', 'gemini_cli'], models: {} }, ENV);
+    assert.deepEqual(aiCrawlerTokens(bindingProviders(engine, 'claude_code')), ['google-extended', 'claudebot', 'claude-user', 'claude-searchbot', 'claude-web', 'anthropic-ai']);
+  });
+
+  it('goes first on "Use it" like the OpenAI-compatible one', () => {
+    assert.deepEqual(withEngineFirst({ order: ['claude_code'], models: {} }, 'local_api', ENV, 'm').order, ['local_api', 'claude_code']);
   });
 });

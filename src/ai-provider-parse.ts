@@ -630,3 +630,121 @@ export function parseOpenAiChatResponse(raw: string): CliOutcome {
   if (typeof content === 'string' && content.trim().length > 0) return { text: content, rateLimited: false, error: null, ...spent };
   return { text: null, rateLimited: false, error: 'openai: empty completion', outcome: 'empty', ...spent };
 }
+
+/*
+ * Ollama's own chat API, which the `local_api` engine speaks (ADR 0057). The
+ * native route rather than /v1, because only it takes a context window per
+ * request: the compatible route runs at the server's default window and cuts
+ * a longer prompt from the START — which is where the rules are.
+ */
+
+/** The window a local model gets when the AI tab names none; the AI tab offers these. */
+export const DEFAULT_LOCAL_CONTEXT_TOKENS = 16_384;
+export const LOCAL_CONTEXT_CHOICES = [8_192, 16_384, 32_768, 65_536] as const;
+/** The chat template's own tokens around the two messages. */
+const CHAT_TEMPLATE_TOKENS = 64;
+/** Room past the answer for a model that thinks first; a model that does not stops where it would have. */
+const LOCAL_THINKING_HEADROOM_TOKENS = 4_096;
+
+/**
+ * A cautious count of the tokens a text becomes: about 3.5 characters a token
+ * for Latin text and 1.5 for anything else, so a Cyrillic resume is not waved
+ * through a window it overflows. Cautious on purpose — a refused call goes to
+ * the next engine, a truncated one answers without its rules.
+ */
+export function estimateTokens(text: string): number {
+  let ascii = 0;
+  let other = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) < 128) ascii++;
+    else other++;
+  }
+  return Math.ceil(ascii / 3.5 + other / 1.5);
+}
+
+/** What a call needs of the window: the prompt, the answer and the template. */
+export function localBudgetTokens(system: string, user: string, maxTokens: number): number {
+  return estimateTokens(system) + estimateTokens(user) + maxTokens + CHAT_TEMPLATE_TOKENS;
+}
+
+export function buildOllamaChatBody(req: {
+  system: string;
+  user: string;
+  model: string;
+  maxTokens: number;
+  contextTokens: number;
+  json?: boolean;
+}): string {
+  return JSON.stringify({
+    model: req.model,
+    messages: [
+      { role: 'system', content: req.system },
+      { role: 'user', content: req.user },
+    ],
+    // Streamed so the headers arrive at once: a reply sent whole after five
+    // minutes of generation meets Node's own header timeout, whatever ours says.
+    stream: true,
+    // JSON mode where the caller parses JSON: a small model's usual failure is the syntax.
+    ...(req.json && { format: 'json' }),
+    options: { num_ctx: req.contextTokens, num_predict: req.maxTokens + LOCAL_THINKING_HEADROOM_TOKENS },
+  });
+}
+
+const OllamaChunkSchema = z.object({
+  model: z.string().optional(),
+  message: z.object({ content: z.string().optional() }).passthrough().optional(),
+  done: z.boolean().optional(),
+  done_reason: z.string().optional(),
+  prompt_eval_count: z.number().optional(),
+  eval_count: z.number().optional(),
+  error: z.string().optional(),
+});
+
+/** Ollama's `{"error": "…"}`, the body of a refused request or a line of a failed stream. */
+export function ollamaError(raw: string): string | null {
+  try {
+    const parsed = OllamaChunkSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? (parsed.data.error ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A streamed /api/chat reply, line by line: the content pieces joined, the
+ * last line's counts and reason. A thinking block some models still inline
+ * is dropped; `length` is a cut-off, as `max_tokens` is on the Messages API.
+ */
+export function parseOllamaStream(raw: string): CliOutcome {
+  let content = '';
+  let model: string | null = null;
+  let done: z.infer<typeof OllamaChunkSchema> | null = null;
+  let error: string | null = null;
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    let json: unknown;
+    try {
+      json = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+    const chunk = OllamaChunkSchema.safeParse(json);
+    if (!chunk.success) continue;
+    if (chunk.data.error) error = chunk.data.error;
+    content += chunk.data.message?.content ?? '';
+    model = chunk.data.model ?? model;
+    if (chunk.data.done) done = chunk.data;
+  }
+  const spend: AiSpend | undefined = done
+    ? { usage: { ...NO_USAGE, inputTokens: count(done.prompt_eval_count), outputTokens: count(done.eval_count) }, model, reportedUsd: null }
+    : undefined;
+  const spent = spend ? { spend } : {};
+  if (error !== null) return { text: null, rateLimited: false, error: `ollama: ${error}`, ...spent };
+  if (!done) return { text: null, rateLimited: false, error: 'ollama: the reply stopped before it ended', ...spent };
+  if (done.done_reason === 'length') return { text: null, rateLimited: false, error: 'ollama: reply cut off at the token limit', outcome: 'cut_off', ...spent };
+  const text = content.replace(/^\s*<think>[\s\S]*?<\/think>\s*/, '');
+  if (text.trim().length === 0) return { text: null, rateLimited: false, error: 'ollama: the model returned no text', outcome: 'empty', ...spent };
+  return { text, rateLimited: false, error: null, ...spent };
+}
+
