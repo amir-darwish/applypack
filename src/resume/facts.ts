@@ -29,9 +29,23 @@ function names(k: MatchKeyword): string[] {
 export const DENIED_NOTE = 'user: does not have it';
 
 /**
+ * The note a "not sure" leaves. Not knowing is not a denial: the prompts are
+ * never told "no" (they read confirmed and denied facts only). The row stops
+ * asking and claims nothing — before this answer existed, the only way to
+ * silence a question you could not answer was to lie in one direction.
+ */
+export const UNSURE_NOTE = 'user: not sure';
+
+/** The three answers a candidate can give about a term. */
+export const FACT_ANSWERS = ['confirmed', 'denied', 'unknown'] as const;
+export type FactAnswer = (typeof FACT_ANSWERS)[number];
+
+/**
  * Flip keyword statuses from stored facts. Confirmed → "add" (the user's
- * context lands in the note); denied → "cannot_claim". Text evidence outranks
- * a denial: "present"/"add" keywords never get downgraded by a stale fact.
+ * context lands in the note); denied → "cannot_claim"; not sure →
+ * "cannot_claim" with its own note, so nothing is claimed and nothing is
+ * asked again. Text evidence outranks every answer: "present"/"add" keywords
+ * never get downgraded by a stale fact.
  */
 export function applyFacts(
   keywords: MatchKeyword[],
@@ -54,6 +68,10 @@ export function applyFacts(
     if (fact.status === 'denied' && k.status === 'ask_user') {
       changed++;
       return { ...k, status: 'cannot_claim' as const, note: DENIED_NOTE };
+    }
+    if (fact.status === 'unknown' && k.note !== UNSURE_NOTE) {
+      changed++;
+      return { ...k, status: 'cannot_claim' as const, note: UNSURE_NOTE };
     }
     return k;
   });

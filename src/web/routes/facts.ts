@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { applyFacts } from '../../resume/facts';
+import { applyFacts, FACT_ANSWERS } from '../../resume/facts';
 import { readKeywords } from '../../resume/prompts';
 import { deleteFact, rescoreMatchKeywords, upsertFact } from '../../resume/store';
 import { flashRedirect, safeBack } from '../flash';
@@ -13,7 +13,7 @@ import { flashRedirect, safeBack } from '../flash';
 
 const FactFormSchema = z.object({
   term: z.string().trim().min(1).max(100),
-  decision: z.enum(['confirmed', 'denied']),
+  decision: z.enum(FACT_ANSWERS),
   note: z.string().optional().default(''),
   matchId: z.coerce.number().int().optional(),
   back: z.string().optional().default('/resumes'),
@@ -28,6 +28,8 @@ factsRoute.post('/facts', async (c) => {
   const back = safeBack(f.back, '/resumes');
   const note = f.note.trim().slice(0, 300) || null;
   const fact = await upsertFact(f.term, f.decision, note);
+  // "Not sure" moves no score and needs no number: it only stops the question.
+  const unsure = f.decision === 'unknown';
 
   if (f.matchId) {
     // Under the row lock, like every other write to this JSON: an override
@@ -39,7 +41,7 @@ factsRoute.post('/facts', async (c) => {
       const { keywords, changed } = applyFacts(readKeywords(match.keywords), [fact]);
       return { keywords: changed > 0 ? keywords : null, detail: { changed } };
     });
-    if (outcome && outcome.detail.changed > 0) {
+    if (outcome && outcome.detail.changed > 0 && !unsure) {
       if (outcome.scored) {
         return flashRedirect(
           back,
@@ -49,6 +51,9 @@ factsRoute.post('/facts', async (c) => {
       }
       return flashRedirect(back, 'ok', `Saved "${fact.term}". Re-check to refresh this comparison.`);
     }
+  }
+  if (unsure) {
+    return flashRedirect(back, 'ok', `Noted: not sure about "${fact.term}". It will not be asked again, and nothing claims it.`);
   }
   return flashRedirect(back, 'ok', `Saved "${fact.term}" — future comparisons will use it.`);
 });
