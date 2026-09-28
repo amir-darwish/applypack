@@ -245,7 +245,9 @@ src/
   priority-rules.ts            ← pure: parsePriorityRules, the score floors a search sets
   eligibility.ts               ← pure: where the candidate lives, the relocation choices, residenceCovered (ADR 0033)
   currency.ts                  ← pure: salary in the posting's own money, toUsdPerYear over a dated rate table
-  filter.ts                    ← pure: passesAnyBaseFilter over passesBaseFilter, titleHasKeyword, placesOverlap
+  filter.ts                    ← pure: passesAnyBaseFilter over passesBaseFilter, titleHasKeyword, placesOverlap;
+                                 baseFilterReason / anyBaseFilterReason name the gate that turned a posting away
+  funnel.ts                    ← pure: the search funnel — the tick counters it keeps, the stages, the reasons in words
   fingerprint.ts               ← SimHash of a JD body + cross-listing search, pure (ADR 0018)
   apply-link.ts                ← pure: flags an apply link nobody can apply through (ADR 0023)
   countries.{json,ts}          ← the gazetteer: 86 countries, cities, region groups; lookups (pure, ADR 0031)
@@ -319,6 +321,7 @@ src/
     red-flags.ts               ← pure: countableFlags, the red flags the score may charge for
     keyword-shape.ts           ← pure: dropMalformedKeywords, what a keyword may be (ADR 0044)
     keyword-anchor.ts          ← pure: anchorStatuses, presence read off the text (ADR 0045)
+    coverage.ts                ← pure: "Missing across postings", the stored keyword tables folded against the text as it is now
     keyword-group.ts           ← pure: reconcileGroups, only the group labels the brief wrote (ADR 0044)
     keyword-frame.ts           ← pure: planKeywordFrame, whether a run inherits the posting's keyword frame
     keyword-overrides.ts       ← pure: the user's re-level / ignore / add, carried into the next reply
@@ -425,6 +428,7 @@ src/
   jobs/
     fetch-job.ts                ← runFetchJob (cron entry; {manual:true} from "Fetch now"), under the fetch lock
     fetch-lock.ts               ← tryFetchLock: the Postgres advisory lock that keeps one fetch running across processes
+    funnel-store.ts             ← addToFunnel (the fetch + HN wrappers) into funnel_day; loadFunnel, loadSourceYield for the pages
     fetch-pause.ts              ← makeFetchPauseProbe: a pause on /settings stops a running tick within seconds
     process-jobs.ts             ← processNormalizedJobs: the shared inner loop used by fetch + HN
     verdict-merge.ts            ← pure: one verdict per search, the winner, the score line (ADR 0028)
@@ -570,6 +574,7 @@ src/
       watchlist.tsx             ← the watchlist section of /companies, the resolve progress page, its preview
       discovery.tsx             ← /discovery
       runs.tsx                  ← /runs (+ Fetch now button)
+      funnel-card.tsx           ← the Search funnel section of /runs: stages over 7 / 30 days, the reasons, by source
       fetch-run.tsx             ← /runs/fetch-now/:id progress page + FetchNowButton
       run-steps.tsx             ← step list shared by the two progress pages
       welcome.tsx               ← /welcome first-run wizard (5 steps, one card at a time)
@@ -612,7 +617,7 @@ src/
       health.ts                 ← JSON liveness for external monitoring
 
 prisma/
-  schema.prisma                 ← 20 models: Company, Job, JobScore, CronRun, AppSettings, CompanyCandidate,
+  schema.prisma                 ← 21 models: Company, Job, JobScore, CronRun, FunnelDay, AppSettings, CompanyCandidate,
                                   NotificationTarget, Profile, Resume, ResumeReview, ResumeMatch, CandidateFact,
                                   CoverLetter, JobStageEvent, PostingBrief, JobVerification, Screening, Applicant,
                                   ScreeningComparison, ScreeningVerdict; 6 enums: AtsType, JobStatus, Workplace,
@@ -666,10 +671,11 @@ user's schedule, read in the schedule's own time zone.
 
 Every model of `prisma/schema.prisma` with its key fields, in Prisma's own
 types. The six enums are `AtsType`, `JobStatus`, `Workplace`,
-`CronRunStatus`, `CandidateStatus` and `NotificationKind`. `CronRun` and
-`CandidateFact` stand alone. `CompanyCandidate` has no foreign key either:
-it meets `Company` only through the pair `(atsType, atsToken)`, which is
-unique in each table, so a pair has at most one row on each side.
+`CronRunStatus`, `CandidateStatus` and `NotificationKind`. `CronRun`,
+`FunnelDay` and `CandidateFact` stand alone. `CompanyCandidate` has no
+foreign key either: it meets `Company` only through the pair
+`(atsType, atsToken)`, which is unique in each table, so a pair has at most
+one row on each side.
 
 ```mermaid
 erDiagram
@@ -849,6 +855,12 @@ erDiagram
     CronRunStatus status "RUNNING, OK or FAILED"
     Json stats
     String errorMessage
+  }
+
+  FunnelDay {
+    DateTime day PK "a UTC date"
+    Json counts "the funnel's tick counters, summed"
+    DateTime updatedAt
   }
 
   CompanyCandidate {

@@ -7,6 +7,7 @@ import { activeFetchRun } from '../fetch-runs';
 import { loadWelcomeContext } from '../welcome-facts';
 import { currentStep, needsWelcome } from '../welcome-steps';
 import { OverviewPage } from '../pages/overview';
+import { loadFunnel } from '../../jobs/funnel-store';
 
 /** ★ How many companies the user watches, and what they put up today (ADR 0036). */
 async function watchedSummary(): Promise<{ companies: number; newJobs: number }> {
@@ -86,6 +87,7 @@ overviewRoute.get('/', async (c) => {
       sleepingUntil={sleepingUntil}
       held={await loadHeldLine(check.schedule)}
       watched={await watchedSummary()}
+      funnelWeek={(await loadFunnel()).week}
       fetchRun={activeFetchRun()}
       finishSetup={currentStep(facts) !== null}
       flash={parseFlashCookie(c.req.header('cookie'))}

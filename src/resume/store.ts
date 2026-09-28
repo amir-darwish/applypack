@@ -12,6 +12,7 @@ import { readMatchMode, storedBreakdown, withSuggestionsMode, type MatchMode } f
 import { comparedResumeName } from './match-name';
 import { readPromptVersion, readVerificationId } from './match-reuse';
 import type { MatchAction, MatchKeyword, MatchSuggestions, ResumeMatchResult, ResumeReviewResult, ResumeScan } from './prompts';
+import { readKeywords } from './prompts';
 import { countableFlags } from './red-flags';
 import { storedReviewBreakdown, type ReviewBreakdown } from './review-score';
 import { readBreakdown, scoreMatch, type ScoreBreakdown } from './score';
@@ -240,6 +241,29 @@ export async function listMatchesForResume(resumeId: number): Promise<MatchRunSu
     orderBy: { createdAt: 'desc' },
     take: MATCH_LIST_LIMIT,
   });
+}
+
+/** The coverage card reads at most this many postings, newest first. */
+const COVERAGE_POSTINGS = 100;
+
+/**
+ * The keyword table of the latest saved comparison of each posting this
+ * resume was compared with — what `coverage.ts` folds. A draft is the editor's
+ * text, not the resume's, so it is left out. One row per posting in SQL: the
+ * tables are the heavy column, and a posting compared twenty times would
+ * otherwise bring nineteen stale copies along.
+ */
+export async function listLatestKeywordTables(resumeId: number): Promise<MatchKeyword[][]> {
+  const rows = await prisma.$queryRaw<{ keywords: unknown }[]>`
+    SELECT t."keywords" FROM (
+      SELECT DISTINCT ON ("jobId") "keywords", "createdAt"
+      FROM "resume_match"
+      WHERE "resumeId" = ${resumeId} AND NOT "draft"
+      ORDER BY "jobId", "createdAt" DESC
+    ) t
+    ORDER BY t."createdAt" DESC
+    LIMIT ${COVERAGE_POSTINGS}`;
+  return rows.map((r) => readKeywords(r.keywords));
 }
 
 /**

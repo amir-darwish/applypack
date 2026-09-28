@@ -6,6 +6,7 @@ import { Badge, Button, Card, Empty, FitBadge, Flash, MetricStrip, PageHeader, S
 import type { FlashMessage } from '../flash';
 import type { FetchRun } from '../fetch-runs';
 import type { HeldLine } from '../held-line';
+import { stageCount, type FunnelView } from '../../funnel';
 import { FetchNowButton } from './fetch-run';
 import {
   formatDuration,
@@ -49,12 +50,23 @@ export interface OverviewProps {
   held: HeldLine | null;
   /** §17: watched companies, and what they put up in the last 24h (ADR 0036). */
   watched: { companies: number; newJobs: number };
+  /** The search funnel over the last 7 days — one line, the card is on /runs. */
+  funnelWeek: FunnelView;
   /** The manual fetch in flight, if any — the button turns into a link to it. */
   fetchRun: FetchRun | null;
   /** A wizard step is still undone (skipped or not) — show the way back to /welcome. */
   finishSetup: boolean;
   flash?: FlashMessage | null;
 }
+
+/** The funnel's line: four of its six stages, each count followed by its word. */
+const FUNNEL_LINE = ['read', 'passed', 'matches', 'alerted'] as const;
+const FUNNEL_WORD: Record<(typeof FUNNEL_LINE)[number], string> = {
+  read: 'read',
+  passed: 'past the filter',
+  matches: 'matches',
+  alerted: 'alerted',
+};
 
 /** The four statuses worth acting on; Total and Dismissed stay quiet. */
 const PRIMARY_STATUSES = ['NEW', 'ALERTED', 'APPLIED', 'SAVED'] as const;
@@ -77,6 +89,7 @@ export const OverviewPage: FC<OverviewProps> = ({
   sleepingUntil,
   held,
   watched,
+  funnelWeek,
   fetchRun,
   finishSetup,
   flash,
@@ -153,6 +166,18 @@ export const OverviewPage: FC<OverviewProps> = ({
               class="font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep"
             >
               {held.action}
+            </a>
+            .
+          </p>
+        )}
+        {stageCount(funnelWeek, 'read') > 0 && (
+          <p data-ui="hint" class="text-[13px] leading-5 tabular-nums text-ink-muted">
+            Last 7 days: {FUNNEL_LINE.map((key) => `${stageCount(funnelWeek, key).toLocaleString('en-US')} ${FUNNEL_WORD[key]}`).join(' → ')} —{' '}
+            <a
+              href="/runs#funnel"
+              class="font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep"
+            >
+              where the rest went
             </a>
             .
           </p>

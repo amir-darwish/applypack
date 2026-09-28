@@ -4,6 +4,29 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.20.0] — 2026-09-28
+
+### Added
+- **Search funnel.** `/runs` opens on what the last 7 and 30 days made of
+  your sources: read, past the filter, new to you, scored by the AI,
+  matches, alerted. Below it, why the filter set postings aside (no title
+  keyword, an excluded word, an arrangement you did not pick, outside your
+  places) and why scored ones were dismissed (fit, location, salary), and,
+  folded, what each source brought. The Overview carries one line of it.
+  The days are kept in a small rollup that outlives the 90-day run history;
+  the runs already stored were summed into it on upgrade. No AI is spent.
+- **Why nothing came through.** A "Fetch now" verdict names the two filter
+  gates that took the most, and the wizard's first scoring pass says why
+  the rest were not a match.
+- **Missing across postings.** From five compared postings on, a resume's
+  page lists the keywords the postings keep asking for and the resume does
+  not say, read against the text as it is now: a word to write, a question
+  to answer under Confirmed facts, or a real gap. No AI.
+
+### Changed
+- TypeScript 7 builds the project (the native compiler: a type check in
+  half a second). pino-pretty 13 for the `npm start` log lines.
+
 ## [2.19.1] — 2026-09-28
 
 ### Fixed
@@ -4080,6 +4103,7 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.20.0]: https://github.com/applypack/applypack/compare/v2.19.1...v2.20.0
 [2.19.1]: https://github.com/applypack/applypack/compare/v2.19.0...v2.19.1
 [2.19.0]: https://github.com/applypack/applypack/compare/v2.18.5...v2.19.0
 [2.18.5]: https://github.com/applypack/applypack/compare/v2.18.4...v2.18.5

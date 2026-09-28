@@ -54,6 +54,19 @@ test('summarizeScoreRun reads the reclassify stats in plain words', () => {
     ok.text,
     'Scored 100 jobs — 18 look like a match; 212 set aside as off-topic without AI; 40 more waiting for the next pass.',
   );
+  // N2: the pass says why the rest were set aside, the base filter's gate and the winning search's reason.
+  assert.equal(
+    summarizeScoreRun({
+      reclassified: 10,
+      unchanged: 2,
+      dismissedLowFit: 6,
+      dismissedLocation: 2,
+      filterDismissed: 35,
+      rejectedTitle: 30,
+      rejectedPlace: 5,
+    }).text,
+    'Scored 10 jobs — 2 look like a match (not a match: 6 under the fit threshold, 2 with a location mismatch); 35 set aside as off-topic without AI — 30 without a title keyword, 5 outside your places.',
+  );
   assert.equal(summarizeScoreRun({ aborted: 1, reason: 'blank-profile' }).kind, 'warn');
   assert.equal(summarizeScoreRun({ reclassified: 0, failed: 3 }).kind, 'warn');
   assert.equal(

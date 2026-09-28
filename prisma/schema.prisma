@@ -300,6 +300,17 @@ model CronRun {
   @@map("cron_run")
 }
 
+// The search funnel's daily rollup (src/funnel.ts): every fetch tick's
+// counters summed per UTC day. Kept after the runs themselves are pruned at
+// 90 days, so the funnel can look further back than the run list.
+model FunnelDay {
+  day       DateTime @id @db.Date
+  counts    Json
+  updatedAt DateTime @updatedAt
+
+  @@map("funnel_day")
+}
+
 // Singleton table — always one row with id=1.
 model AppSettings {
   id                             Int       @id @default(1)

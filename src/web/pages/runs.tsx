@@ -2,7 +2,7 @@
 import type { FC } from 'hono/jsx';
 import type { CronRunStatus } from '@prisma/client';
 import { Layout } from '../layout';
-import { Badge, Card, Disclosure, Empty, Flash, PageHeader, Table, Td, Tr } from '../ui';
+import { Badge, Card, Disclosure, Empty, Flash, PageHeader, SectionTitle, Table, Td, Tr } from '../ui';
 import type { FlashMessage } from '../flash';
 import { formatDate, formatDuration, formatStamp } from '../format';
 import { displayZoneLabel } from '../display-zone';
@@ -10,7 +10,10 @@ import type { FetchRun } from '../fetch-runs';
 import type { CronStats, SourceStat } from '../../jobs/cron-run';
 import { summarizeRun } from '../runs-summary';
 import { FetchNowButton } from './fetch-run';
+import { FunnelCard } from './funnel-card';
 import { runLabel, runTone } from './overview';
+import type { FunnelView } from '../../funnel';
+import type { SourceYield } from '../../jobs/funnel-store';
 
 interface RunRow {
   id: number;
@@ -24,6 +27,8 @@ interface RunRow {
 
 export interface RunsProps {
   runs: RunRow[];
+  /** The search funnel over the last 7 and 30 days, and what each source brought. */
+  funnel: { week: FunnelView; month: FunnelView; sources: SourceYield[] };
   /** The manual fetch in flight, if any — the button turns into a link to it. */
   fetchRun: FetchRun | null;
   flash?: FlashMessage | null;
@@ -36,14 +41,19 @@ const RECENT_RUNS = 50;
 const columns = () => ['Job', `Started (${displayZoneLabel()})`, <span class="block text-right">Duration</span>, 'Status', 'What happened'];
 const WIDTHS = ['w-[15%]', 'w-[17%]', 'w-[8%]', 'w-[7%]', 'w-[53%]'];
 
-export const RunsPage: FC<RunsProps> = ({ runs, fetchRun, flash }) => {
+export const RunsPage: FC<RunsProps> = ({ runs, funnel, fetchRun, flash }) => {
   const recent = runs.slice(0, RECENT_RUNS);
+  // A fresh install has read nothing yet: the empty state below says what to do.
+  const funnelShown = funnel.month.stages.some((s) => s.count > 0) || funnel.sources.length > 0;
   const earlier = runs.slice(RECENT_RUNS);
   const earlierFailed = earlier.filter((r) => r.status === 'FAILED').length;
   return (
     <Layout title="Runs" active="runs">
       <PageHeader title="Runs" meta={`last ${runs.length}`} actions={<FetchNowButton run={fetchRun} />} />
       <Flash flash={flash} />
+
+      {funnelShown && <FunnelCard {...funnel} />}
+      {funnelShown && runs.length > 0 && <SectionTitle level="section">Run history</SectionTitle>}
 
       {runs.length === 0 ? (
         <Empty title="No runs yet">

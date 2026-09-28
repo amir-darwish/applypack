@@ -40,7 +40,35 @@ export function passesAnyBaseFilter(
   job: FilterableJob,
   profiles: readonly FilterProfile[],
 ): boolean {
-  return profiles.some((p) => passesBaseFilter(job, p));
+  return anyBaseFilterReason(job, profiles) === null;
+}
+
+/**
+ * Why the base filter turned a posting away, gate by gate: no title keyword,
+ * an excluded word in the title, an arrangement the search does not accept,
+ * a place outside the search's. The search funnel counts them (TASKS §20),
+ * because "why do I get nothing?" is answered by which gate took the jobs.
+ */
+export const FILTER_REASONS = ['title', 'excluded', 'workplace', 'place'] as const;
+export type FilterReason = (typeof FILTER_REASONS)[number];
+
+/**
+ * For the union: null when any search admits the posting, else the reason of
+ * the search that got it furthest — a posting that matched one search's
+ * titles and missed its places is a "place" miss, whatever the other searches
+ * made of its title. With no search at all the first gate is the reason.
+ */
+export function anyBaseFilterReason(
+  job: FilterableJob,
+  profiles: readonly FilterProfile[],
+): FilterReason | null {
+  let furthest: FilterReason = 'title';
+  for (const profile of profiles) {
+    const reason = baseFilterReason(job, profile);
+    if (reason === null) return null;
+    if (FILTER_REASONS.indexOf(reason) > FILTER_REASONS.indexOf(furthest)) furthest = reason;
+  }
+  return furthest;
 }
 
 /**
@@ -121,6 +149,14 @@ export function passesBaseFilter(
   job: FilterableJob,
   profile: FilterProfile,
 ): boolean {
+  return baseFilterReason(job, profile) === null;
+}
+
+/** The gate that turned the posting away for this search, or null when it passes. */
+export function baseFilterReason(
+  job: FilterableJob,
+  profile: FilterProfile,
+): FilterReason | null {
   const title = job.title.toLowerCase();
 
   // 1. Title must contain at least one stackRequired keyword OR one
@@ -133,16 +169,16 @@ export function passesBaseFilter(
     const hits =
       required.some((k) => titleHasKeyword(title, k)) ||
       roles.some((k) => titleHasKeyword(title, k));
-    if (!hits) return false;
+    if (!hits) return 'title';
   }
 
   // 2. Exclude — any match in title rejects.
   if (profile.stackExclude.some((k) => titleHasKeyword(title, k))) {
-    return false;
+    return 'excluded';
   }
 
   // 3. Location.
-  return locationMatches(job, profile);
+  return locationReason(job, profile);
 }
 
 /**
@@ -154,25 +190,25 @@ export function passesBaseFilter(
  *   - when both sides name places, they must overlap — groups expand to
  *     their members, so PL is inside EU and "Europe" reaches an EU search.
  */
-function locationMatches(job: FilterableJob, profile: FilterProfile): boolean {
+function locationReason(job: FilterableJob, profile: FilterProfile): FilterReason | null {
   const location = job.location.toLowerCase();
   const cities = profile.onsiteCities.map((c) => c.toLowerCase()).filter((c) => c.length > 0);
-  if (cities.some((c) => location.includes(c))) return true;
+  if (cities.some((c) => location.includes(c))) return null;
 
   if (
     job.workplace !== 'UNKNOWN' &&
     profile.workplace.length > 0 &&
     !profile.workplace.includes(job.workplace)
   ) {
-    return false;
+    return 'workplace';
   }
 
   // Nothing said, or said only on one side → Claude decides.
-  if (job.workplace === 'UNKNOWN') return true;
-  if (job.countries.length === 0 && job.regions.length === 0) return true;
-  if (profile.countries.length === 0 && profile.regions.length === 0) return true;
+  if (job.workplace === 'UNKNOWN') return null;
+  if (job.countries.length === 0 && job.regions.length === 0) return null;
+  if (profile.countries.length === 0 && profile.regions.length === 0) return null;
 
-  return placesOverlap(job, profile);
+  return placesOverlap(job, profile) ? null : 'place';
 }
 
 /** Set intersection that understands groups on both sides. */

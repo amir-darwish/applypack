@@ -13,8 +13,9 @@ import { describeSchedule, isFetchDue, lastRealFetch, RUN_LOOKBACK } from '../us
 import { deliverHeldAlerts } from './alert-delivery';
 import { recordCandidatesFromText } from '../discovery';
 import { makeFetchPauseProbe } from './fetch-pause';
-import { processNormalizedJobs, type ProcessStats } from './process-jobs';
+import { emptyProcessStats, processNormalizedJobs } from './process-jobs';
 import { tryFetchLock } from './fetch-lock';
+import { addToFunnel } from './funnel-store';
 import type { CronStats, SourceStat } from './cron-run';
 
 export interface FetchJobOptions {
@@ -43,8 +44,12 @@ export async function runFetchJob(opts: FetchJobOptions = {}): Promise<{ stats: 
     logger.warn({ manual: opts.manual === true }, 'fetch-job: another fetch is running; skipped');
     return { stats: { skipped: 1, reason: 'overlap' } };
   }
+  const startedAt = new Date();
   try {
-    return await fetchUnderLock(opts);
+    const result = await fetchUnderLock(opts);
+    // The funnel is a view of the run, not part of it: a failed write is logged, the run stands.
+    await addToFunnel(startedAt, result.stats).catch((err) => logger.warn({ err }, 'fetch-job: funnel day not updated'));
+    return result;
   } finally {
     await lock.release();
   }
@@ -197,27 +202,7 @@ async function fetchUnderLock(opts: FetchJobOptions): Promise<{ stats: CronStats
   }
 
   opts.onProcessing?.();
-  const inner: ProcessStats = {
-    filterRejected: 0,
-    duplicate: 0,
-    preFiltered: 0,
-    classified: 0,
-    classifyFailed: 0,
-    classifyError: null,
-    persisted: 0,
-    dismissed: 0,
-    alerted: 0,
-    alertFailed: 0,
-    priorityBoosted: 0,
-    crossListed: 0,
-    abortedMidRun: 0,
-    skippedByPause: 0,
-    skippedBlankProfile: 0,
-    alertHeld: 0,
-    alertsOffHeld: 0,
-    alertNoTarget: 0,
-    watchedKept: 0,
-  };
+  const inner = emptyProcessStats();
   await processNormalizedJobs(fetched, profiles, inner, {
     classifierMode,
     classify,

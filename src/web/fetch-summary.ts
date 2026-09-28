@@ -1,4 +1,5 @@
 import type { CronStats } from '../jobs/cron-run';
+import { filteredReasons, funnelCounts, reasonsText } from '../funnel';
 import type { FlashKind } from './flash';
 import { formatDuration } from './format';
 
@@ -52,7 +53,7 @@ export function summarizeFetchRun(stats: CronStats): { kind: FlashKind; text: st
   if (stats.classify === false) {
     return {
       kind: 'ok',
-      text: `${head} unscored, no AI spent while the pipeline is paused. Score them later with Save & re-classify on Settings → Profile.`,
+      text: `${head} unscored, no AI spent while the pipeline is paused.${filteredClause(stats)} Score them later with Save & re-classify on Settings → Profile.`,
     };
   }
   if (stats.skippedBlankProfile === 1) {
@@ -64,7 +65,13 @@ export function summarizeFetchRun(stats: CronStats): { kind: FlashKind; text: st
   if (stats.abortedMidRun === 1) {
     return { kind: 'warn', text: `${head}; the rest was skipped when fetching was paused mid-run.` };
   }
-  return { kind: 'ok', text: `${head}, ${num(stats, 'classified')} scored, ${num(stats, 'alerted')} alerted.` };
+  return { kind: 'ok', text: `${head}, ${num(stats, 'classified')} scored, ${num(stats, 'alerted')} alerted.${filteredClause(stats)}` };
+}
+
+/** " The filter set aside 500: 480 without a title keyword, 20 outside your places." — its two largest gates (N2). */
+function filteredClause(stats: CronStats): string {
+  const why = reasonsText(filteredReasons(funnelCounts(stats)), 2);
+  return why ? ` The filter set aside ${num(stats, 'filterRejected')}: ${why}.` : '';
 }
 
 /** "(44 unchanged, 2 failed)" — whichever of the two happened. */

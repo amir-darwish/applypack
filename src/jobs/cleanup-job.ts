@@ -10,11 +10,9 @@ const AI_USAGE_RETENTION_DAYS = 60;
  * search-analytics note both said 30 days — after a year of hourly ticks
  * that is around 50 000 rows nobody reads past the first page of /runs.
  *
- * 90 and not 30, because the search funnel that is coming reads this
- * history to say how many postings a search turned into matches, and a month
- * is too short a window to see a seasonal search in. When the funnel lands
- * with its daily rollup, the raw rows may go back to 30 — the rollup is what
- * has to outlive them.
+ * 90 and not 30: a month is too short to see a seasonal search in. The
+ * search funnel keeps its own daily rollup (`funnel_day`, never pruned), so
+ * what a search turned into matches outlives the raw rows either way.
  */
 const RUN_RETENTION_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;

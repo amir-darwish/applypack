@@ -37,6 +37,7 @@ import type { ParseWarning } from '../../resume/parse-warnings';
 import { describeStructure, type DocxStructure } from '../../resume/docx-structure';
 import type { DocxProps } from '../../resume/docx-props';
 import type { ProfileDraft } from '../../resume/profile-draft';
+import type { Coverage, CoverageKind } from '../../resume/coverage';
 
 export interface ResumeDetailProps {
   resume: ResumeSummary;
@@ -45,6 +46,8 @@ export interface ResumeDetailProps {
   /** Its document properties; null for anything but a .docx. */
   props: DocxProps | null;
   matches: MatchRunSummary[];
+  /** What the compared postings keep asking for and the text lacks; null under `coverage.ts:MIN_POSTINGS`. */
+  coverage: Coverage | null;
   /** The latest strength review, or null when the user has never asked for one. */
   review: ResumeReview | null;
   /** The candidate's answers to the review's questions (ADR 0030 phase 3). */
@@ -68,6 +71,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
   structure,
   props,
   matches,
+  coverage,
   review,
   answers,
   reviewDelta,
@@ -298,6 +302,8 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
           </Table>
         )}
       </Card>
+
+      {coverage && <CoverageCard coverage={coverage} />}
 
       {structure && <TemplateCheck resumeId={resume.id} candidate={resume.text.split('\n')[0]?.trim() || resume.name} structure={structure} props={props} />}
 
@@ -531,3 +537,60 @@ const TemplateCheck: FC<{ resumeId: number; candidate: string; structure: DocxSt
     </Card>
   );
 };
+
+/** What each reading asks of the user — the one move that closes it. */
+const CoverageMove: FC<{ kind: CoverageKind }> = ({ kind }) =>
+  kind === 'unwritten' ? (
+    <>A comparison found it in your experience — write it in</>
+  ) : kind === 'unconfirmed' ? (
+    <>
+      Say whether you have it, under{' '}
+      <a href="/resumes#facts" class="font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep">
+        Confirmed facts
+      </a>
+    </>
+  ) : (
+    <>Not on your resume — a skill to learn, or postings to skip</>
+  );
+
+/**
+ * "Missing across postings" (N10): the terms the latest comparison of each
+ * posting asked for and this resume does not say, as the text reads now.
+ */
+const CoverageCard: FC<{ coverage: Coverage }> = ({ coverage }) => (
+  <Card class="mt-4" flush>
+    <div class="border-b border-line px-5 py-3">
+      <div class="text-sm font-semibold text-ink">Missing across postings</div>
+      <Hint class="mt-0.5">
+        What the latest comparison of each of your {coverage.postings} compared postings asked for and this resume does
+        not say, read against the text as it is now. No AI.
+      </Hint>
+    </div>
+    {coverage.terms.length === 0 ? (
+      <div class="px-5 py-4">
+        <Hint>No keyword is missing from two postings or more — what is missing is one posting's own ask.</Hint>
+      </div>
+    ) : (
+      <Table
+        caption="Keywords missing across compared postings"
+        columns={['Keyword', 'Missing in', 'What closes it']}
+        widths={['w-[28%]', 'w-[24%]', 'w-[47%]']}
+      >
+        {coverage.terms.map((t) => (
+          <Tr>
+            <Td class="font-medium text-ink">{t.term}</Td>
+            <Td class="tabular-nums">
+              <div class="whitespace-nowrap">
+                {t.missing} of {coverage.postings}
+              </div>
+              {t.must > 0 && <div class="text-meta text-ink-faint">{t.must} as a must</div>}
+            </Td>
+            <Td class="text-ink-muted">
+              <CoverageMove kind={t.kind} />
+            </Td>
+          </Tr>
+        ))}
+      </Table>
+    )}
+  </Card>
+);

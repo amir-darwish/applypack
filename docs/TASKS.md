@@ -2314,7 +2314,7 @@ release-discipline skill, a docs/site block does not.
       steps 3 and 5; an Overview "next three things" card while
       `scoredCount > 0 && matchCount === 0` (open the top match →
       Compare → Tailor), derived from data like the wizard's steps.
-- [ ] **`search-funnel`** (minor) — §19 stage 1: `src/web/funnel.ts`
+- [x] **`search-funnel`** (minor) — §19 stage 1: `src/web/funnel.ts`
       (pure) summing `CronRun.stats` over 7 / 30 days + the
       location-mismatch share from `job_score`, a strip on `/runs` and one
       line on the Overview; decide `filterReason` after two weeks.
@@ -2323,6 +2323,21 @@ release-discipline skill, a docs/site block does not.
       at ≥ 5 comparisons. Deferred (§20): `stack_mentioned[]` from the
       classifier, a column, a card — trigger ≥ 500 classified postings in
       one search; §21 stays behind the F19 trigger.
+      **2026-09-28, v2.20.0:** shipped with the reasons decided now, not in
+      two weeks. Each tick counts the base filter's gate
+      (`filter.ts:baseFilterReason`; with several searches, the furthest
+      gate any reached), the winner's dismissal reason and `matched`, and
+      `jobs/funnel-store.ts` sums them into `funnel_day`, one row per UTC
+      day, never pruned. The funnel is read from that rollup, not from
+      `CronRun.stats`, so it outlives the 90-day run pruning; the migration
+      backfilled the stored runs (totals only, `matched` = scored − dismissed).
+      The location-mismatch share is the "with a location mismatch"
+      dismissal count from here on, not a `job_score` read. `src/funnel.ts`
+      sits outside `web/` because the worker writes it. `/runs` opens on the
+      funnel (7 / 30 days, the reasons, per-source yield from the jobs); the
+      Overview has one line; the Fetch now verdict and the wizard's scoring
+      pass name the reasons. Stage 3 as planned, read against the resume's
+      current text. §22.3's SVG charts stay later: a table reads six numbers.
 
 ### 20.4 Owner items
 
