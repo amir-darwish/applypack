@@ -21,7 +21,7 @@ import { fenceClose, fenceOpen } from './prompt-fence';
  * kind of cleverness that breaks on the next signature change.
  */
 
-/* CommonJS build (tsconfig module: CommonJS), so __dirname is the src root. */
+/* CommonJS output (no "type": "module" in package.json), so __dirname is the src root. */
 const SRC = __dirname;
 const BUILDER_RE = /^build[A-Za-z]*Prompt$/;
 
