@@ -29,6 +29,11 @@ export interface AppSettingsView {
   aiEngine: unknown;
   /** ADR 0055: the monthly ceiling on billed AI money, in cents; null = none. */
   aiBudgetCents: number | null;
+  /** TASKS N9: look for a newer release once a week; off by default. */
+  updateCheck: boolean;
+  /** The last release the check saw, and when; null until it has looked. */
+  latestVersion: string | null;
+  latestCheckedAt: Date | null;
   /** Raw AppSettings.coverAngles JSON — parse with readCoverAngles. */
   coverAngles: unknown;
   /** Raw AppSettings.pipelineStages JSON — parse with parseStageConfig (ADR 0025). */
@@ -112,6 +117,9 @@ export async function getSettings(): Promise<AppSettingsView> {
     sourceHealthAlerts: row.sourceHealthAlerts,
     aiEngine: row.aiEngine,
     aiBudgetCents: row.aiBudgetCents,
+    updateCheck: row.updateCheck,
+    latestVersion: row.latestVersion,
+    latestCheckedAt: row.latestCheckedAt,
     coverAngles: row.coverAngles,
     pipelineStages: row.pipelineStages,
     schedule: row.schedule,
@@ -302,6 +310,19 @@ export async function setAiBudgetCents(cents: number | null): Promise<void> {
     create: { id: SETTINGS_ID, aiBudgetCents: cents },
   });
   logger.info({ cents }, 'settings: AI budget set');
+}
+
+export async function setUpdateCheck(enabled: boolean): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: SETTINGS_ID },
+    update: { updateCheck: enabled },
+    create: { id: SETTINGS_ID, updateCheck: enabled },
+  });
+}
+
+/** What the update check saw: the latest release (null = none it could read) and when it looked. */
+export async function setLatestRelease(version: string | null, at: Date): Promise<void> {
+  await prisma.appSettings.update({ where: { id: SETTINGS_ID }, data: { latestVersion: version, latestCheckedAt: at } });
 }
 
 export async function setClassifierMode(mode: ClassifierMode): Promise<void> {

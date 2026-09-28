@@ -211,6 +211,11 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 303 && res.headers.get('location') === `/jobs/${f.jobId}`,
     },
     {
+      name: 'POST /facts (not sure)',
+      init: form({ term: 'Kubernetes', decision: 'unknown', back: '/resumes' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/resumes',
+    },
+    {
       name: 'POST /settings/ai/budget',
       init: form({ budget: '12.50' }),
       expect: (res) => res.status === 303 && (res.headers.get('location') ?? '').startsWith('/settings?tab=ai'),
@@ -229,6 +234,7 @@ async function main(): Promise<void> {
     `/jobs/${f.jobId}/status`,
     `/jobs/${f.jobId}/status`,
     `/jobs/${f.jobId}/status`,
+    '/facts',
     '/settings/ai/budget',
     `/resumes/${f.resumeId}/render`,
   ];

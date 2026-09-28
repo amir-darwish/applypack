@@ -32,6 +32,7 @@ import { welcomeRoute } from './routes/welcome';
 import { countriesRoute } from './routes/countries';
 import { screenRoute } from './routes/screen';
 import { ensureEmployerMode } from './employer-mode';
+import { ensureUpdateNotice } from './update-notice';
 import { withDisplayZone } from './display-zone';
 import { getSchedule } from '../settings';
 import { DEFAULT_BODY_BYTES, hasOwnBodyLimit } from './body-limits';
@@ -120,6 +121,7 @@ app.use('*', async (c, next) => {
   let timezone = config.TZ;
   try {
     await ensureEmployerMode();
+    await ensureUpdateNotice();
     timezone = (await getSchedule()).timezone;
   } catch (err) {
     logger.warn({ err, path: c.req.path }, 'web: employer mode unknown — database unreachable');

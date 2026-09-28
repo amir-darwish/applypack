@@ -2,6 +2,7 @@ import { CronRunStatus, JobStatus } from '@prisma/client';
 import { prisma } from '../db';
 import { logger } from '../logger';
 import type { CronStats } from './cron-run';
+import { checkForUpdate } from '../update-check';
 
 const RETENTION_DAYS = 30;
 /** The AI ledger (ADR 0055): long enough for "this year" and last year's same month. */
@@ -32,6 +33,9 @@ export async function runCleanupJob(): Promise<{ stats: CronStats }> {
       fetchedAt: { lt: cutoff },
     },
   });
+
+  // The optional weekly look for a newer release (TASKS N9); off unless turned on.
+  await checkForUpdate();
 
   const aiCalls = await prisma.aiCall.deleteMany({
     where: { at: { lt: new Date(Date.now() - AI_CALL_RETENTION_DAYS * DAY_MS) } },

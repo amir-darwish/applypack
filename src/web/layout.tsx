@@ -1,5 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import { isEmployerMode } from './employer-mode';
+import { newerRelease } from './update-notice';
+import { APP_VERSION } from '../app-version';
 import type { FC, PropsWithChildren } from 'hono/jsx';
 import { raw } from 'hono/html';
 import { TOKENS, hex, rootBlock } from './tokens';
@@ -332,9 +334,28 @@ const Sidebar: FC<{ active?: NavKey }> = ({ active }) => (
       <p class="px-2.5 text-xs leading-4 text-ink-faint md:hidden lg:block">
         Runs locally · data stays in your Postgres
       </p>
+      <VersionLine />
     </div>
   </aside>
 );
+
+/** Which release this is, and — when the optional check has seen one — that a newer one is out (TASKS N9). */
+const VersionLine: FC = () => {
+  const newer = newerRelease();
+  return (
+    <p class="px-2.5 text-xs leading-4 text-ink-faint md:hidden lg:block">
+      ApplyPack v{APP_VERSION}
+      {newer && (
+        <>
+          {' · '}
+          <a href="/settings?tab=general#updates" class="font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep">
+            v{newer} is out
+          </a>
+        </>
+      )}
+    </p>
+  );
+};
 
 const MobileBar: FC = () => (
   <header class="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-surface-raised px-4 md:hidden">
