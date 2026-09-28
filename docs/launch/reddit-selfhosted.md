@@ -19,7 +19,8 @@ search through it every day, and that is how I found the job I have
 now. It watches the boards, and my Telegram only rings when a posting
 clears my fit threshold. Resume, profile and every AI report stay in my Postgres. The
 scoring part runs live in your browser, no signup:
-https://applypack.dev/demo/
+https://applypack.dev/demo/ (and a 20-second tour of the rest:
+https://applypack.dev/tour.webm)
 
 What it does:
 
