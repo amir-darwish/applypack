@@ -13,6 +13,7 @@ import { comparedResumeName } from './match-name';
 import { readPromptVersion, readVerificationId } from './match-reuse';
 import type { MatchAction, MatchKeyword, MatchSuggestions, ResumeMatchResult, ResumeReviewResult, ResumeScan } from './prompts';
 import { readKeywords } from './prompts';
+import type { FactAnswer } from './facts';
 import { countableFlags } from './red-flags';
 import { storedReviewBreakdown, type ReviewBreakdown } from './review-score';
 import { readBreakdown, scoreMatch, type ScoreBreakdown } from './score';
@@ -750,11 +751,7 @@ export async function listFacts(): Promise<CandidateFact[]> {
   return prisma.candidateFact.findMany({ orderBy: { term: 'asc' } });
 }
 
-export async function upsertFact(
-  term: string,
-  status: 'confirmed' | 'denied',
-  note: string | null,
-): Promise<CandidateFact> {
+export async function upsertFact(term: string, status: FactAnswer, note: string | null): Promise<CandidateFact> {
   const key = term.trim().toLowerCase();
   const row = await prisma.candidateFact.upsert({
     where: { term: key },

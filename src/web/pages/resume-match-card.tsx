@@ -377,6 +377,12 @@ const FactRow: FC<{ k: MatchKeyword; matchId: number; back: string }> = ({ k, ma
           I don't
         </Button>
       </ActionForm>
+      {/* Stops the question without a claim either way (facts.ts:UNSURE_NOTE). */}
+      <ActionForm action="/facts" hidden={{ term: k.term, decision: 'unknown', matchId, back }}>
+        <Button size="sm" variant="ghost">
+          Not sure
+        </Button>
+      </ActionForm>
     </div>
   </li>
 );

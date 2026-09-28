@@ -170,9 +170,16 @@ export function init(data) {
     // Hardest requirement first, then the words the posting keeps repeating.
     for (const r of orderKeywords(keywordGaps(scored.rows), data.jobText)) {
       const unproven = r.status === 'cannot_claim';
-      // The user's own "I don't" is a cannot_claim too, carrying the note the
-      // denial left. Still a gap, so still a chip — but not an offer to confirm.
-      const denied = unproven && r.note === data.deniedNote;
+      // The user's own "I don't" or "Not sure" is a cannot_claim too, carrying
+      // the note the answer left. Still a gap, so still a chip — but not an
+      // offer to confirm: the card stopped asking about it.
+      const answer = !unproven
+        ? null
+        : r.note === data.deniedNote
+          ? 'you said you do not have it'
+          : r.note === data.unsureNote
+            ? 'you said you are not sure'
+            : null;
       const b = document.createElement('button');
       b.type = 'button';
       b.className =
@@ -182,12 +189,12 @@ export function init(data) {
         wantsLabel(r),
         gapLabel(r, false),
         r.count > 1 ? '×' + r.count + ' in the posting' : null,
-        denied ? 'you said you do not have it' : unproven ? 'type it in where it is true, or click to say you have it' : r.where ? 'add in: ' + r.where : null,
-        denied ? null : r.note,
+        answer ?? (unproven ? 'type it in where it is true, or click to say you have it' : r.where ? 'add in: ' + r.where : null),
+        answer ? null : r.note,
       ].filter(Boolean).join(' · ');
       // A dashed chip has no section to send you to — the resume never mentions
       // the word. It opens the confirm card, the other way to make it count.
-      b.addEventListener('click', () => (unproven && !denied ? openConfirm() : jumpToSection(r.where)));
+      b.addEventListener('click', () => (unproven && !answer ? openConfirm() : jumpToSection(r.where)));
       chips.appendChild(b);
       // "Add to Skills" only where it can honestly work: the model (or a fact the
       // user confirmed — applyFacts flips confirmed to `add` before this page

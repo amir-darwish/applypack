@@ -164,8 +164,8 @@ export const ResumesPage: FC<{
                       f.status === 'confirmed' ? 'font-medium text-ok' : 'text-ink-muted'
                     }`}
                   >
-                    <MarkIcon kind={f.status === 'confirmed' ? 'check' : 'x'} class="!h-3 !w-3" />
-                    {f.status === 'confirmed' ? 'I have this' : "I don't"}
+                    {f.status !== 'unknown' && <MarkIcon kind={f.status === 'confirmed' ? 'check' : 'x'} class="!h-3 !w-3" />}
+                    {f.status === 'confirmed' ? 'I have this' : f.status === 'unknown' ? 'Not sure' : "I don't"}
                   </span>
                 </div>
                 {f.note && <div class="mt-0.5 truncate text-meta text-ink-faint">{f.note}</div>}
@@ -177,6 +177,7 @@ export const ResumesPage: FC<{
                   action="/facts"
                   hidden={{
                     term: f.term,
+                    // Denied and not-sure both turn into a "yes": the answer someone finds later.
                     decision: f.status === 'confirmed' ? 'denied' : 'confirmed',
                     note: f.note ?? '',
                     back: '/resumes',

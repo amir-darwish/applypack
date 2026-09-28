@@ -1,4 +1,4 @@
-import { canonicalTerm, DENIED_NOTE } from './facts';
+import { canonicalTerm, DENIED_NOTE, UNSURE_NOTE } from './facts';
 import { withTableAliases } from './keyword-aliases';
 import type { KeywordMatcher } from './keyword-matcher';
 import type { MatchKeyword } from './prompts';
@@ -276,13 +276,14 @@ export function carryOverrides(
  * the model marked SASS and BEM cannot_claim for a twelve-year CSS developer
  * and WordPress for a twelve-year PHP developer.
  *
- * Out: a term the user already denied (that IS their answer), and a context
- * term, which the score does not count either way.
+ * Out: a term the user already denied or said they are not sure of (those
+ * ARE their answers), and a context term, which the score does not count
+ * either way.
  */
 export function confirmable(keywords: MatchKeyword[]): { asks: MatchKeyword[]; unproven: MatchKeyword[] } {
   const asks = keywords.filter((k) => k.status === 'ask_user');
   const unproven = keywords.filter(
-    (k) => k.status === 'cannot_claim' && k.note !== DENIED_NOTE && effectiveRequirement(k) !== 'context',
+    (k) => k.status === 'cannot_claim' && k.note !== DENIED_NOTE && k.note !== UNSURE_NOTE && effectiveRequirement(k) !== 'context',
   );
   return { asks, unproven };
 }

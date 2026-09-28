@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { annotateElsewhere, applyFacts, canonicalTerm } from './facts';
+import { annotateElsewhere, applyFacts, canonicalTerm, DENIED_NOTE, UNSURE_NOTE } from './facts';
 import type { MatchKeyword } from './prompts';
 
 const kw = (over: Partial<MatchKeyword>): MatchKeyword => ({
@@ -46,8 +46,40 @@ test('a denied fact flips ask_user to cannot_claim but never downgrades text evi
   );
   assert.equal(changed, 1);
   assert.equal(keywords[0]?.status, 'cannot_claim');
+  assert.equal(keywords[0]?.note, DENIED_NOTE);
   assert.equal(keywords[1]?.status, 'present');
   assert.equal(keywords[2]?.status, 'add');
+});
+
+test('a "no" to a term the model could not back is recorded, so the card stops asking', () => {
+  // The confirm card's second tier offers "I don't" on cannot_claim terms;
+  // before, the answer left the model's note in place and the question came back.
+  const denied = [{ term: 'redis', status: 'denied', note: null }];
+  const { keywords, changed } = applyFacts([kw({ term: 'Redis', status: 'cannot_claim', note: 'no Redis anywhere' })], denied);
+  assert.equal(changed, 1);
+  assert.deepEqual([keywords[0]?.status, keywords[0]?.note], ['cannot_claim', DENIED_NOTE]);
+  assert.equal(applyFacts(keywords, denied).changed, 0);
+});
+
+test('"not sure" stops the question and claims nothing, once', () => {
+  const unsure = [{ term: 'azure', status: 'unknown', note: null }];
+  const { keywords, changed } = applyFacts([kw({}), kw({ term: 'GCP', status: 'cannot_claim' }), kw({ term: 'AWS', status: 'present' })], [
+    ...unsure,
+    { term: 'gcp', status: 'unknown', note: null },
+    { term: 'aws', status: 'unknown', note: null },
+  ]);
+  assert.equal(changed, 2);
+  assert.deepEqual(
+    keywords.map((k) => [k.term, k.status, k.note]),
+    [
+      ['Azure', 'cannot_claim', UNSURE_NOTE],
+      ['GCP', 'cannot_claim', UNSURE_NOTE],
+      // Written in the text: no answer outranks that.
+      ['AWS', 'present', null],
+    ],
+  );
+  // Applied again (a re-score, the next comparison of the same row): nothing moves.
+  assert.equal(applyFacts(keywords, unsure).changed, 0);
 });
 
 test('facts match through aliases and no facts means no work', () => {

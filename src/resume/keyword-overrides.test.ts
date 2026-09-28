@@ -10,7 +10,7 @@ import {
   confirmable,
 } from './keyword-overrides';
 import type { MatchKeyword } from './prompts';
-import { DENIED_NOTE } from './facts';
+import { DENIED_NOTE, UNSURE_NOTE } from './facts';
 import { scoreMatch } from './score';
 import { loadKeywordMatcher } from './keyword-matcher';
 
@@ -270,6 +270,8 @@ test('confirmable offers what the model asked and what it could not back, minus 
     k('SASS', 'cannot_claim'),
     // The user already said no — that IS the answer, not a question to repeat.
     k('Oracle', 'cannot_claim', { note: DENIED_NOTE }),
+    // "Not sure" is an answer too.
+    k('Terraform', 'cannot_claim', { note: UNSURE_NOTE }),
     // Context is not scored either way, so a yes changes nothing.
     k('JIRA', 'cannot_claim', { requirement: 'context' }),
     // An override to context counts the same as the model saying it.

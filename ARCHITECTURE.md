@@ -232,6 +232,9 @@ src/
   db.ts                        ← PrismaClient singleton
   types.ts                     ← NormalizedJob, ClaudeClassification, ClassifyInput, AlertJob
   http.ts                      ← fetchWithRetry, stripHtml, AbortController timeout
+  app-version.ts               ← APP_VERSION from package.json: the sidebar, the User-Agent, the update check
+  versions.ts                  ← pure: parseVersion, isNewer — release tags compared
+  update-check.ts              ← the optional weekly look at GitHub's latest release (off by default)
   text-utils.ts                ← pure helpers: parseTagList, extractJson, extractAtsToken, feedItemKey,
                                  daysSince, hashShortId, maskToken, decideStageStrategy
   cancellation.ts              ← makeLatchingProbe: a flag long loops can poll cheaply (pure)
@@ -505,6 +508,7 @@ src/
     delete-confirm.ts           ← pure: the confirm text for the two deletes that cascade
     upload.ts                   ← multipart resume upload helper + 5 MB limit
     employer-mode.ts            ← the switch, cached in the web process; requireEmployerMode on every /screen route
+    update-notice.ts            ← the sidebar's "a newer release is out": the check's answer, cached an hour in the web process
     job-facets.ts               ← /jobs place / workplace / posted facets: params, where, chip counts; the list's URLs (jobsHref), the filters in force (pure)
     job-tabs.ts                 ← the job page's tabs: resolveJobTab (explicit, else inferred from match= / letter=), jobHref, the labels with what exists (pure)
     job-pick.ts                 ← the jobs a candidate launcher offers (fit threshold, newest, ?job= kept)
@@ -724,6 +728,8 @@ erDiagram
     Json aiKeys "per-engine API keys, DB first (ADR 0027)"
     Json sourceKeys "Adzuna and France Travail keys (ADR 0034)"
     Json aiUsage "retired in 2.21.0; the ai_call ledger replaced it"
+    Boolean updateCheck "look for a newer release weekly, off by default"
+    String latestVersion "the last release the check saw"
     Int aiBudgetCents "monthly ceiling on billed AI money, NULL = none (ADR 0055)"
     String aiBudgetAlerted "the last budget warning sent, YYYY-MM:080 / :100"
     Boolean sourceHealthAlerts

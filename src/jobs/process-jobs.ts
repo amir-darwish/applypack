@@ -294,12 +294,18 @@ export async function processNormalizedJobs(
       break;
     }
     consumed++;
-    const { results, location, preFiltered } = await outcome;
+    const { results, location, preFiltered, prefilterReason } = await outcome;
     // The model read the whole description; where it knows more than the
     // location line said, the row is stored with that (ADR 0032).
     const placed: Candidate = { ...item, place: mergeAiLocation(item.place, location) };
     if (preFiltered) {
       stats.preFiltered++;
+      // Stored, dismissed and unscored, with the prefilter's reason: unstored,
+      // the next tick met it as new and paid the prefilter again, every hour it
+      // stayed on its feed (#290). "Save & re-classify" still reads it.
+      await persistJob(placed, null, JobStatus.DISMISSED, [], batch, {
+        summary: prefilterReason ? `Set aside by the prefilter: ${prefilterReason}` : 'Set aside by the prefilter.',
+      });
       continue;
     }
     if (results.size === 0) {
@@ -326,14 +332,9 @@ export async function processNormalizedJobs(
     const kept = merged.kept || keptByPolicy;
 
     if (!kept) {
-      const stored = await persistJob(
-        placed,
-        finalClassification,
-        JobStatus.DISMISSED,
-        winner.priorityRulesApplied,
-        batch,
+      const stored = await persistJob(placed, finalClassification, JobStatus.DISMISSED, winner.priorityRulesApplied, batch, {
         verdicts,
-      );
+      });
       if (stored) {
         stats.dismissed++;
         if (winner.dismissReason) stats[DISMISS_KEY[winner.dismissReason]]++;
@@ -360,15 +361,10 @@ export async function processNormalizedJobs(
       finalClassification.red_flags.includes(NO_PROFILE_STACK_FLAG) && !alertsEveryPosting(item.watch);
     const holds = !skipsAlert && channel !== 'no-targets' && (!mayAlert || channel === 'alerts-off');
     const alertHeldAt = holds ? new Date() : null;
-    const stored = await persistJob(
-      placed,
-      finalClassification,
-      JobStatus.NEW,
-      winner.priorityRulesApplied,
-      batch,
+    const stored = await persistJob(placed, finalClassification, JobStatus.NEW, winner.priorityRulesApplied, batch, {
       verdicts,
       alertHeldAt,
-    );
+    });
     if (!stored) continue;
     stats.matched++;
     const { created, crossListing } = stored;
@@ -548,8 +544,16 @@ async function persistJob(
   status: JobStatus,
   priorityRulesApplied: string[],
   { stats, recentFingerprints }: Batch,
-  verdicts: ProfileVerdict[] = [],
-  alertHeldAt: Date | null = null,
+  {
+    verdicts = [],
+    alertHeldAt = null,
+    summary = null,
+  }: {
+    verdicts?: ProfileVerdict[];
+    alertHeldAt?: Date | null;
+    /** A row stored without a classification still says why it was set aside. */
+    summary?: string | null;
+  } = {},
 ): Promise<{ created: Job; crossListing: CrossListing } | null> {
   const fingerprint = simhash64(job.description);
   const crossListing = findCrossListing(fingerprint, job.companyId, recentFingerprints);
@@ -562,6 +566,7 @@ async function persistJob(
           descriptionSimhash: fingerprint,
           crossListedOfJobId: crossListing?.job.id ?? null,
         }),
+        ...(summary !== null && c === null && { summary }),
         alertHeldAt,
         // Every search's verdict, written with the row it belongs to — a
         // second statement could leave a scored Job with no JobScore.

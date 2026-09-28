@@ -25,6 +25,7 @@ import {
   setPipelineStages,
   setSourceHealthAlerts,
   setStaleApplicationsDigestEnabled,
+  setUpdateCheck,
   setTelegramEnabled,
   testTelegramTarget,
   toggleNotificationTarget,
@@ -68,6 +69,10 @@ import {
   type AiProviderId,
 } from '../../ai-engine';
 import { billingFacts, forgetAiProbe, getAiEngineEnv, probeAiProviders } from '../../ai-runtime';
+import { APP_VERSION } from '../../app-version';
+import { checkForUpdate } from '../../update-check';
+import { isNewer } from '../../versions';
+import { forgetUpdateNotice } from '../update-notice';
 import { billingOf, type AiBilling } from '../../ai-usage';
 import { billingNotes, isSpendPeriod, periodRange, spendView, type SpendPeriod } from '../../ai-spend';
 import { billedThisMonth, loadSpendGroups } from '../../ai-ledger';
@@ -305,6 +310,12 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
       fixed: s.key === 'applied' || TERMINAL_KEYS.includes(s.key),
     })),
     staleApplicationsDigestEnabled: settings.staleApplicationsDigestEnabled,
+    updates: {
+      enabled: settings.updateCheck,
+      current: APP_VERSION,
+      latest: settings.latestVersion,
+      checkedAt: settings.latestCheckedAt,
+    },
     sourceHealthAlerts: settings.sourceHealthAlerts,
     disabledSources: settings.disabledSources,
     hnParserEnabled: settings.hnParserEnabled,
@@ -841,6 +852,24 @@ settingsRoute.post('/settings/stages/:key/rename', async (c) => {
   return applyStageEdit(
     (work) => renameStage(work, key, label),
     'Column renamed.',
+  );
+});
+
+/** TASKS N9: turning the check on looks right away — one request — so the answer is on the page now, not on Sunday. */
+settingsRoute.post('/settings/update-check-toggle', async (c) => {
+  const enabling = !(await getSettings()).updateCheck;
+  await setUpdateCheck(enabling);
+  forgetUpdateNotice();
+  if (!enabling) return flashRedirect('/settings?tab=general#updates', 'ok', 'No more update checks.');
+  const latest = await checkForUpdate();
+  return flashRedirect(
+    '/settings?tab=general#updates',
+    'ok',
+    latest === null
+      ? 'Checking weekly. GitHub did not answer just now; the next look is on Sunday.'
+      : isNewer(APP_VERSION, latest)
+        ? `Checking weekly. v${latest} is out — you run v${APP_VERSION}.`
+        : `Checking weekly. You run the latest release, v${APP_VERSION}.`,
   );
 });
 

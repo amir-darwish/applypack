@@ -3,7 +3,8 @@ import type { Child, FC, PropsWithChildren } from 'hono/jsx';
 import type { Profile } from '@prisma/client';
 import { Layout } from '../layout';
 import { ActionForm, Badge, Button, Card, Code, Empty, Field, FILE_INPUT_CLASS, Flash, Hint, Input, More, PageHeader, PillCheckbox, Radio, SectionTitle, Select, Table, Tag, Td, Textarea, ToggleRow, Tr, TagListInput } from '../ui';
-import { formatRelative } from '../format';
+import { formatDate, formatRelative } from '../format';
+import { isNewer } from '../../versions';
 import type { FlashMessage } from '../flash';
 import { describeCount, type SourceGroup } from '../source-groups';
 import { dotClassFor, MAX_WORK_STAGES } from '../stage-config';
@@ -145,6 +146,8 @@ export interface SettingsProps {
   /** Full funnel order with job counts; fixed rows carry no edit controls. */
   pipelineStages: { key: string; label: string; count: number; fixed: boolean }[];
   staleApplicationsDigestEnabled: boolean;
+  /** TASKS N9: the optional weekly look at GitHub's releases, and what it last saw. */
+  updates: { enabled: boolean; current: string; latest: string | null; checkedAt: Date | null };
   sourceHealthAlerts: boolean;
   disabledSources: string[];
   /** Off on /discovery stops the HN thread as surely as unticking its pill here. */
@@ -205,6 +208,17 @@ const Section: FC<PropsWithChildren<{ title: string; desc?: string | Child; more
   </Card>
 );
 
+
+/** What the last update check saw, in one sentence. */
+const UpdateLine: FC<{ current: string; latest: string | null; checkedAt: Date }> = ({ current, latest, checkedAt }) => (
+  <Hint>
+    {latest === null
+      ? `GitHub had nothing to read on ${formatDate(checkedAt)}; the next look is on Sunday.`
+      : isNewer(current, latest)
+        ? `v${latest} is out (checked ${formatDate(checkedAt)}): git pull, then npm install and npm start — or docker compose up -d --build.`
+        : `You run the latest release (checked ${formatDate(checkedAt)}).`}
+  </Hint>
+);
 
 /**
  * The Schedule form (TASKS §16.3). Whole hours only, one time zone for
@@ -353,6 +367,7 @@ export const SettingsPage: FC<SettingsProps> = ({
   applicationTrackingEnabled,
   pipelineStages,
   staleApplicationsDigestEnabled,
+  updates,
   sourceHealthAlerts,
   disabledSources,
   hnParserEnabled,
@@ -1007,6 +1022,24 @@ export const SettingsPage: FC<SettingsProps> = ({
       </Section>
       <SourceKeysSection rows={sourceKeyRows} />
       </>
+      )}
+
+      {activeTab === 'general' && (
+      <Section id="updates" title="Updates" desc={`You run ApplyPack v${updates.current}.`}>
+        <ToggleRow
+          label="New versions"
+          enabled={updates.enabled}
+          action="/settings/update-check-toggle"
+          onLabel="Checking weekly"
+          offLabel="Off"
+          enableText="Check weekly"
+          disableText="Stop checking"
+          more="One request a week to GitHub's releases API — the only request ApplyPack makes about itself, so it is off until you turn it on. It never updates anything: updating is git pull, then npm install and npm start (with Docker: git pull, then docker compose up -d --build)."
+        >
+          Say in the sidebar when a newer release is out.
+        </ToggleRow>
+        {updates.enabled && updates.checkedAt && <UpdateLine {...updates} checkedAt={updates.checkedAt} />}
+      </Section>
       )}
 
       {activeTab === 'general' && (

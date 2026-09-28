@@ -398,6 +398,12 @@ model AppSettings {
   // (ADR 0055). Nothing reads or writes it; the column goes in a later
   // release, so a rollback to 2.20 still finds it.
   aiUsage                        Json?
+  // Tell me when a newer version is out (TASKS N9): off by default — it is
+  // one request a week to GitHub's releases API, the only one ApplyPack
+  // makes about itself. `latestVersion` is the last release it saw.
+  updateCheck                    Boolean   @default(false)
+  latestVersion                  String?
+  latestCheckedAt                DateTime?
   // ADR 0055: a monthly ceiling on BILLED AI money, in cents; null = none.
   // It warns at 80 % and 100 % on the alert channels and never stops a call.
   // `aiBudgetAlerted` is the last warning sent, "YYYY-MM:80" / "YYYY-MM:100".
