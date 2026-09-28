@@ -3,6 +3,7 @@ import { fetchWithRetry, stripHtml } from '../http';
 import { conditionalHeaders, rememberResponse } from './conditional';
 import { hashShortId } from '../text-utils';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 const ENDPOINT = 'https://remotive.com/api/remote-jobs?category=software-dev';
 
@@ -62,6 +63,7 @@ function toNormalized(j: RemotiveJob, companyId: number): NormalizedJob {
   const description = stripHtml(j.description ?? '');
   return {
     companyId,
+    employer: cleanEmployer(j.company_name),
     externalId,
     title: j.title,
     url,

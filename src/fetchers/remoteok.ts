@@ -3,6 +3,7 @@ import { fetchWithRetry, stripHtml } from '../http';
 import { conditionalHeaders, rememberResponse } from './conditional';
 import { hashShortId } from '../text-utils';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 const ENDPOINT = 'https://remoteok.com/api';
 
@@ -68,6 +69,7 @@ function toNormalized(j: RemoteOkJob, companyId: number): NormalizedJob {
   const postedAt = parsePostedAt(j.epoch, j.date);
   return {
     companyId,
+    employer: cleanEmployer(company),
     externalId,
     title,
     url,

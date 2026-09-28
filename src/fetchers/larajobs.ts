@@ -4,6 +4,7 @@ import { fetchWithRetry, stripHtml } from '../http';
 import { conditionalHeaders, rememberResponse } from './conditional';
 import { feedEntryId } from '../text-utils';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 const FEED_URL = 'https://larajobs.com/feed';
 const PARSER_TIMEOUT_MS = 10_000;
@@ -87,6 +88,7 @@ export function mapLarajobsItem(
     (item.jobLocation && item.jobLocation.trim()) || 'Remote';
   return {
     companyId,
+    employer: cleanEmployer(item.jobCompany),
     externalId,
     title: item.title ?? 'Untitled',
     url: link,

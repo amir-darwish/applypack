@@ -4,6 +4,7 @@ import { SourceKeyMissingError, resolveSourceKeys } from '../source-keys';
 import type { NormalizedJob } from '../types';
 import { EMPTY_CONTEXT, type FetchContext } from './fetch-context';
 import { forgetFranceTravailToken, franceTravailToken, scrubbed, type FranceTravailCredentials } from './francetravail-auth';
+import { cleanEmployer } from '../employer';
 
 /**
  * France Travail, Offres d'emploi v2 (stage 3e, ADR 0034) — every job ad in
@@ -191,6 +192,7 @@ export function mapFranceTravailOffer(o: FranceTravailOffer, companyId: number):
   if (o.nombrePostes && o.nombrePostes > 1) head.push(`Positions: ${o.nombrePostes}.`);
   return {
     companyId,
+    employer: cleanEmployer(o.entreprise?.nom),
     externalId: o.id,
     title: o.intitule.trim() || 'Untitled',
     url: (o.origineOffre?.urlOrigine ?? '').trim() || `https://candidat.francetravail.fr/offres/recherche/detail/${encodeURIComponent(o.id)}`,

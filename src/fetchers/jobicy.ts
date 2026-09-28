@@ -5,6 +5,7 @@ import { logger } from '../logger';
 import { feedEntryId } from '../text-utils';
 import type { NormalizedJob } from '../types';
 import { type FetchContext, EMPTY_CONTEXT } from './fetch-context';
+import { cleanEmployer } from '../employer';
 
 const FEED_URL = 'https://jobicy.com/?feed=job_feed';
 const DEFAULT_CATEGORY = 'dev';
@@ -146,6 +147,7 @@ export function mapJobicyItem(
   const location = (item.jobLocation && item.jobLocation.trim()) || 'Remote';
   return {
     companyId,
+    employer: cleanEmployer(item.jobCompany),
     externalId,
     title: item.title ?? 'Untitled',
     url: link,

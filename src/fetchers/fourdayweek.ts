@@ -4,6 +4,7 @@ import { fetchWithRetry, sleep } from '../http';
 import { workplaceFromText } from '../location';
 import type { NormalizedJob } from '../types';
 import { type FetchContext, EMPTY_CONTEXT } from './fetch-context';
+import { cleanEmployer } from '../employer';
 
 // 4dayweek.io publishes a versioned public API; robots.txt disallows
 // /api/ but explicitly allows /api/v1 and /api/v2, so v2 it is (F2
@@ -144,6 +145,7 @@ export function mapFourDayWeekPage(
 function toNormalized(j: FourDayWeekJob, companyId: number): NormalizedJob {
   return {
     companyId,
+    employer: cleanEmployer(j.company?.name),
     externalId: j.id,
     title: j.title,
     url: j.url,

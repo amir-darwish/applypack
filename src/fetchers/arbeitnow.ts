@@ -3,6 +3,7 @@ import { fetchWithRetry, sleep, stripHtml } from '../http';
 import { logger } from '../logger';
 import { hashShortId } from '../text-utils';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 const ENDPOINT = 'https://www.arbeitnow.com/api/job-board-api';
 // 175 rows a page, no total, `links.next` until the end (verified live
@@ -99,6 +100,7 @@ function toNormalized(j: ArbeitnowJob, companyId: number): NormalizedJob {
     typeof j.created_at === 'number' ? new Date(j.created_at * 1000) : new Date();
   return {
     companyId,
+    employer: cleanEmployer(j.company_name),
     externalId,
     title: j.title,
     url,

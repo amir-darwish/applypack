@@ -30,6 +30,7 @@ describe('mapRemotiveFeed', () => {
     assert.equal(j.url, 'https://remotive.com/x/12345');
     assert.equal(j.location, 'Remote · USA timezones');
     assert.equal(j.description, 'Build things.');
+    assert.equal(j.employer, 'Acme');
   });
 
   it('returns [] when payload has no jobs key', () => {

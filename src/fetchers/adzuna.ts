@@ -4,6 +4,7 @@ import { HttpError, fetchWithRetry } from '../http';
 import { SourceKeyMissingError, redactSecrets, resolveSourceKeys } from '../source-keys';
 import type { NormalizedJob } from '../types';
 import { EMPTY_CONTEXT, type FetchContext } from './fetch-context';
+import { cleanEmployer } from '../employer';
 
 /**
  * Adzuna (stage 3e, ADR 0034): one Company row per market, the token the
@@ -206,6 +207,7 @@ function toNormalized(ad: AdzunaAd, companyId: number, market: AdzunaMarket): No
   const country = placeLabel(market.country);
   return {
     companyId,
+    employer: cleanEmployer(ad.company?.display_name),
     externalId: ad.id,
     title: ad.title.trim() || 'Untitled',
     url: ad.redirect_url,

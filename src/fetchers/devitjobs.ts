@@ -4,6 +4,7 @@ import { decodeHtmlEntities, fetchWithRetry, stripHtml } from '../http';
 import { conditionalHeaders, rememberResponse } from './conditional';
 import { feedItemKey } from '../text-utils';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 /**
  * The DevITjobs family (stage 3c, plan §4.2): GermanTechJobs.de, DevITjobs.uk
@@ -116,6 +117,7 @@ export function mapDevItJobsItem(item: DevItJobsItem, companyId: number, host: s
   const body = stripHtml(content);
   return {
     companyId,
+    employer: cleanEmployer(title.company),
     externalId,
     title: title.role || 'Untitled',
     url: link,

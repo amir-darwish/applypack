@@ -5,6 +5,7 @@ import { conditionalHeaders, rememberResponse } from './conditional';
 import { parseLocation } from '../location';
 import { feedEntryId } from '../text-utils';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 const PARSER_TIMEOUT_MS = 10_000;
 /** A 70-country allow-list stays in the hints; the string shows the region instead. */
@@ -84,6 +85,7 @@ export function mapWwrItem(item: WwrItem, companyId: number): NormalizedJob | nu
   const where = allowList.length > 0 && countryText.length <= MAX_COUNTRY_TEXT ? countryText : region;
   return {
     companyId,
+    employer: wwrEmployer(item.title ?? ''),
     externalId,
     title: item.title ?? 'Untitled',
     url: link,
@@ -92,4 +94,9 @@ export function mapWwrItem(item: WwrItem, companyId: number): NormalizedJob | nu
     postedAt: safeDate(item.pubDate),
     locationHints: { workplace: 'REMOTE', countries, regions },
   } satisfies NormalizedJob;
+}
+
+/** The feed titles every row "Company: Role" (ADR 0056); a title without that shape names nobody. */
+export function wwrEmployer(title: string): string | null {
+  return cleanEmployer(/^([^:]{1,80}):\s+\S/.exec(title.trim())?.[1] ?? null);
 }

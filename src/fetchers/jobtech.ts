@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { findCountry, placeLabel } from '../countries';
 import { fetchWithRetry, sleep } from '../http';
 import type { NormalizedJob } from '../types';
+import { cleanEmployer } from '../employer';
 
 /**
  * JobTech JobSearch — Arbetsförmedlingen's open API over every job ad in
@@ -145,6 +146,7 @@ function toNormalized(hit: JobTechHit, companyId: number): NormalizedJob {
   const posted = utcDate(hit.publication_date);
   return {
     companyId,
+    employer: cleanEmployer(hit.employer?.name),
     externalId: hit.id,
     title: hit.headline.trim() || 'Untitled',
     url: hit.webpage_url ?? '',
