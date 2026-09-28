@@ -251,7 +251,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                   ))}
                   <tr class="bg-surface-overlay/40">
                     <td class="py-2 pr-2 align-top">
-                      <Select name="add_kind" aria-label="Kind of the new criterion" class="!py-1 text-[13px]">
+                      <Select name="add_kind" aria-label="Kind of the new criterion" class="!w-auto !py-1 text-[13px]">
                         {CRITERION_KINDS.map((k) => (
                           <option value={k} selected={k === 'custom'}>
                             {CRITERION_KIND_LABELS[k]}
@@ -264,9 +264,9 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                       <div class="mt-1 text-xs text-ink-faint" id="add-hint">
                         {CRITERION_KIND_HINTS.custom}
                       </div>
-                      <label class="mt-1 inline-flex items-center gap-2 text-xs text-ink-muted">
+                      <label class="mt-1 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
                         answered as
-                        <Select name="add_answer" aria-label="How a question in your own words is answered" class="!py-0.5 !text-xs">
+                        <Select name="add_answer" aria-label="How a question in your own words is answered" class="!w-auto max-w-full !py-0.5 !text-xs">
                           <option value="yesno">yes / no (pass, partial, unknown, fail)</option>
                           <option value="howmuch">how much (the evidence ladder)</option>
                         </Select>
@@ -621,7 +621,7 @@ const CriterionChip: FC<{ c: Criterion }> = ({ c }) => {
 };
 
 const ModeSelect: FC<{ name: string; value: Criterion['mode'] }> = ({ name, value }) => (
-  <Select name={name} aria-label="Mode" class="!py-1 text-[13px]">
+  <Select name={name} aria-label="Mode" class="!w-auto !py-1 text-[13px]">
     {CRITERION_MODES.map((m) => (
       <option value={m} selected={m === value}>
         {CRITERION_MODE_LABELS[m].split(' — ')[0]}
@@ -631,7 +631,7 @@ const ModeSelect: FC<{ name: string; value: Criterion['mode'] }> = ({ name, valu
 );
 
 const WeightSelect: FC<{ name: string; value: number }> = ({ name, value }) => (
-  <Select name={name} aria-label="Weight" class="!py-1 text-[13px]">
+  <Select name={name} aria-label="Weight" class="!w-auto !py-1 text-[13px]">
     {Array.from({ length: MAX_WEIGHT }, (_, i) => i + 1).map((w) => (
       <option value={w} selected={w === value} aria-label={`Weight ${w} of ${MAX_WEIGHT}`}>
         {'★'.repeat(w)}
@@ -656,7 +656,7 @@ const CriterionRow: FC<{ c: Criterion }> = ({ c }) => {
         {c.kind === 'custom' && (
           <label class="mt-1 inline-flex items-center gap-2 text-xs text-ink-muted">
             answered as
-            <Select name={`answer_${c.id}`} aria-label="How this question is answered" class="!py-0.5 !text-xs">
+            <Select name={`answer_${c.id}`} aria-label="How this question is answered" class="!w-auto !py-0.5 !text-xs">
               <option value="yesno" selected={c.spec.answer === 'yesno'}>
                 yes / no
               </option>

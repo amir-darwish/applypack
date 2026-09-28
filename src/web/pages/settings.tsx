@@ -1574,7 +1574,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
             ))}
           </datalist>
         )}
-        <div class="grid gap-3 sm:grid-cols-3">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(19.5rem,100%),1fr))] gap-3">
         <Field label="Classifier model" hint="Scores every fetched job; keep it cheap.">
           <ModelPicker
             name="classifier"
@@ -1606,7 +1606,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
           />
         </Field>
         {e.id === 'claude_code' && /haiku/.test(e.resumeModel || e.resumeDefault) && (
-          <Hint class="sm:col-span-3">
+          <Hint class="col-span-full">
             Measured 2026-09-05 on this lane: Haiku 4.5 answers a quick check in 21–26 s but returned
             JSON that could not be parsed in 2 of 3 calls, and each costs a retry. Sonnet 5 answered
             in 19 s with none — it is the default when this slot is empty.

@@ -304,8 +304,10 @@ export const CompaniesPage: FC<CompaniesProps> = ({
     ) : (
       <Card flush>
         <div class="overflow-x-auto">
-          <div class="min-w-[56rem]">
+          {/* TASKS U7: a phone keeps the name, the health and the actions. */}
+          <div class="lg:min-w-[56rem]">
             <Table caption="Companies and sources"
+              hideBelow={['', 'sm', 'lg', '', 'md', 'lg', 'md', 'sm', '']}
               columns={[
                 'Name',
                 'Source',
@@ -421,7 +423,7 @@ export const CompaniesPage: FC<CompaniesProps> = ({
             <form
               method="post"
               action="/companies/new"
-              class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_0.9fr_1fr_1.2fr_auto]"
+              class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_auto_1fr_1.2fr_auto]"
             >
               <Field label="Name">
                 <Input type="text" name="name" required placeholder="Honeycomb.io" />
