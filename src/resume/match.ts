@@ -76,7 +76,7 @@ export async function matchResumeToJob(
     /**
      * R1: the owner's confirmed facts and other resumes join the judgment
      * (`own`, the default), or the text is judged alone (`text`) — a file on
-     * the Compare page may be a friend's or an old one.
+     * the Tailor resume page may be a friend's or an old one.
      */
     evidence?: MatchEvidence;
     onError?: (reason: string) => void;

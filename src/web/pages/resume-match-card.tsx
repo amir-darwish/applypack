@@ -177,7 +177,7 @@ export const ResumeMatchCard: FC<ResumeMatchCardProps> = ({
             Compare
           </Button>
           {/* Only the Resumes rows are listed here; a file that is not one of
-              them, or pasted text, is compared from the Compare page with this
+              them, or pasted text, is compared from the Tailor resume page with this
               job already picked. */}
           <a
             href={`/target?job=${jobId}`}
@@ -283,11 +283,11 @@ export const ScoreCeilingLine: FC<{ bd: ScoreBreakdown; class?: string }> = ({ b
   bd.ceiling === undefined ? null : (
     <p
       class={`text-xs text-ink-muted ${className}`}
-      title="How well you fit, if the resume said everything it honestly could: every claimable keyword written in, alignment perfect. Going above the ceiling would need experience this resume does not have."
+      title="The match score if the resume said everything it honestly could: every claimable keyword written in, alignment perfect. Going above the ceiling would need experience this resume does not have."
     >
       {bd.ceiling > bd.score ? (
         <>
-          you fit <span class="font-medium tabular-nums text-ink">{bd.ceiling}</span> — editing can reach it
+          editing can reach a match of <span class="font-medium tabular-nums text-ink">{bd.ceiling}</span>
         </>
       ) : (
         <span class="font-medium text-ok">the resume already shows everything it can</span>

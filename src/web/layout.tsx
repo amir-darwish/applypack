@@ -56,7 +56,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: 'Tools',
     items: [
       { key: 'resumes', href: '/resumes', label: 'Resumes' },
-      { key: 'target', href: '/target', label: 'Compare' },
+      { key: 'target', href: '/target', label: 'Tailor resume' },
       { key: 'letter', href: '/letter', label: 'Cover letter' },
     ],
   },

@@ -306,7 +306,7 @@ welcomeRoute.post('/welcome/profile/apply', async (c) => {
   const form = await c.req.parseBody();
   const { profile } = await loadWelcomeContext();
   const resume = await getResume(idParam(form.resumeId));
-  if (!profile) return flashRedirect(PROFILE_STEP, 'err', 'No primary search — create one in Settings → Profile.');
+  if (!profile) return flashRedirect(PROFILE_STEP, 'err', 'No primary search — create one in Settings → Searches.');
   if (!resume || !resume.scannedAt) return flashRedirect(PROFILE_STEP, 'err', 'That resume has not been read yet.');
   const draft = buildProfileDraft(profile, scanFields(resume));
   // The search is built from this resume, so it hunts with it (#158) — the
@@ -319,7 +319,7 @@ welcomeRoute.post('/welcome/profile/apply', async (c) => {
     '/welcome',
     'ok',
     changed.length > 0
-      ? `Profile filled from "${resume.name}" — ${changed.join(', ')}. Adjust it any time in Settings → Profile.`
+      ? `Profile filled from "${resume.name}" — ${changed.join(', ')}. Adjust it any time in Settings → Searches.`
       : `Profile already matched "${resume.name}".`,
   );
 });
@@ -339,7 +339,7 @@ welcomeRoute.post('/welcome/profile/create', async (c) => {
   return flashRedirect(
     PROFILE_STEP,
     'ok',
-    `Created a second search, "${profile.name}", from "${resume.name}". Your current search keeps running — switch to it on Settings → Profile.`,
+    `Created a second search, "${profile.name}", from "${resume.name}". Your current search keeps running — switch to it on Settings → Searches.`,
   );
 });
 
@@ -347,7 +347,7 @@ welcomeRoute.post('/welcome/profile/create', async (c) => {
 welcomeRoute.post('/welcome/profile', async (c) => {
   const form = await c.req.parseBody({ all: true });
   const { profile } = await loadWelcomeContext();
-  if (!profile) return flashRedirect(PROFILE_STEP, 'err', 'No primary search — create one in Settings → Profile.');
+  if (!profile) return flashRedirect(PROFILE_STEP, 'err', 'No primary search — create one in Settings → Searches.');
   const stackRequired = parseTagList(String(form.stackRequired ?? ''));
   const roleTypes = parseTagList(String(form.roleTypes ?? ''));
   const seniority = toStringArray(form.seniority).filter((s) =>
@@ -357,7 +357,7 @@ welcomeRoute.post('/welcome/profile', async (c) => {
     return flashRedirect(PROFILE_STEP, 'err', 'Add at least one technology or one role word.');
   }
   await updateProfile(profile.id, { ...profileInput(profile), stackRequired, roleTypes, seniority });
-  return flashRedirect('/welcome', 'ok', 'Profile saved. Adjust it any time in Settings → Profile.');
+  return flashRedirect('/welcome', 'ok', 'Profile saved. Adjust it any time in Settings → Searches.');
 });
 
 /** Step 5: score the stored-unscored jobs on the progress page; one pass at a time. */

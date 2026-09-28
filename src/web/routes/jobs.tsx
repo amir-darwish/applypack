@@ -1056,7 +1056,7 @@ jobsRoute.get('/jobs/:id/target', async (c) => {
   const file = await describeResumeFile(resume);
   // A one-off check keeps nothing: the comparison holds the text, and Resumes
   // is where a file the user wants to keep is uploaded.
-  const fileVerdict = (resume.hidden ? 'A one-off check from the Compare page. ' : '') + file.verdict;
+  const fileVerdict = (resume.hidden ? 'A one-off check from the Tailor resume page. ' : '') + file.verdict;
   return c.html(
     <TargetPage
       job={{ id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description }}

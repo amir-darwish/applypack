@@ -14,7 +14,7 @@ import { runFailure } from './run-failure';
 /**
  * One comparison of one text against one stored posting, run on the progress
  * page. Every comparison goes through here — the job page's Compare, the
- * editor's Re-check and re-upload, and both halves of the Compare page — so
+ * editor's Re-check and re-upload, and both halves of the Tailor resume page (`/target`) — so
  * all of them behave the same: the memo answers a repeat for free, a second
  * submit of the same thing joins the run in flight, and the finished run lands
  * the user on the analysis it just wrote.
@@ -27,7 +27,7 @@ export interface ComparisonRequest {
   /** The text to judge: the stored version, the editor's draft, or a fresh upload. */
   text: string;
   mode: MatchMode;
-  /** R1: the owner's facts and other resumes, or the text alone — a file on the Compare page may not be theirs. */
+  /** R1: the owner's facts and other resumes, or the text alone — a file on the Tailor resume page may not be theirs. */
   evidence: MatchEvidence;
   rebuild: boolean;
   force: boolean;

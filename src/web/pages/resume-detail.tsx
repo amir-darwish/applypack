@@ -443,7 +443,7 @@ const SearchCard: FC<ResumeDetailProps['search'] & { resumeId: number }> = ({
           </div>
           <Hint class="mt-3">
             It starts switched off — your current search keeps running until you press Run on
-            Settings → Profile. Location, salary and alert routing are yours to set; a resume
+            Settings → Searches. Location, salary and alert routing are yours to set; a resume
             cannot know them.
           </Hint>
         </>

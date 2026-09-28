@@ -157,7 +157,7 @@ async function load(c: Context): Promise<RenderContext | { response: Response }>
   if (!resume) return { response: c.text('Not found', 404) };
   if (resume.hidden) {
     return {
-      response: flashRedirect('/resumes', 'err', 'That is the one-off check the Compare page uses — upload the file on Resumes to work on it here.'),
+      response: flashRedirect('/resumes', 'err', 'That is the one-off check the Tailor resume page uses — upload the file on Resumes to work on it here.'),
     };
   }
 

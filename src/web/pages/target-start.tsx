@@ -46,8 +46,8 @@ export const TargetStartPage: FC<TargetStartProps> = ({ jobs, selectedJobId, res
   const hasResumes = resumes.length > 0;
   const defaultResumeId = (resumes.find((r) => r.isDefault) ?? resumes[0])?.id;
   return (
-    <Layout title="Compare" active="target">
-      <PageHeader title="Compare" meta="1–2 min">
+    <Layout title="Tailor resume" active="target">
+      <PageHeader title="Tailor resume" meta="1–2 min">
         A posting and a resume: one run scores the resume against the posting and opens the editor
         beside it.
       </PageHeader>
