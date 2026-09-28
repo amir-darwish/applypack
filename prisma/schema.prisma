@@ -443,6 +443,10 @@ model AppSettings {
   // `aiBudgetAlerted` is the last warning sent, "YYYY-MM:80" / "YYYY-MM:100".
   aiBudgetCents                  Int?
   aiBudgetAlerted                String?
+  // TASKS S1: the OpenAI-compatible engine's server, set on the AI tab; null =
+  // OPENAI_BASE_URL from .env (api.openai.com by default). A local server
+  // (Ollama, LM Studio, llama.cpp) needs no key and costs nothing (ADR 0055).
+  openAiBaseUrl                  String?
   // ADR 0056: turn new postings away at a company applied to in the last N
   // days (30 / 60 / 90 / 180); null = off. `employersFilledAt` is when
   // init.ts gave the rows stored before Job.employerKey theirs; null = the

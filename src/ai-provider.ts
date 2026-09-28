@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { config } from './config';
 import { logger } from './logger';
 import { sleep } from './http';
-import { addUsage, NO_USAGE, type AiOutcome, type AiSpend } from './ai-usage';
+import { addUsage, isLocalUrl, NO_USAGE, type AiOutcome, type AiSpend } from './ai-usage';
 import {
   anthropicMaxTokens,
   anthropicUsage,
@@ -66,6 +66,8 @@ export interface AiRequest {
    * Absent means "whatever .env holds" — the path scripts still take.
    */
   apiKey?: string;
+  /** The OpenAI-compatible engine's server, as the AI tab set it (TASKS S1); absent = OPENAI_BASE_URL. */
+  baseUrl?: string;
   /**
    * Called with a one-line reason just before complete() resolves null. The
    * /settings connectivity test uses it to name the real cause instead of
@@ -251,11 +253,14 @@ class AnthropicApiProvider implements AiProvider {
 class OpenAiApiProvider implements AiProvider {
   readonly name = 'openai_api';
 
-  constructor(private readonly baseUrl: string) {}
+  constructor(private readonly defaultBaseUrl: string) {}
 
   async complete(req: AiRequest): Promise<AiAttempt> {
+    // The server set on the AI tab rides on the request (TASKS S1); .env's is the fallback.
+    const baseUrl = req.baseUrl ?? this.defaultBaseUrl;
     const apiKey = req.apiKey ?? config.OPENAI_API_KEY;
-    if (!apiKey) {
+    // A local server (Ollama, LM Studio, llama.cpp) needs no key and gets none.
+    if (!apiKey && !isLocalUrl(baseUrl)) {
       logger.error({ label: req.label }, 'ai: no OpenAI API key — paste one on /settings');
       req.onError?.('no API key — paste one on /settings, or set it in .env');
       return failed('error');
@@ -263,7 +268,7 @@ class OpenAiApiProvider implements AiProvider {
     const model = req.model || config.OPENAI_MODEL || OPENAI_FALLBACK_MODEL;
     // api.openai.com rejects max_tokens for reasoning models; most
     // compatible servers (OpenRouter, Groq, local) only know max_tokens.
-    const isOpenAi = this.baseUrl.includes('api.openai.com');
+    const isOpenAi = baseUrl.includes('api.openai.com');
     const reasoning = isOpenAi && OPENAI_REASONING_MODEL.test(model);
     const body = JSON.stringify({
       model,
@@ -283,10 +288,10 @@ class OpenAiApiProvider implements AiProvider {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), req.timeoutMs ?? CLI_TIMEOUT_MS);
       try {
-        const resp = await fetch(`${this.baseUrl}/chat/completions`, {
+        const resp = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
             'Content-Type': 'application/json',
           },
           body,

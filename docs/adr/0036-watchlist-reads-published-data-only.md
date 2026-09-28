@@ -237,3 +237,29 @@ and it can be added (TASKS N8):
 
 A redirect onto a board the vendor will not serve stays `watchOnly`. Its
 reason is the one thing the user can act on, and a paste box would bury it.
+
+## Addendum (2026-09-28): a model on this machine is nobody's crawler
+
+The OpenAI-compatible engine can now be pointed at a server on this machine
+or the user's own network from the dashboard (TASKS S1): Ollama, LM Studio,
+anything that speaks `/chat/completions`. The binding set treated it as
+OpenAI whatever it talked to, so a user whose only engine was a model on
+their desk was refused by every site that bans GPTBot.
+
+- A local OpenAI-compatible engine contributes no tokens
+  (`ai-engine.ts:aiCrawlerTokens`): the text goes to the user's own
+  hardware, which is no vendor's crawler. "Local" is `ai-usage.ts:isLocalUrl`
+  — loopback, a private or link-local address, `*.local`,
+  `host.docker.internal` — the same test that makes it free in the ledger.
+- A **local-only** install answers to `applypack` and `*` alone
+  (`bindingProviders`): every engine in its list is local, none of them is
+  skipped, and no last resort stands in. `AI_PROVIDER` and the last resort
+  bind as before on every other install. They are what an emptied list
+  would call, and the list is read again on the next run, so an install
+  that adds a vendor engine tomorrow is bound by it from that run on.
+- Any engine beside the local one keeps the rule: a skipped engine in the
+  list binds (a key tomorrow puts it in front), a second engine binds, a
+  remote OpenAI-compatible server binds as OpenAI.
+
+`Content-Signal: ai-input=no` still refuses a local-only install: it speaks
+about the act — an AI reading the page — not about whose crawler does it.

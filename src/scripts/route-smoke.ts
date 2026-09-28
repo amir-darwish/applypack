@@ -51,6 +51,8 @@ const QUERY_VARIANTS = [
   '/settings?tab=ai&spend=month',
   '/settings?tab=ai&spend=year',
   '/settings?tab=ai&spend=nonsense',
+  // Step 1 asks the default local addresses for a model server (TASKS S1); nothing answering is the usual case.
+  '/welcome?step=ai',
 ];
 // app.request() builds no Host header of its own, and the origin guard
 // compares Origin's host with it (same-origin.ts) — so the request says both.
@@ -260,6 +262,27 @@ async function main(): Promise<void> {
       expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=general',
     },
     {
+      // TASKS S1: the OpenAI-compatible engine's server, set here; one on this machine takes no key.
+      name: 'POST /settings/ai/openai-base',
+      init: form({ baseUrl: 'http://127.0.0.1:9/v1' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=ai',
+    },
+    {
+      name: 'GET /settings?tab=ai with a local server that does not answer',
+      init: { method: 'GET', headers: ORIGIN },
+      expect: (res) => res.status === 200,
+    },
+    {
+      name: 'POST /welcome/ai/local with nothing answering (nothing changes)',
+      init: form({ base: 'http://127.0.0.1:9/v1', model: 'llama3.1:8b' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/welcome?step=ai',
+    },
+    {
+      name: 'POST /settings/ai/openai-base clear=1 (back to .env)',
+      init: form({ clear: '1' }),
+      expect: (res) => res.status === 303 && res.headers.get('location') === '/settings?tab=ai',
+    },
+    {
       // The one route that reads files beside dist/: the PDF fonts a build must copy.
       name: 'POST /resumes/:id/render (a clean PDF)',
       init: form({ mode: 'pdf' }),
@@ -280,6 +303,10 @@ async function main(): Promise<void> {
     '/jobs',
     '/companies/mutes/delete',
     '/settings/reapply',
+    '/settings/ai/openai-base',
+    '/settings?tab=ai',
+    '/welcome/ai/local',
+    '/settings/ai/openai-base',
     `/resumes/${f.resumeId}/render`,
   ];
   for (const [i, p] of posts.entries()) {

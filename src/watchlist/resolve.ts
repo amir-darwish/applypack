@@ -226,8 +226,9 @@ async function confirmBoard(
  */
 export async function installAiTokens(): Promise<string[]> {
   const [settings, keys] = await Promise.all([getSettings(), getAiKeys()]);
-  const env = getAiEngineEnv(keys);
-  return aiCrawlerTokens(bindingProviders(resolveAiEngine(settings.aiEngine, env), env.provider));
+  const env = getAiEngineEnv(keys, settings.openAiBaseUrl);
+  // A local OpenAI-compatible server is no vendor's crawler (ADR 0036 addendum 2026-09-28).
+  return aiCrawlerTokens(bindingProviders(resolveAiEngine(settings.aiEngine, env), env.provider, env), env);
 }
 
 /**

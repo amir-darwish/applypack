@@ -71,6 +71,13 @@ export interface ProfileDraftCard {
   warnings: string[];
 }
 
+/** Step 1's "A model on this computer" card (TASKS S1): the servers found at their default addresses. */
+export interface LocalModelView {
+  servers: { name: string; base: string; host: string; models: string[]; preferred: string | null }[];
+  /** The address of the found server the engine already uses first, if any. */
+  inUse: string | null;
+}
+
 export interface TopJob {
   id: number;
   title: string;
@@ -85,7 +92,7 @@ export interface WelcomeProps {
   setupCompleted: boolean;
   fetchingEnabled: boolean;
   telegramEnabled: boolean;
-  ai: { engines: EngineStatusRow[] };
+  ai: { engines: EngineStatusRow[]; local: LocalModelView };
   search: {
     jobCount: number;
     last: LastSearch | null;
@@ -152,8 +159,8 @@ const ENGINE_CARDS: { id: AiProviderId; title: string; how: string; env: string 
   },
   {
     id: 'openai_api',
-    title: 'OpenAI, OpenRouter, Groq or a local model',
-    how: 'Any server that speaks /chat/completions; add OPENAI_BASE_URL to .env for the non-OpenAI ones.',
+    title: 'OpenAI, OpenRouter or Groq',
+    how: 'Any server that speaks /chat/completions. Paste its key here; a server other than OpenAI takes its address on Settings → AI engine.',
     env: 'OPENAI_API_KEY',
   },
   {
@@ -250,6 +257,58 @@ const StepCard: FC<PropsWithChildren<{ n: number; step: WelcomeStep; done: boole
 
 /* ---------- step 1 ---------- */
 
+/**
+ * A model on this computer (TASKS S1): Ollama or LM Studio answering at its
+ * default address, found by one local request each — or, when nothing is
+ * running and nothing else is connected either, how to get one.
+ */
+const LocalModelCard: FC<{ local: LocalModelView; offerInstall: boolean }> = ({ local, offerInstall }) => {
+  const servers = local.servers.filter((s) => s.base !== local.inUse && s.models.length > 0);
+  const empty = local.servers.find((s) => s.models.length === 0);
+  if (servers.length === 0 && !offerInstall) return null;
+  return (
+    <div class="mt-4 rounded-md border border-line px-4 py-3">
+      <div class="text-sm font-medium text-ink">A model on this computer</div>
+      {servers.length > 0 ? (
+        servers.map((s) => (
+          <form method="post" action="/welcome/ai/local" class="mt-2">
+            <input type="hidden" name="base" value={s.base} />
+            <p data-ui="hint" class="text-[13px] leading-5 text-ink-faint">
+              {s.name} answers at {s.host} with {s.models.length === 1 ? 'one model' : `${s.models.length} models`}. Free and
+              private — nothing leaves this machine — but slower than a hosted model, and a small one judges postings less
+              well. Start it with a context of 16k tokens or more (Ollama: <Code>OLLAMA_CONTEXT_LENGTH=16384</Code>), or a
+              long posting is cut.
+            </p>
+            <div class="mt-2.5 flex flex-wrap items-end gap-2">
+              <Select name="model" aria-label={`Model on ${s.name}`} class="min-w-[12rem] flex-1">
+                {s.models.map((m) => (
+                  <option value={m} selected={m === s.preferred}>
+                    {m}
+                  </option>
+                ))}
+              </Select>
+              <Button size="sm" variant="secondary">
+                Use it{offerInstall ? '' : ' first'}
+              </Button>
+            </div>
+          </form>
+        ))
+      ) : empty ? (
+        <p data-ui="hint" class="mt-1 text-[13px] leading-5 text-ink-faint">
+          {empty.name} answers at {empty.host} but has no model yet. Pull one — <Code>ollama pull llama3.1:8b</Code>, or
+          download one in LM Studio — then press Check again.
+        </p>
+      ) : (
+        <p data-ui="hint" class="mt-1 text-[13px] leading-5 text-ink-faint">
+          Free and private, slower than a hosted model. Install Ollama from ollama.com, run{' '}
+          <Code>ollama pull llama3.1:8b</Code> (or start LM Studio's server), then press Check again. Nothing answers at
+          127.0.0.1:11434 or 127.0.0.1:1234 right now.
+        </p>
+      )}
+    </div>
+  );
+};
+
 const AiStep: FC<WelcomeProps> = ({ ai, steps }) => {
   const connected = ai.engines.filter((e) => e.ok);
   const done = steps.find((s) => s.key === 'ai')?.done ?? false;
@@ -278,6 +337,7 @@ const AiStep: FC<WelcomeProps> = ({ ai, steps }) => {
             </ActionForm>
             <Hint>Optional: one tiny AI call, a few seconds.</Hint>
           </div>
+          <LocalModelCard local={ai.local} offerInstall={false} />
         </>
       ) : (
         <>
@@ -285,6 +345,7 @@ const AiStep: FC<WelcomeProps> = ({ ai, steps }) => {
             An AI scores every job against you. None was detected yet: pick the one you have and
             paste its key. It is saved in your own database — no file to edit, no restart.
           </p>
+          <LocalModelCard local={ai.local} offerInstall />
           <ul class="mt-4 grid gap-3 lg:grid-cols-2">
             {ENGINE_CARDS.map((card) => {
               const status = ai.engines.find((e) => e.id === card.id);

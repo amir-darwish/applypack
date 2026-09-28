@@ -81,9 +81,11 @@ export interface AiEngineRow {
   classifierDefault: string;
   resumeDefault: string;
   coverDefault: string;
-  /** Family model ids for the selects; empty = free-text input. */
+  /** Family model ids for the selects; on a free-text engine, the suggestions its server listed. */
   options: string[];
   freeTextModels: boolean;
+  /** The OpenAI-compatible engine's server (TASKS S1): where calls go, whether it was set here, whether it is on this machine. */
+  server: { value: string; stored: boolean; local: boolean } | null;
   /** Whose money a call on this engine spends (ai-usage.ts:billingOf, ADR 0055). */
   billing: AiBilling;
   /** The .env variable this engine's key mirrors; null = login-only engine. */
@@ -1363,11 +1365,57 @@ const EngineKeyRow: FC<{ engine: AiEngineRow }> = ({ engine: e }) => {
           ? `Saved in your database and used instead of ${e.keyEnvVar} from .env.`
           : e.keySource === 'env'
             ? `Read from ${e.keyEnvVar} in .env; a key pasted here overrides it.`
-            : `Stored in your database; ${e.keyEnvVar} in .env works too.`}
+            : e.server?.local
+              ? 'A server on this machine needs none; paste one only if yours asks for it.'
+              : `Stored in your database; ${e.keyEnvVar} in .env works too.`}
       </Hint>
     </Card>
   );
 };
+
+/**
+ * Where the OpenAI-compatible engine sends its calls (TASKS S1): OpenAI, or
+ * any server that speaks /v1/chat/completions — Ollama, LM Studio, vLLM, a
+ * proxy. Stored in the database like a key, so a local model needs no .env
+ * edit; the address decides whether the key row matters at all.
+ */
+const EngineServerRow: FC<{ server: NonNullable<AiEngineRow['server']> }> = ({ server }) => (
+  <Card variant="subtle" class="mt-3">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-label text-ink">Server address</span>
+      <Badge tone="neutral">{server.stored ? 'saved' : 'from .env'}</Badge>
+      {server.local && <Badge tone="ok">on this machine · no key needed</Badge>}
+      {server.stored && (
+        <ActionForm action="/settings/ai/openai-base" hidden={{ clear: '1' }} class="ml-auto">
+          <Button size="sm" variant="secondary" title="Forget this address and use OPENAI_BASE_URL from .env">
+            Use .env
+          </Button>
+        </ActionForm>
+      )}
+    </div>
+    <form method="post" action="/settings/ai/openai-base" class="mt-2.5 flex flex-wrap items-end gap-2">
+      <Input
+        type="text"
+        inputmode="url"
+        name="baseUrl"
+        required
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="OpenAI-compatible server address"
+        value={server.value}
+        mono
+        class="min-w-[16rem] flex-1"
+      />
+      <Button size="sm" variant="secondary">
+        Save
+      </Button>
+    </form>
+    <Hint class="mt-2">
+      Ollama answers at http://127.0.0.1:11434/v1, LM Studio at http://127.0.0.1:1234/v1 (from Docker:
+      host.docker.internal instead of 127.0.0.1). Test lists the models it runs.
+    </Hint>
+  </Card>
+);
 
 /**
  * One engine: a row of the AI engines section, not a card of its own. The
@@ -1418,6 +1466,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
     {!e.canToggle && (
       <Hint class="mt-1.5">The only engine in the list; enable another to replace it.</Hint>
     )}
+    {e.server && <EngineServerRow server={e.server} />}
     {e.keyEnvVar && <EngineKeyRow engine={e} />}
     {(e.enabled || e.lastResort) && (
       <form
@@ -1427,6 +1476,13 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
         class="mt-4"
       >
         <input type="hidden" name="provider" value={e.id} />
+        {e.freeTextModels && e.options.length > 0 && (
+          <datalist id={`models-${e.id}`}>
+            {e.options.map((m) => (
+              <option value={m} />
+            ))}
+          </datalist>
+        )}
         <div class="grid gap-3 sm:grid-cols-3">
         <Field label="Classifier model" hint="Scores every fetched job; keep it cheap.">
           <ModelPicker
@@ -1435,6 +1491,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
             fallback={e.classifierDefault}
             options={e.options}
             freeText={e.freeTextModels}
+            list={e.freeTextModels && e.options.length > 0 ? `models-${e.id}` : undefined}
           />
         </Field>
         <Field label="Resume model" hint="Resume scan, match and verification.">
@@ -1444,6 +1501,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
             fallback={e.resumeDefault}
             options={e.options}
             freeText={e.freeTextModels}
+            list={e.freeTextModels && e.options.length > 0 ? `models-${e.id}` : undefined}
           />
         </Field>
         <Field label="Cover letter model" hint="Writing quality, not analysis.">
@@ -1453,6 +1511,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
             fallback={e.coverDefault}
             options={e.options}
             freeText={e.freeTextModels}
+            list={e.freeTextModels && e.options.length > 0 ? `models-${e.id}` : undefined}
           />
         </Field>
         {e.id === 'claude_code' && /haiku/.test(e.resumeModel || e.resumeDefault) && (
@@ -1481,16 +1540,18 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
 );
 
 /** Closed families get a select (no wrong-family ids possible); base-URL
- *  engines (openai_api) get free text — any model id may be legal there. */
+ *  engines (openai_api) get free text — any model id may be legal there —
+ *  with the models the server listed as suggestions (`list`, TASKS S3). */
 const ModelPicker: FC<{
   name: string;
   value: string;
   fallback: string;
   options: string[];
   freeText: boolean;
-}> = ({ name, value, fallback, options, freeText }) =>
+  list?: string;
+}> = ({ name, value, fallback, options, freeText, list }) =>
   freeText ? (
-    <Input type="text" name={name} value={value} placeholder={fallback || 'model id'} mono />
+    <Input type="text" name={name} value={value} placeholder={fallback || 'model id'} list={list} autocomplete="off" mono />
   ) : (
     <Select name={name}>
       <option value="" selected={value === ''}>

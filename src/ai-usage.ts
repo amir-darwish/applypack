@@ -159,6 +159,30 @@ export function billingOf(id: AiProviderId, facts: BillingFacts): AiBilling {
 }
 
 /**
+ * The address typed for the OpenAI-compatible engine (TASKS S1), made one we
+ * send to: http(s), no trailing slash, and https unless the server is local —
+ * a key must never cross the internet in the clear. A local server needs no
+ * key at all.
+ */
+export function checkOpenAiBaseUrl(input: string): { ok: true; url: string } | { ok: false; reason: string } {
+  let url: URL;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    return { ok: false, reason: 'That is not a web address — it starts with http:// or https://.' };
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return { ok: false, reason: 'The address starts with http:// or https://.' };
+  }
+  if (url.username || url.password) return { ok: false, reason: 'Leave the key out of the address; it has its own field.' };
+  const clean = `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+  if (url.protocol === 'http:' && !isLocalUrl(clean)) {
+    return { ok: false, reason: 'A server on the internet takes https:// — plain http would send the key in the clear.' };
+  }
+  return { ok: true, url: clean };
+}
+
+/**
  * An address that is this machine or a private network — Ollama, LM Studio,
  * llama.cpp's server. `host.docker.internal` is the host seen from a container.
  */

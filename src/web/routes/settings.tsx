@@ -25,6 +25,7 @@ import {
   setPipelineStages,
   setSourceHealthAlerts,
   setStaleApplicationsDigestEnabled,
+  setOpenAiBaseUrl,
   setReapplyDays,
   setUpdateCheck,
   setTelegramEnabled,
@@ -69,13 +70,14 @@ import {
   type AiEngineConfig,
   type AiProviderId,
 } from '../../ai-engine';
-import { billingFacts, forgetAiProbe, getAiEngineEnv, probeAiProviders } from '../../ai-runtime';
+import { billingFacts, forgetAiProbe, getAiEngineEnv, openAiBase, probeAiProviders } from '../../ai-runtime';
+import { knownModels } from '../../openai-models';
 import { APP_VERSION } from '../../app-version';
 import { checkForUpdate } from '../../update-check';
 import { isNewer } from '../../versions';
 import { isReapplyChoice } from '../../employer';
 import { forgetUpdateNotice } from '../update-notice';
-import { billingOf, type AiBilling } from '../../ai-usage';
+import { billingOf, checkOpenAiBaseUrl, isLocalUrl, type AiBilling } from '../../ai-usage';
 import { billingNotes, isSpendPeriod, periodRange, spendView, type SpendPeriod } from '../../ai-spend';
 import { billedThisMonth, loadSpendGroups } from '../../ai-ledger';
 import {
@@ -219,8 +221,6 @@ function cardRank(e: { enabled: boolean; position: number; lastResort: boolean }
 async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
   // The keys are read once and lent to the probe — both need them (ADR 0027).
   const aiKeys = await getAiKeys();
-  const billing = billingFacts(aiKeys);
-  const billingFor = (id: AiProviderId): AiBilling => billingOf(id, billing);
   const spendRange = periodRange(spendPeriod, new Date());
   const [settings, targets, profiles, active, resumes, aiStatuses, stageCounts, spendGroups, billedMonth] =
     await Promise.all([
@@ -248,7 +248,11 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
   const countByStage = new Map(
     stageCounts.map((row) => [row.pipelineStage, row._count._all]),
   );
-  const aiEnv = getAiEngineEnv(aiKeys);
+  const { openAiBaseUrl } = settings;
+  const openAiServer = openAiBase(openAiBaseUrl);
+  const billing = billingFacts(aiKeys, openAiBaseUrl);
+  const billingFor = (id: AiProviderId): AiBilling => billingOf(id, billing);
+  const aiEnv = getAiEngineEnv(aiKeys, openAiBaseUrl);
   const engine = resolveAiEngine(settings.aiEngine, aiEnv);
   const aiConfig = parseAiEngineConfig(settings.aiEngine);
   const aiEngines = AI_PROVIDER_IDS.map((id) => {
@@ -269,8 +273,10 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
       resumeDefault,
       // An empty cover slot takes the engine's own letter default, not the resume slot.
       coverDefault: defaultModelFor(id, 'cover', aiEnv) || 'CLI default',
-      options: PROVIDER_MODEL_OPTIONS[id],
+      // TASKS S3: an OpenAI-compatible server's own models, as its last Test listed them.
+      options: id === 'openai_api' ? knownModels(openAiServer) : PROVIDER_MODEL_OPTIONS[id],
       freeTextModels: id === 'openai_api',
+      server: id === 'openai_api' ? { value: openAiServer, stored: openAiBaseUrl !== null, local: isLocalUrl(openAiServer) } : null,
       billing: billingFor(id),
       // ADR 0027: the field takes a key, it never hands one back — only the
       // last four characters of what is stored, and where it came from.
@@ -538,7 +544,8 @@ settingsRoute.post('/settings/ai/enable', async (c) => {
   }
   // A metered engine standing behind subscription engines = money spent
   // exactly when the free capacity runs out — say so up front.
-  const billing = billingFacts(await getAiKeys());
+  const [keys, { openAiBaseUrl }] = await Promise.all([getAiKeys(), getSettings()]);
+  const billing = billingFacts(keys, openAiBaseUrl);
   if (billingOf(provider, billing) === 'billed' && next.slice(0, -1).some((id) => billingOf(id, billing) !== 'billed')) {
     return flashRedirect(
       '/settings?tab=ai',
@@ -613,6 +620,25 @@ settingsRoute.post('/settings/ai/models', async (c) => {
   return wantsJson
     ? c.json({ ok: true })
     : flashRedirect('/settings?tab=ai', 'ok', `${label} models saved.`);
+});
+
+/** TASKS S1: the OpenAI-compatible engine's server, set here instead of in .env. */
+settingsRoute.post('/settings/ai/openai-base', async (c) => {
+  const form = await c.req.parseBody();
+  if (form.clear === '1') {
+    await setOpenAiBaseUrl(null);
+    forgetAiProbe();
+    return flashRedirect('/settings?tab=ai', 'ok', `Server address cleared — the engine uses ${config.OPENAI_BASE_URL} again.`);
+  }
+  const checked = checkOpenAiBaseUrl(typeof form.baseUrl === 'string' ? form.baseUrl : '');
+  if (!checked.ok) return flashRedirect('/settings?tab=ai', 'err', `Server address not saved: ${checked.reason}`);
+  await setOpenAiBaseUrl(checked.url);
+  forgetAiProbe();
+  return flashRedirect(
+    '/settings?tab=ai',
+    'ok',
+    `Server saved: ${checked.url}.${isLocalUrl(checked.url) ? ' A local server needs no key and costs nothing.' : ''} Press Test to list its models.`,
+  );
 });
 
 /**
