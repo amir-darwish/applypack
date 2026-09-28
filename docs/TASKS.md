@@ -2408,6 +2408,21 @@ release-discipline skill, a docs/site block does not.
       - S31: the conditional-request validators live on the Company row, so a
         restart is not a full read (ADR 0035 addendum).
 
+- [x] **`ui-finish`** (minor, part 1 v2.36.0) — the 2026-09 plan's W9.
+      U4 `ui.tsx:Notice` replaces ten hand-rolled tone banners; U5 the jobs
+      list, the Comparisons card and the board use `Empty`; U6 a failed run
+      reads as a sentence (`runs-summary.ts:failedRunLine` over
+      `run-failure.ts:runFailure`), the raw error under Details; U11 the
+      targeted view's tabs (aria-controls, one tabpanel, arrow keys); U12
+      `ui.tsx:Stars` and gate marks with text; U13 the scorecard's score
+      table has header cells; U14 the watchlist link's contrast; U18 one
+      tone map (`TONE_TEXT`, `TONE_FILL`, `BUCKET_TONE`); R20 `ui.tsx:When`,
+      a focusable table scroll region, the resume name links to its strength
+      review, "fill your current search from it"; R25 the patched save's
+      flash offers Download .docx; R28 the legend says benefits and EEO text
+      stay unmarked; S28 the browser's time zone until one is saved. U9 and
+      U10 had already been done.
+
 - [x] **`screening-fixes`** (minor, parts 1–2 v2.34.0 … v2.35.0) — the 2026-09 plan's
       W8. E1 had shipped in v2.19.0 (a skill's "within N months" in its
       text). E5: religion and health fields are redacted. E4 (Q6): an
