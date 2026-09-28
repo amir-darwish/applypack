@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.24.0] — 2026-09-28
+
+### Added
+- **The applications board as a file.** `/applications` → CSV or Markdown:
+  every application with its column, company, dates, fit, the resume it
+  went out with, the recruiter, your notes and the link. It is the
+  spreadsheet you would otherwise keep by hand.
+- **"Next: three things" on the Overview.** After setup, until your first
+  comparison: open your best match, compare it with your resume, tailor
+  the resume for it. Each step links to the page that does it.
+- **What a button will cost, before you press it.** The resume step and the
+  scoring step of the setup wizard now say whether the call is billed per
+  token, covered by your plan or free on a local model. Once calls are on
+  record, they show the usual cost instead.
+
+### Fixed
+- **A new version's styles could be missing until the browser let go of
+  the old stylesheet.** The stylesheet's address now carries the version.
+
 ## [2.23.0] — 2026-09-28
 
 ### Added

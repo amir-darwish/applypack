@@ -2310,10 +2310,15 @@ release-discipline skill, a docs/site block does not.
       of the dashboard on a scratch install (1.9 MB), at the top of
       README; the recipe is `docs/screenshots/README.md`. No `.webm`, and
       the launch drafts do not mention it yet.
-- [ ] **`first-run-follow-through`** (minor) — §10: cost hints on wizard
+- [x] **`first-run-follow-through`** (minor) — §10: cost hints on wizard
       steps 3 and 5; an Overview "next three things" card while
       `scoredCount > 0 && matchCount === 0` (open the top match →
       Compare → Tailor), derived from data like the wizard's steps.
+      **2026-09-28, v2.24.0:** `web/next-things.ts` (the top posting must
+      clear the primary search's floor, or the card stays away) and
+      `web/cost-hint.ts:spendHint` — the ledger's median, or what kind of
+      money the first engine spends; no figure is guessed before a call
+      is on record.
 - [x] **`search-funnel`** (minor) — §19 stage 1: `src/web/funnel.ts`
       (pure) summing `CronRun.stats` over 7 / 30 days + the
       location-mismatch share from `job_score`, a strip on `/runs` and one
@@ -2368,8 +2373,9 @@ release-discipline skill, a docs/site block does not.
       posting or by name (turned away before any AI, hidden on `/jobs`,
       reversible), and an opt-in re-apply window rests a company applied
       to. The employer name now reaches the classifier, the verifier, the
-      letter and the alerts instead of the aggregator's. Next: N7 board
-      export, N11 the Overview's next-three card, N8 `needsBrowser` +
+      letter and the alerts instead of the aggregator's. **v2.24.0:** N7
+      (the applications board as CSV / Markdown, `src/csv.ts` shared with
+      the screening export) and N11 (above). Next: N8 `needsBrowser` +
       paste-the-page.
 
 ### 20.4 Owner items
