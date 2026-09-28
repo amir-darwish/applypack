@@ -12,6 +12,7 @@ import {
   RESUME_TIMEOUT_MS,
 } from './prompts';
 import { scoreReview } from './review-score';
+import { gateReviewAdvice } from './review-gate';
 import { createReview } from './store';
 
 
@@ -46,7 +47,9 @@ export async function reviewResume(resume: {
     { resumeId: resume.id },
   );
   if (!answer) return null;
-  const review = answer.data;
+  // An example that reaches past the resume becomes the question it needed (TASKS R3).
+  const gate = gateReviewAdvice(answer.data.advice, [resume.text, ...answers.map((a) => `${a.question} ${a.answer}`)]);
+  const review = { ...answer.data, advice: gate.advice };
   const breakdown = scoreReview(review.grades);
   const row = await createReview({
     resumeId: resume.id,
@@ -69,6 +72,7 @@ export async function reviewResume(resume: {
       missing: breakdown.missing.length,
       advice: review.advice.length,
       asks: review.advice.filter((a) => a.ask !== null).length,
+      examplesBlocked: gate.blocked,
       // The point of the loop: answered figures should make asks go down.
       answersUsed: answers.length,
       chars: answer.chars,
