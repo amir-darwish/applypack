@@ -2417,6 +2417,20 @@ release-discipline skill, a docs/site block does not.
       for English; R16: a re-upload of the same text is refused, and a new
       version that reads like the old one is not made — no scan paid for.
 
+      **v2.32.0 (part 2):**
+      - R3: the strength review's example bullets pass the fact gate; one
+        that invents a figure or a tool becomes a question
+        (`resume/review-gate.ts`).
+      - R4: a keyword the resume matches only through an alias is marked
+        "as <spelling>" — an ATS searches the posting's own word.
+      - R12: "What the ATS sees" shows the parsed view (name, contacts,
+        sections, roles with dates) from the deterministic reader.
+      - R14: the same resume in another format, read beside the saved one —
+        which a parser reads better and where the texts differ; no AI,
+        nothing stored.
+      - R5: `bench:resume` has a hedged-stack fixture (brief first, then the
+        match). R6: the red-team cases in `skill-normalization.test.ts`.
+
 - [x] **`ai-provider-hardening`** (patch, v2.28.1) — the 2026-09 plan's AI-4
       rest (H40–H46; H44 had shipped). A refused key or sign-in is its own
       outcome (`unauthorized`): never retried, the engine left alone until

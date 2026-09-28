@@ -11,13 +11,18 @@ import {
 } from '../ai-engine';
 import { getAiEngineEnv, probeAiProviders } from '../ai-runtime';
 import {
+  BRIEF_MAX_TOKENS,
+  buildBriefPrompt,
   buildMatchPrompt,
   MATCH_FAST_MAX_TOKENS,
   MATCH_MAX_TOKENS,
+  parseBriefResponse,
   parseMatchResponse,
   PROMPT_VERSION,
   type MatchContext,
+  type PostingBrief,
 } from '../resume/prompts';
+import { reconcileGroups } from '../resume/keyword-group';
 import { readBenchRun, renderBenchTable, type BenchFixture, type BenchRun } from '../resume/bench-report';
 import { parseMatchMode, type MatchMode } from '../resume/match-mode';
 import { scoreMatch } from '../resume/score';
@@ -25,10 +30,10 @@ import { logger } from '../logger';
 
 /*
  * Live smoke bench for the match prompt (no DB writes): a handful of gold
- * fixtures from the blueprint — stack mismatch, stack match, prompt
- * injection — each run once through the real provider, parsed, scored
- * deterministically and checked against expectations. Run after any
- * MATCH_SYSTEM / scoring change:  npm run bench:resume
+ * fixtures from the blueprint — stack mismatch, stack match, a hedged
+ * stack, prompt injection — each run once through the real provider,
+ * parsed, scored deterministically and checked against expectations. Run
+ * after any MATCH_SYSTEM / scoring change:  npm run bench:resume
  *
  * Cross-engine mode (docs/ai-engine-improvements.md item 4):
  *   npm run bench:resume -- --list-engines      # who could run it (no AI spend)
@@ -116,6 +121,23 @@ Senior Node.js Engineer — Acme SaaS (2022–2026)
 Software Engineer — WebCo (2019–2022)
 - Built Node.js REST APIs and React dashboards for 200k users; Dockerised all services on AWS.`;
 
+/* A hedged stack (TASKS R5): "either is fine" and "preferred" are not musts.
+ * The Laravel/Vue resume meets the front-end alternative through Vue.js and
+ * the back end outright; Node.js and TypeScript are the posting's wishes. */
+const HEDGED_JOB = {
+  title: 'Full-Stack Engineer',
+  companyName: 'Northwind',
+  location: 'Remote',
+  description: `Full-stack engineer for our booking product.
+Requirements:
+- 4+ years building web products (required)
+- React or Vue.js on the front end, either is fine (required)
+- PHP / Laravel back end (required)
+- Node.js preferred for new services
+- MySQL, Docker, CI/CD
+Nice to have: TypeScript, Redis.`,
+};
+
 interface Check {
   name: string;
   ok: boolean;
@@ -148,7 +170,7 @@ async function runFixture(
     checks.push({ name: `${name}: schema`, ok: parsed.ok, detail: parsed.ok ? `${ms}ms` : parsed.error });
     if (parsed.ok) {
       expect(parsed, checks);
-      const bd = scoreOf(parsed);
+      const bd = scoreOf(parsed, context.brief);
       record.score = bd.score;
       record.cap = bd.cap;
       record.keywords = parsed.data.keywords.map((k) => ({ term: k.term, status: k.status, requirement: k.requirement, primary: k.primary }));
@@ -167,8 +189,22 @@ async function runFixture(
   return { checks, record };
 }
 
-function scoreOf(r: Extract<ReturnType<typeof parseMatchResponse>, { ok: true }>) {
-  return scoreMatch(r.data.keywords, r.data.alignment, r.data.red_flags.length);
+/** Scored as match.ts scores it: a group label stands only when the brief backs it, and without one none does. */
+function scoreOf(r: Extract<ReturnType<typeof parseMatchResponse>, { ok: true }>, brief?: PostingBrief | null) {
+  return scoreMatch(reconcileGroups(r.data.keywords, brief).keywords, r.data.alignment, r.data.red_flags.length);
+}
+
+/** The posting read on its own first, as the product does (ADR 0044): the "either" groups come from here. */
+async function benchBrief(job: typeof NODE_JOB): Promise<PostingBrief | null> {
+  const { text } = await benchProvider.complete({
+    ...buildBriefPrompt(job),
+    maxTokens: BRIEF_MAX_TOKENS,
+    label: 'bench:brief',
+    model: benchModel,
+    timeoutMs: 5 * 60_000,
+  });
+  const parsed = text === null ? null : parseBriefResponse(text);
+  return parsed?.ok ? parsed.data : null;
 }
 
 // Which backend/model/variant the fixtures run on; main() sets these per engine.
@@ -232,6 +268,32 @@ async function runSuite(): Promise<{ checks: Check[]; fixtures: BenchFixture[] }
       );
     }),
   );
+
+  const hedgedBrief = await benchBrief(HEDGED_JOB);
+  all.push({ name: 'laravel-vs-hedged: brief', ok: hedgedBrief !== null, detail: hedgedBrief ? `${hedgedBrief.requirement_groups.length} groups` : 'no brief' });
+  if (hedgedBrief) {
+    collect(
+      await runFixture(
+        'laravel-vs-hedged',
+        LARAVEL_RESUME,
+        HEDGED_JOB,
+        (r, checks) => {
+          if (!r.ok) return;
+          const bd = scoreOf(r, hedgedBrief);
+          const frontEnd = hedgedBrief.requirement_groups.find((g) => g.options.some((o) => /react/i.test(o)) && g.options.some((o) => /vue/i.test(o)));
+          const vue = r.data.keywords.find((k) => /vue/i.test(k.term));
+          const node = r.data.keywords.find((k) => /node/i.test(k.term));
+          checks.push(
+            { name: '"React or Vue.js" read as one group', ok: frontEnd !== undefined, detail: hedgedBrief.requirement_groups.map((g) => `${g.label}: ${g.options.join(' / ')}`).join('; ') || 'no groups' },
+            { name: 'Vue.js satisfies it', ok: vue?.status === 'present', detail: `vue ${vue?.status ?? 'missing'}` },
+            { name: '"Node.js preferred" is not a must', ok: node === undefined || node.requirement !== 'must', detail: `node ${node?.requirement ?? 'missing'}` },
+            { name: 'the hedged stack does not cap the score (≥65, no cap)', ok: bd.cap === null && bd.score >= 65, detail: `score ${bd.score}, cap ${bd.cap}` },
+          );
+        },
+        { brief: hedgedBrief },
+      ),
+    );
+  }
 
   // The treadmill scenario, twice: a fully tailored resume must score high
   // with almost nothing left to change, and a re-run with the previous
