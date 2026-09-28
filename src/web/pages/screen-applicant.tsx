@@ -6,7 +6,7 @@ import type { FlashMessage } from '../flash';
 import { formatDate } from '../format';
 import { formatRange, parseRange } from '../../screening/dates';
 import { trajectoryLine, trajectoryOf } from '../../screening/trajectory';
-import { SCREEN_PROMPT_VERSION } from '../../screening/prompts';
+import { STANDOUT_SINCE } from '../../screening/prompts';
 import { CRITERION_KIND_LABELS, EVIDENCE_RUNG_LABELS, type Rubric } from '../../screening/rubric';
 import type { ScreenReply } from '../../screening/prompts';
 import { capExplanation, GATE_BUCKET_LABELS, type ScoreRow, type ScreenBreakdown } from '../../screening/score';
@@ -183,7 +183,7 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
               <h2 class="text-entity text-ink">Stands out — what no criterion asked</h2>
               {reply.standout.length === 0 ? (
                 <Hint class="mt-1">
-                  {promptVersion !== null && promptVersion < SCREEN_PROMPT_VERSION
+                  {promptVersion !== null && promptVersion < STANDOUT_SINCE
                     ? 'Scored before stand-out facts were read; Score again on the screening page to get them.'
                     : 'Nothing beyond the criteria stood out in the text.'}
                 </Hint>

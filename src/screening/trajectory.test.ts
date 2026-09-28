@@ -22,9 +22,9 @@ test('trajectoryOf reads the career off the dated roles', () => {
   assert.equal(t.yearsRelevant, 9.8);
   assert.equal(t.averageTenure, 4.2);
   assert.equal(t.inRoleNow, true);
-  assert.deepEqual(t.sectors, ['IT outsourcing', 'banking', 'e-commerce']);
+  assert.deepEqual(t.sectors, ['IT services', 'fintech', 'e-commerce'], 'one vocabulary (sectors.ts): outsourcing is IT services, banking is fintech');
   assert.deepEqual(t.companyTypes, ['consultancy', 'agency']);
-  assert.equal(trajectoryLine(t), '10.8 years across 3 employers · average stay 4.2 years · in a role now · IT outsourcing, banking, e-commerce');
+  assert.equal(trajectoryLine(t), '10.8 years across 3 employers · average stay 4.2 years · in a role now · IT services, fintech, e-commerce');
 });
 
 test('trajectoryLine with dated roles that name no employer counts roles', () => {
