@@ -27,7 +27,7 @@ export const FunnelCard: FC<{ week: FunnelView; month: FunnelView; sources: Sour
           </Tr>
         ))}
       </Table>
-      <div class="space-y-1 border-t border-line px-3.5 py-3 text-[13px] leading-5 text-ink-muted sm:px-5">
+      <div class="space-y-1 border-t border-line px-3.5 py-3 text-note leading-5 text-ink-muted sm:px-5">
         <ReasonLine title="Set aside by the filter" reasons={month.filtered} />
         <ReasonLine title="Dismissed after scoring" reasons={month.dismissed} />
         {sources.length > 0 && (

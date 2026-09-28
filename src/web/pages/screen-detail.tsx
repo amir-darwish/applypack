@@ -12,6 +12,7 @@ import {
   Flash,
   Hint,
   Input,
+  More,
   Notice,
   PageHeader,
   SectionTitle,
@@ -127,7 +128,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
             <Step n={1} />
             Position
           </SectionTitle>
-          <span class="text-[13px] text-ink-faint">
+          <span class="text-note text-ink-faint">
             {screening.postingUpdatedAt
               ? `edited here ${formatRelative(screening.postingUpdatedAt)}`
               : 'as stored on the job'}{' '}
@@ -165,7 +166,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
             <span class="when-open">Hide the posting</span>
             <Chevron />
           </summary>
-          <pre class="mt-2 max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-[13px] leading-5 text-ink">{screening.postingText}</pre>
+          <pre class="mt-2 max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-note leading-5 text-ink">{screening.postingText}</pre>
         </details>
         <details class="mt-2">
           <summary class={DISCLOSURE}>
@@ -196,7 +197,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
             <Step n={2} />
             Criteria — what this screen checks
           </SectionTitle>
-          <span class="text-[13px] text-ink-faint">
+          <span class="text-note text-ink-faint">
             {rubricEmpty ? 'no criteria yet' : rubricSummary(rubric)} · rubric v{screening.rubricVersion}
           </span>
         </div>
@@ -206,7 +207,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
               <CriterionChip c={c} />
             ))}
             {rubric.criteria.length > MAX_CRITERION_CHIPS && (
-              <span class="self-center text-xs text-ink-faint">+{rubric.criteria.length - MAX_CRITERION_CHIPS} more</span>
+              <span class="self-center text-meta text-ink-faint">+{rubric.criteria.length - MAX_CRITERION_CHIPS} more</span>
             )}
           </div>
         )}
@@ -219,9 +220,12 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
           <Hint class="mt-2">
             A <span class="text-ink">gate</span> buckets (pass / unknown / fail, never points), the
             <span class="text-ink"> stars</span> weigh a scored criterion, a <span class="text-ink">note</span> is shown and
-            not counted. Rows the posting wrote say so; edit the words, change the mode, tick Remove — and add your own in
-            the last row, in your own words.
+            not counted.
           </Hint>
+          <More class="mt-1">
+            Rows the posting wrote say so; edit the words, change the mode, tick Remove — and add your own in the last row,
+            in your own words.
+          </More>
           {rubricEmpty && (
             <div class="mt-3 flex flex-wrap items-center gap-3">
               <Hint>The posting could not be read into a draft. Add criteria below, or read the posting again.</Hint>
@@ -236,7 +240,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
-                  <tr class="text-left text-xs font-medium text-ink-muted">
+                  <tr class="text-left text-label text-ink-muted [&>th]:font-[550]">
                     <th scope="col" class="py-2 pr-2">Kind</th>
                     <th scope="col" class="py-2 pr-2">What</th>
                     <th scope="col" class="py-2 pr-2">Mode</th>
@@ -251,7 +255,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                   ))}
                   <tr class="bg-surface-overlay/40">
                     <td class="py-2 pr-2 align-top">
-                      <Select name="add_kind" aria-label="Kind of the new criterion" class="!w-auto !py-1 text-[13px]">
+                      <Select name="add_kind" aria-label="Kind of the new criterion" class="!w-auto !py-1 text-note">
                         {CRITERION_KINDS.map((k) => (
                           <option value={k} selected={k === 'custom'}>
                             {CRITERION_KIND_LABELS[k]}
@@ -260,13 +264,13 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                       </Select>
                     </td>
                     <td class="py-2 pr-2 align-top">
-                      <Input type="text" name="add_text" maxlength="200" placeholder="In your own words: a question the resume can answer — or a term, a band of years, a sector…" aria-label="The new criterion" class="!py-1 text-[13px]" />
-                      <div class="mt-1 text-xs text-ink-faint" id="add-hint">
+                      <Input type="text" name="add_text" maxlength="200" placeholder="In your own words: a question the resume can answer — or a term, a band of years, a sector…" aria-label="The new criterion" class="!py-1 text-note" />
+                      <div class="mt-1 text-meta text-ink-faint" id="add-hint">
                         {CRITERION_KIND_HINTS.custom}
                       </div>
-                      <label class="mt-1 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                      <label class="mt-1 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-muted">
                         answered as
-                        <Select name="add_answer" aria-label="How a question in your own words is answered" class="!w-auto max-w-full !py-0.5 !text-xs">
+                        <Select name="add_answer" aria-label="How a question in your own words is answered" class="!w-auto max-w-full !py-0.5 !text-meta">
                           <option value="yesno">yes / no (pass, partial, unknown, fail)</option>
                           <option value="howmuch">how much (the evidence ladder)</option>
                         </Select>
@@ -278,7 +282,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                     <td class="py-2 pr-2 align-top">
                       <WeightSelect name="add_weight" value={3} />
                     </td>
-                    <td class="py-2 pr-2 align-top text-xs text-ink-faint">you</td>
+                    <td class="py-2 pr-2 align-top text-meta text-ink-faint">you</td>
                     <td></td>
                   </tr>
                 </tbody>
@@ -294,7 +298,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
             </div>
           </form>
           <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-            <span class="text-[13px] text-ink-faint">Start over from a shape of hiring:</span>
+            <span class="text-note text-ink-faint">Start over from a shape of hiring:</span>
             {PRESETS.map((p) => (
               <ActionForm action={`/screen/${screening.id}/rubric/preset`} hidden={{ preset: p }} once>
                 <Button variant="secondary" size="sm" title={PRESET_HINTS[p]}>
@@ -339,10 +343,10 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
           <Button variant="secondary" data-upload-button>
             Add and score
           </Button>
-          <span class="text-[13px] text-ink-faint" data-picked aria-live="polite"></span>
+          <span class="text-note text-ink-faint" data-picked aria-live="polite"></span>
         </form>
         {/* Six facts, one line each — as one paragraph none of them was findable. */}
-        <ul class="mt-2 list-disc space-y-1 pl-4 text-[13px] leading-5 text-ink-faint">
+        <ul class="mt-2 list-disc space-y-1 pl-4 text-note leading-5 text-ink-faint">
           <li>
             Choosing is adding: pick {ACCEPTED_EXTENSIONS.join(' / ')} files, a .zip, or a folder with its subfolders,
             and the scoring starts. On a folder, the browser asks once whether to upload its files.
@@ -370,7 +374,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
               <Step n={4} />
               Results
             </SectionTitle>
-            <div class="text-[13px] text-ink-faint" id="run-progress" role="status" aria-live="polite" data-screening={screening.id} data-running={running ? '1' : undefined}>
+            <div class="text-note text-ink-faint" id="run-progress" role="status" aria-live="polite" data-screening={screening.id} data-running={running ? '1' : undefined}>
               {running
                 ? progressText(run!)
                 : run && run.finishedAt !== null && run.failed > 0
@@ -383,7 +387,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                         }`
                       : 'Add applicants above.'}
             </div>
-            <div class="mt-1 text-[13px] text-ink-faint">
+            <div class="mt-1 text-note text-ink-faint">
               Runs on {engine.label}
               {engine.warn ? (
                 <>
@@ -415,7 +419,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
         ) : (
           <form id="bulk-form" method="post" action={`/screen/${screening.id}/applicants/bulk`}>
           <div class="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5 sm:px-5">
-            <span class="text-[13px] text-ink-faint" data-selection>
+            <span class="text-note text-ink-faint" data-selection>
               With the ticked applicants:
             </span>
             {(['interview', 'hold', 'declined'] as const).map((d) => (
@@ -508,7 +512,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
             Calibration — your decisions against the order
           </SectionTitle>
           {calibration.enough && (
-            <span class="text-[13px] text-ink-faint">
+            <span class="text-note text-ink-faint">
               {calibration.decided.interview} to interview · {calibration.decided.hold} on hold · {calibration.decided.declined} declined
             </span>
           )}
@@ -530,7 +534,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
                         {sp.decision === 'interview' ? 'To interview' : 'Declined'}, {sp.position}
                         {ordinal(sp.position)} of {sp.total} in the table
                       </span>
-                      {sp.why.length > 0 && <div class="text-[13px] text-ink-faint">{sp.why.join(' · ')}</div>}
+                      {sp.why.length > 0 && <div class="text-note text-ink-faint">{sp.why.join(' · ')}</div>}
                     </li>
                   ))}
                 </ul>
@@ -540,7 +544,7 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
               <h3 class="text-label text-ink">Which criteria tell your picks from the rest</h3>
               <table class="mt-1 w-full text-sm">
                 <thead>
-                  <tr class="text-left text-xs font-medium text-ink-muted">
+                  <tr class="text-left text-label text-ink-muted [&>th]:font-[550]">
                     <th scope="col" class="py-1 pr-2">Criterion</th>
                     <th scope="col" class="py-1 pr-2 text-right">To interview</th>
                     <th scope="col" class="py-1 pr-2 text-right">Declined</th>
@@ -583,11 +587,14 @@ export const ScreenDetailPage: FC<ScreenDetailProps> = ({ screening, rubric, row
         )}
       </Card>
       <Hint class="mt-3">
-        Created <When at={screening.createdAt} />. "Priority to talk to" means every gate passed; "Ask first" means one is unknown and the scorecard has the
-        question. A failed gate is a fact about the posting's conditions, never a verdict on the person. A score
-        with a small +N or −N beside it carries your own adjustment from the scorecard; the computed number is in
-        its tooltip and in the export.
+        Created <When at={screening.createdAt} />. A failed gate is a fact about the posting's conditions, never a
+        verdict on the person.
       </Hint>
+      <More class="mt-1">
+        "Priority to talk to" means every gate passed; "Ask first" means one is unknown and the scorecard has the
+        question. A score with a small +N or −N beside it carries your own adjustment from the scorecard; the
+        computed number is in its tooltip and in the export.
+      </More>
       <style dangerouslySetInnerHTML={{ __html: RUN_BADGE_CSS + DISCLOSURE_CSS }} />
       <script
         type="module"
@@ -607,7 +614,7 @@ const CriterionChip: FC<{ c: Criterion }> = ({ c }) => {
   const words = c.kind === 'impact' || c.kind === 'overall' ? c.label : criterionText(c) || c.label;
   return (
     <span
-      class={`inline-flex min-w-0 max-w-[32rem] items-center gap-1 rounded-md px-2 py-0.5 text-xs ring-1 ring-inset ${
+      class={`inline-flex min-w-0 max-w-[32rem] items-center gap-1 rounded-md px-2 py-0.5 text-meta ring-1 ring-inset ${
         c.mode === 'gate' ? 'bg-warn/5 text-ink ring-warn/25' : c.mode === 'note' ? 'bg-surface-overlay text-ink-muted ring-line' : 'bg-surface-raised text-ink ring-line'
       }`}
       title={`${CRITERION_KIND_LABELS[c.kind]} · ${CRITERION_MODE_LABELS[c.mode].split(' — ')[0]}${c.source === 'you' ? ' · yours' : ''}`}
@@ -621,7 +628,7 @@ const CriterionChip: FC<{ c: Criterion }> = ({ c }) => {
 };
 
 const ModeSelect: FC<{ name: string; value: Criterion['mode'] }> = ({ name, value }) => (
-  <Select name={name} aria-label="Mode" class="!w-auto !py-1 text-[13px]">
+  <Select name={name} aria-label="Mode" class="!w-auto !py-1 text-note">
     {CRITERION_MODES.map((m) => (
       <option value={m} selected={m === value}>
         {CRITERION_MODE_LABELS[m].split(' — ')[0]}
@@ -631,7 +638,7 @@ const ModeSelect: FC<{ name: string; value: Criterion['mode'] }> = ({ name, valu
 );
 
 const WeightSelect: FC<{ name: string; value: number }> = ({ name, value }) => (
-  <Select name={name} aria-label="Weight" class="!w-auto !py-1 text-[13px]">
+  <Select name={name} aria-label="Weight" class="!w-auto !py-1 text-note">
     {Array.from({ length: MAX_WEIGHT }, (_, i) => i + 1).map((w) => (
       <option value={w} selected={w === value} aria-label={`Weight ${w} of ${MAX_WEIGHT}`}>
         {'★'.repeat(w)}
@@ -646,17 +653,17 @@ const CriterionRow: FC<{ c: Criterion }> = ({ c }) => {
   const fixed = c.kind === 'impact' || c.kind === 'overall';
   return (
     <tr>
-      <td class="py-2 pr-2 align-top whitespace-nowrap text-[13px] text-ink">{CRITERION_KIND_LABELS[c.kind]}</td>
+      <td class="py-2 pr-2 align-top whitespace-nowrap text-note text-ink">{CRITERION_KIND_LABELS[c.kind]}</td>
       <td class="py-2 pr-2 align-top">
         {fixed ? (
-          <span class="text-[13px] text-ink-muted">{c.label}</span>
+          <span class="text-note text-ink-muted">{c.label}</span>
         ) : (
-          <Input type="text" name={`text_${c.id}`} value={criterionText(c)} maxlength="200" aria-label={`${CRITERION_KIND_LABELS[c.kind]} criterion`} title={CRITERION_KIND_HINTS[c.kind]} class="!py-1 text-[13px]" />
+          <Input type="text" name={`text_${c.id}`} value={criterionText(c)} maxlength="200" aria-label={`${CRITERION_KIND_LABELS[c.kind]} criterion`} title={CRITERION_KIND_HINTS[c.kind]} class="!py-1 text-note" />
         )}
         {c.kind === 'custom' && (
-          <label class="mt-1 inline-flex items-center gap-2 text-xs text-ink-muted">
+          <label class="mt-1 inline-flex items-center gap-2 text-meta text-ink-muted">
             answered as
-            <Select name={`answer_${c.id}`} aria-label="How this question is answered" class="!w-auto !py-0.5 !text-xs">
+            <Select name={`answer_${c.id}`} aria-label="How this question is answered" class="!w-auto !py-0.5 !text-meta">
               <option value="yesno" selected={c.spec.answer === 'yesno'}>
                 yes / no
               </option>
@@ -673,7 +680,7 @@ const CriterionRow: FC<{ c: Criterion }> = ({ c }) => {
       <td class="py-2 pr-2 align-top">
         <WeightSelect name={`weight_${c.id}`} value={c.weight} />
       </td>
-      <td class="py-2 pr-2 align-top text-xs text-ink-faint">{c.source === 'posting' ? 'the posting' : 'you'}</td>
+      <td class="py-2 pr-2 align-top text-meta text-ink-faint">{c.source === 'posting' ? 'the posting' : 'you'}</td>
       <td class="py-2 text-right align-top">
         <input type="checkbox" name={`remove_${c.id}`} value="1" aria-label={`Remove ${c.label}`} class="h-4 w-4 accent-accent" />
       </td>
@@ -683,14 +690,14 @@ const CriterionRow: FC<{ c: Criterion }> = ({ c }) => {
 
 /** The step number in a card's title — the page reads top to bottom: position, criteria, applicants, results. */
 const Step: FC<{ n: number }> = ({ n }) => (
-  <span class="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-surface-overlay text-[11px] font-semibold text-ink-muted ring-1 ring-inset ring-line">
+  <span class="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-surface-overlay text-meta font-semibold text-ink-muted ring-1 ring-inset ring-line">
     {n}
   </span>
 );
 
 /** A <summary> that reads as a button, with a chevron that turns when the block is open; the bare marker was missed. */
 const DISCLOSURE =
-  'inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-line bg-surface-raised px-2.5 py-1 text-[13px] font-medium text-ink hover:bg-surface-overlay list-none [&::-webkit-details-marker]:hidden';
+  'inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-line bg-surface-raised px-2.5 py-1 text-note font-medium text-ink hover:bg-surface-overlay list-none [&::-webkit-details-marker]:hidden';
 const Chevron: FC = () => (
   <svg class="chev h-3.5 w-3.5 text-ink-faint transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="m6 9 6 6 6-6" />
@@ -719,7 +726,7 @@ const RUN_BADGE_CSS = `
 
 const GroupRow: FC<{ tone: 'ok' | 'warn' | 'danger' | 'neutral'; label: string; count: number }> = ({ tone, label, count }) => (
   <tr class="bg-surface-overlay/60">
-    <td colspan={10} class="px-3.5 py-1.5 text-xs font-medium sm:px-5">
+    <td colspan={10} class="px-3.5 py-1.5 text-meta font-medium sm:px-5">
       <Badge tone={tone}>{label}</Badge>
       <span class="ml-2 text-ink-faint">{count}</span>
     </td>
@@ -777,7 +784,7 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
             </Badge>
           </span>
         )}
-        <div class="truncate text-xs text-ink-faint" title={r.file}>
+        <div class="truncate text-meta text-ink-faint" title={r.file}>
           {r.file}
           {r.letters > 0 ? ` · + cover letter${r.letters === 1 ? '' : 's'}` : ''}
           {r.status !== 'ok' && r.note ? ` — ${r.note}` : ''}
@@ -785,7 +792,7 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
         </div>
         {/* Phone width leaves the name cell too narrow for a list; the scorecard has the same facts. */}
         {v && (v.standout.length > 0 || v.career.roles > 0) && (
-          <details class="mt-0.5 hidden text-xs sm:block">
+          <details class="mt-0.5 hidden text-meta sm:block">
             <summary class="cursor-pointer truncate text-ink-muted" title={v.standout.length > 0 ? v.standout.map((f) => f.fact).join(' · ') : v.careerLine}>
               {v.standout.length > 0 ? v.standout.map((f) => f.fact).join(' · ') : `Career: ${v.careerLine}`}
             </summary>
@@ -808,7 +815,7 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
       </Td>
       <Td class="whitespace-nowrap">
         {v ? (
-          <span class="inline-flex gap-1.5 font-mono text-[13px]">
+          <span class="inline-flex gap-1.5 font-mono text-note">
             {gates.map((g) => {
               const status = v.gates.find((x) => x.gate.toLowerCase() === g.toLowerCase())?.status ?? 'unknown';
               return (
@@ -836,7 +843,7 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
             {v.cap !== null && <span class="text-ink-faint">*</span>}
             {r.adjustment !== 0 && (
               <span
-                class={`ml-1 text-xs font-normal ${r.adjustment > 0 ? 'text-ok' : 'text-warn'}`}
+                class={`ml-1 text-meta font-normal ${r.adjustment > 0 ? 'text-ok' : 'text-warn'}`}
                 title={`Computed ${v.score}; your adjustment ${r.adjustment > 0 ? '+' : ''}${r.adjustment}${r.adjustmentNote ? ` — ${r.adjustmentNote}` : ''}`}
               >
                 {r.adjustment > 0 ? '+' : ''}
@@ -853,7 +860,7 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
         {v ? (
           <>
             {v.mustCovered} / {v.mustTotal}
-            <span class="block text-xs text-ink-faint">{v.mustStrong} strong</span>
+            <span class="block text-meta text-ink-faint">{v.mustStrong} strong</span>
           </>
         ) : (
           ''
@@ -866,7 +873,7 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
       <Td class="whitespace-nowrap">
         {r.status === 'ok' ? (
           <span class="flex items-center gap-2">
-            <Select name="decision" form={`decision-${r.id}`} data-commit="submit" aria-label={`Decision for applicant ${r.number}`} class="min-w-[7.5rem] !py-1 text-[13px]">
+            <Select name="decision" form={`decision-${r.id}`} data-commit="submit" aria-label={`Decision for applicant ${r.number}`} class="min-w-[7.5rem] !py-1 text-note">
               <option value="" selected={r.decision === null}>
                 —
               </option>
@@ -883,11 +890,11 @@ const ApplicantRow: FC<{ r: ApplicantRowView; screeningId: number; gates: string
             </noscript>
           </span>
         ) : r.status === 'held' ? (
-          <a href={`/screen/${screeningId}/applicants/${r.id}`} class="text-[13px] text-ink hover:underline">
+          <a href={`/screen/${screeningId}/applicants/${r.id}`} class="text-note text-ink hover:underline">
             read it first
           </a>
         ) : (
-          <span class="text-[13px] text-ink-faint">tick and Delete</span>
+          <span class="text-note text-ink-faint">tick and Delete</span>
         )}
       </Td>
     </Tr>

@@ -36,7 +36,7 @@ export function ringTone(score) {
 // A missing chip wears the colour its mark wears in the posting (target.mjs):
 // red for a must, amber for a preferred, slate for a nice-to-have. Keyed by
 // keywordRank — 4 a primary-stack must … 0 context.
-const CHIP_BASE = 'chip inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset';
+const CHIP_BASE = 'chip inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-meta font-medium ring-1 ring-inset';
 // The add control beside a missing chip: an action, so it reads as the accent, not the warning.
 const CHIP_ADD = 'border border-accent/40 bg-accent/5 text-accent-strong hover:bg-accent/10';
 const CHIP_LEVEL = {
@@ -220,7 +220,7 @@ export function init(data) {
       });
       chips.appendChild(add);
     }
-    if (chips.children.length === 0) chips.innerHTML = '<span class="text-xs text-ink-faint">Every countable keyword is present.</span>';
+    if (chips.children.length === 0) chips.innerHTML = '<span class="text-meta text-ink-faint">Every countable keyword is present.</span>';
 
     // Nothing marks the ring as stale: the sticky bar says it in full while
     // the text is dirty — the estimate, the delta and the button to re-run.

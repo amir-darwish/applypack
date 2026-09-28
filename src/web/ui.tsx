@@ -63,7 +63,7 @@ export const PageHeader: FC<
     {back && (
       <a
         href={back.href}
-        class="mb-1.5 inline-flex items-center gap-1 text-[13px] text-ink-faint transition-colors duration-150 hover:text-ink"
+        class="mb-1.5 inline-flex items-center gap-1 text-note text-ink-faint transition-colors duration-150 hover:text-ink"
       >
         <svg
           viewBox="0 0 24 24"
@@ -134,7 +134,7 @@ export const Notice: FC<PropsWithChildren<{ tone: keyof typeof MESSAGE_TONE; cla
   class: extra,
   role,
   children,
-}) => <div role={role} class={`rounded-md border px-3.5 py-2.5 text-[13px] leading-5 ${MESSAGE_TONE[tone]}${extra ? ` ${extra}` : ''}`}>{children}</div>;
+}) => <div role={role} class={`rounded-md border px-3.5 py-2.5 text-note leading-5 ${MESSAGE_TONE[tone]}${extra ? ` ${extra}` : ''}`}>{children}</div>;
 
 /** `children` is the message's one action, if any — a form or a button after the text. */
 export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ flash, children }) =>
@@ -313,7 +313,7 @@ const ChevronDown: FC = () => (
 const DISCLOSURE_SUMMARY = {
   button:
     'inline-flex min-h-[32px] items-center gap-1.5 whitespace-nowrap rounded-md border border-line-strong bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink shadow-sm hover:bg-surface-overlay group-open:bg-surface-overlay',
-  quiet: 'inline-flex items-center gap-1 text-[13px] text-ink-muted hover:text-ink',
+  quiet: 'inline-flex items-center gap-1 text-note text-ink-muted hover:text-ink',
 } as const;
 
 /**
@@ -340,7 +340,7 @@ export const Disclosure: FC<
     >
       {summary}
       {count > 0 && (
-        <span class="rounded bg-surface-selected px-1.5 text-xs font-medium tabular-nums text-accent-strong">
+        <span class="rounded bg-surface-selected px-1.5 text-meta font-medium tabular-nums text-accent-strong">
           {count}
           <span class="sr-only"> active</span>
         </span>
@@ -383,7 +383,7 @@ export const Tabs: FC<{
       <a
         href={t.href}
         aria-current={t.current ? 'page' : undefined}
-        class={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-[13px] transition-colors duration-150 ${
+        class={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-note transition-colors duration-150 ${
           t.current
             ? 'border-accent-strong font-medium text-ink'
             : 'border-transparent text-ink-muted hover:border-line-strong hover:text-ink'
@@ -408,7 +408,7 @@ export const FilterChip: FC<{ label: string; href: string; flag?: string }> = ({
   <a
     href={href}
     aria-label={`Remove filter: ${label}`}
-    class="inline-flex min-h-[28px] items-center gap-1.5 rounded-md border border-accent/30 bg-surface-selected py-0.5 pl-2 pr-1.5 text-[13px] font-medium text-accent-strong transition-colors duration-150 hover:border-accent-strong"
+    class="inline-flex min-h-[28px] items-center gap-1.5 rounded-md border border-accent/30 bg-surface-selected py-0.5 pl-2 pr-1.5 text-note font-medium text-accent-strong transition-colors duration-150 hover:border-accent-strong"
   >
     {flag && <span aria-hidden="true">{flag}</span>}
     {label}
@@ -427,7 +427,7 @@ export const HistoryChip: FC<PropsWithChildren<{ href: string; current: boolean 
   <a
     href={href}
     aria-current={current ? 'true' : undefined}
-    class={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs transition-colors duration-150 ${
+    class={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-meta transition-colors duration-150 ${
       current
         ? 'border-accent/50 bg-surface-selected font-medium text-accent-strong'
         : 'border-line bg-surface-raised text-ink-muted hover:border-line-strong hover:text-ink'
@@ -492,7 +492,7 @@ export const Badge: FC<PropsWithChildren<{ tone?: Tone; class?: string }>> = ({
   class: className = '',
 }) => (
   <span
-    class={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${TONE_SOFT[tone]} ${className}`}
+    class={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-meta font-medium ring-1 ring-inset ${TONE_SOFT[tone]} ${className}`}
   >
     {children}
   </span>
@@ -503,7 +503,7 @@ export const Tag: FC<PropsWithChildren<{ tone?: Tone }>> = ({
   tone = 'neutral',
 }) => (
   <span
-    class={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs ring-1 ring-inset ${TONE_SOFT[tone]}`}
+    class={`inline-flex items-center rounded-md px-1.5 py-0.5 text-meta ring-1 ring-inset ${TONE_SOFT[tone]}`}
   >
     {children}
   </span>
@@ -672,7 +672,7 @@ export const Input: FC<Record<string, unknown> & { mono?: boolean }> = ({
   mono,
   class: className = '',
   ...rest
-}) => <input class={`${CONTROL} ${mono ? 'font-mono text-xs' : ''} ${className}`} {...rest} />;
+}) => <input class={`${CONTROL} ${mono ? 'font-mono text-meta' : ''} ${className}`} {...rest} />;
 
 /* Drawn chevron so selects match the themed controls instead of browser chrome. */
 const SELECT_CHEVRON = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23${hex(TOKENS['ink-faint']).slice(1)}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`;
@@ -697,7 +697,7 @@ export const Textarea: FC<PropsWithChildren<Record<string, unknown> & { mono?: b
   class: className = '',
   ...rest
 }) => (
-  <textarea class={`${CONTROL} ${mono ? 'font-mono text-xs' : ''} ${className}`} {...rest}>
+  <textarea class={`${CONTROL} ${mono ? 'font-mono text-meta' : ''} ${className}`} {...rest}>
     {children}
   </textarea>
 );
@@ -751,7 +751,7 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
 };
 
 const BUTTON_SIZE = {
-  sm: 'px-2.5 py-1 text-xs',
+  sm: 'px-2.5 py-1 text-meta',
   md: 'px-3 py-1.5 text-sm',
   lg: 'px-4 py-2 text-sm',
 } as const;
@@ -801,7 +801,7 @@ export const ConfirmAction: FC<{
         popover="auto"
         role="dialog"
         aria-label={ariaLabel ?? label}
-        class="m-auto w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-surface-raised p-4 text-left text-[13px] leading-5 text-ink shadow-lg backdrop:bg-[rgb(0_0_0/0.15)]"
+        class="m-auto w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-surface-raised p-4 text-left text-note leading-5 text-ink shadow-lg backdrop:bg-[rgb(0_0_0/0.15)]"
       >
         <p>{confirm}</p>
         <form method="post" action={action} class="mt-3 flex justify-end gap-2">

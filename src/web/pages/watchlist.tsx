@@ -134,7 +134,7 @@ export const WatchlistRunPage: FC<{ run: WatchlistRun }> = ({ run }) => (
   <Layout title="Resolving companies…" active="companies">
     <div class="w-full pt-6 lg:pt-16">
       <Card>
-        <div class="mb-1 text-sm font-semibold text-ink">Resolving companies</div>
+        <div class="mb-1 text-entity text-ink">Resolving companies</div>
         <Hint class="mb-4">
           Each URL gets at most five requests, a polite second apart — twenty companies take a
           couple of minutes.
@@ -147,7 +147,7 @@ export const WatchlistRunPage: FC<{ run: WatchlistRun }> = ({ run }) => (
         >
           {run.results.length} of {run.total} resolved
         </div>
-        <ul id="wl-lines" class="mt-3 flex flex-col gap-1 text-[13px] text-ink-muted" />
+        <ul id="wl-lines" class="mt-3 flex flex-col gap-1 text-note text-ink-muted" />
       </Card>
     </div>
     <WatchlistScript />
@@ -291,7 +291,7 @@ export const WatchlistPreviewPage: FC<{ run: WatchlistRun }> = ({ run }) => {
                     <Badge tone={VERDICT_TONE[r.resolution.kind]}>{verdictLabel(r.resolution)}</Badge>
                   </Td>
                   <Td class="text-ink-muted">
-                    <div class="truncate text-xs" title={r.careerUrl}>
+                    <div class="truncate text-meta" title={r.careerUrl}>
                       <Code>
                         {r.resolution.kind === 'ats'
                           ? r.resolution.atsToken
@@ -321,13 +321,13 @@ export const WatchlistPreviewPage: FC<{ run: WatchlistRun }> = ({ run }) => {
               <li class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2">
                 <div class="min-w-0">
                   <span class="text-label text-ink">{r.name}</span>{' '}
-                  <a href={r.input.url} class="text-xs text-ink-faint underline" rel="noreferrer noopener" target="_blank">
+                  <a href={r.input.url} class="text-meta text-ink-faint underline" rel="noreferrer noopener" target="_blank">
                     {r.input.url}
                   </a>
                 </div>
                 <div class="flex items-center gap-2">
                   <Badge tone={VERDICT_TONE[r.resolution.kind]}>{verdictLabel(r.resolution)}</Badge>
-                  <span class="text-xs text-ink-muted">
+                  <span class="text-meta text-ink-muted">
                     {'reason' in r.resolution ? r.resolution.reason : ''}
                   </span>
                 </div>
@@ -340,7 +340,7 @@ export const WatchlistPreviewPage: FC<{ run: WatchlistRun }> = ({ run }) => {
       {run.rejected.length > 0 && (
         <Card class="mb-4">
           <SectionTitle>Lines with no URL ({run.rejected.length})</SectionTitle>
-          <ul class="mt-2 flex flex-col gap-1 text-[13px] text-ink-muted">
+          <ul class="mt-2 flex flex-col gap-1 text-note text-ink-muted">
             {run.rejected.map((line) => (
               <li>
                 <Code>{line}</Code>
@@ -388,14 +388,14 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
               <div class="truncate font-medium text-ink" title={r.name}>
                 ★ {r.name}
               </div>
-              <div class="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
+              <div class="mt-0.5 flex flex-wrap items-center gap-2 text-meta text-ink-faint">
                 <Tag>{sourceLabel(r.atsType)}</Tag>
                 {!r.active && !needsPaste(r) && <Badge tone="warn">Off</Badge>}
               </div>
             </Td>
             <Td class="text-ink-muted">
               {needsPaste(r) ? (
-                <span class="text-[13px]" title="The page draws its jobs in the browser, so there is nothing for a check to read.">
+                <span class="text-note" title="The page draws its jobs in the browser, so there is nothing for a check to read.">
                   Not checked
                 </span>
               ) : (
@@ -410,11 +410,11 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
             </Td>
             <Td class="text-ink-muted">
               {needsPaste(r) ? (
-                <a href="#browser-pages" class="text-[13px] font-medium text-accent-strong hover:text-accent-deep">
+                <a href="#browser-pages" class="text-note font-medium text-accent-strong hover:text-accent-deep">
                   Paste the page
                 </a>
               ) : isChangeWatch(r) ? (
-                <span class="text-[13px]" title="This page publishes no board and no feed, so there are no postings to score — we tell you when its text changes, at most once a day.">
+                <span class="text-note" title="This page publishes no board and no feed, so there are no postings to score — we tell you when its text changes, at most once a day.">
                   Page changes
                 </span>
               ) : (
@@ -432,7 +432,7 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
             </Td>
             <Td class="whitespace-nowrap">
               {needsPaste(r) ? (
-                <span class="text-[13px] text-ink-faint">
+                <span class="text-note text-ink-faint">
                   {r.paste === null
                     ? 'not pasted yet'
                     : r.paste.added.length > 0
@@ -440,7 +440,7 @@ export const WatchlistSection: FC<{ rows: WatchedRow[] }> = ({ rows }) => {
                       : `pasted ${formatRelative(r.paste.at)}`}
                 </span>
               ) : isChangeWatch(r) ? (
-                <span class="text-[13px] text-ink-faint" title="A change watch never stores postings.">
+                <span class="text-note text-ink-faint" title="A change watch never stores postings.">
                   {r.changePending
                     ? 'changed · notice waiting'
                     : r.lastContentAlertAt

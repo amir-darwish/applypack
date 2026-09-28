@@ -41,16 +41,16 @@ export const RunSteps: FC<{
           <span class="min-w-0 flex-1">
             <span class="flex items-baseline gap-2">
               <span class="t-label text-sm">{view[s]?.label ?? s}</span>
-              <span class="text-xs tabular-nums text-ink-faint" data-step-time>
+              <span class="text-meta tabular-nums text-ink-faint" data-step-time>
                 {formatElapsed(i < currentIdx ? stepMs[s] : i === currentIdx ? activeMs : undefined)}
               </span>
             </span>
-            <span class="t-detail block text-xs">{view[s]?.detail}</span>
-            <span class="t-result block text-[13px] leading-5 text-ink-muted" data-result>
+            <span class="t-detail block text-meta">{view[s]?.detail}</span>
+            <span class="t-result block text-note leading-5 text-ink-muted" data-result>
               {results[s] ?? ''}
             </span>
             <span
-              class="t-activity mt-1.5 block text-[13px] leading-5 text-ink-muted transition-opacity duration-300"
+              class="t-activity mt-1.5 block text-note leading-5 text-ink-muted transition-opacity duration-300"
               data-activity
               aria-live="polite"
             ></span>

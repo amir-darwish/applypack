@@ -90,11 +90,11 @@ const RunsTable: FC<{ runs: RunRow[]; caption: string }> = ({ runs, caption }) =
         <Table caption={caption} columns={columns()} widths={WIDTHS} hideBelow={['', 'sm', 'md', '', '']}>
           {runs.map((r) => (
             <Tr class="align-top">
-              <Td class="whitespace-nowrap font-mono text-[13px] text-ink">{r.name}</Td>
+              <Td class="whitespace-nowrap font-mono text-note text-ink">{r.name}</Td>
               <Td class="whitespace-nowrap text-ink-muted">
                 <span title={formatDate(r.startedAt)}>{formatStamp(r.startedAt)}</span>
               </Td>
-              <Td class="whitespace-nowrap text-right font-mono text-[13px] tabular-nums text-ink-muted">
+              <Td class="whitespace-nowrap text-right font-mono text-note tabular-nums text-ink-muted">
                 {r.finishedAt ? formatDuration(r.finishedAt.getTime() - r.startedAt.getTime()) : '—'}
               </Td>
               <Td>
@@ -103,16 +103,16 @@ const RunsTable: FC<{ runs: RunRow[]; caption: string }> = ({ runs, caption }) =
               <Td>
                 {r.errorMessage ? (
                   <div>
-                    <p class="text-[13px] leading-5 text-danger">{failedRunLine(r.name, r.errorMessage)}</p>
+                    <p class="text-note leading-5 text-danger">{failedRunLine(r.name, r.errorMessage)}</p>
                     <details class="mt-1">
-                      <summary class="cursor-pointer text-xs text-ink-faint transition-colors duration-150 hover:text-ink">Details</summary>
-                      <pre class="mt-1 whitespace-pre-wrap break-words font-mono text-xs leading-5 text-ink-muted">{r.errorMessage}</pre>
+                      <summary class="cursor-pointer text-meta text-ink-faint transition-colors duration-150 hover:text-ink">Details</summary>
+                      <pre class="mt-1 whitespace-pre-wrap break-words font-mono text-meta leading-5 text-ink-muted">{r.errorMessage}</pre>
                     </details>
                   </div>
                 ) : r.stats ? (
                   <StatsCell name={r.name} stats={r.stats} />
                 ) : (
-                  <span class="text-xs text-ink-faint">—</span>
+                  <span class="text-meta text-ink-faint">—</span>
                 )}
               </Td>
             </Tr>
@@ -138,7 +138,7 @@ const StatsCell: FC<{ name: string; stats: unknown }> = ({ name, stats }) => {
   return (
     <div class="flex flex-wrap items-baseline gap-x-4">
       {facts.length > 0 && (
-        <ul class="flex flex-wrap gap-x-2 text-[13px] leading-5 tabular-nums text-ink-muted [&>li+li]:before:mr-2 [&>li+li]:before:text-ink-faint [&>li+li]:before:content-['·']">
+        <ul class="flex flex-wrap gap-x-2 text-note leading-5 tabular-nums text-ink-muted [&>li+li]:before:mr-2 [&>li+li]:before:text-ink-faint [&>li+li]:before:content-['·']">
           {facts.map((fact) => (
             <li>{fact}</li>
           ))}
@@ -147,10 +147,10 @@ const StatsCell: FC<{ name: string; stats: unknown }> = ({ name, stats }) => {
       {/* A bare <details>, not the Disclosure primitive: a drawn chevron a hundred times over
           is 40 KB of markup on the one page that is a log. The native marker does here. */}
       <details class="contents">
-        <summary class="cursor-pointer text-xs text-ink-faint transition-colors duration-150 hover:text-ink">Details</summary>
+        <summary class="cursor-pointer text-meta text-ink-faint transition-colors duration-150 hover:text-ink">Details</summary>
         {/* min-w-0 + break-all: a space-less JSON string is one unbreakable word, and a flex
             item will not shrink under its longest word on its own. */}
-        <div class="order-last min-w-0 basis-full pt-1 font-mono text-xs leading-5 text-ink-faint">
+        <div class="order-last min-w-0 basis-full pt-1 font-mono text-meta leading-5 text-ink-faint">
           {sources.length > 0 && (
             <ul class="mb-1">
               {[...sources]

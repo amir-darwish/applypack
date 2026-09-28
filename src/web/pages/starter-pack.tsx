@@ -44,7 +44,7 @@ export const StarterPackPicker: FC<{ segments: PackSegmentChoice[] }> = ({ segme
                   · {s.count}
                 </span>
               </span>
-              <span data-ui="hint" class="block text-[13px] leading-5 text-ink-faint">{s.blurb}</span>
+              <span data-ui="hint" class="block text-note leading-5 text-ink-faint">{s.blurb}</span>
             </span>
           </PillCheckbox>
         ))}
@@ -61,7 +61,7 @@ const BoardCell: FC<{ entry: ResolvedEntry }> = ({ entry }) => (
       href={entry.boardUrl}
       target="_blank"
       rel="noopener"
-      class="font-mono text-xs text-ink-muted transition-colors duration-150 hover:text-accent-strong"
+      class="font-mono text-meta text-ink-muted transition-colors duration-150 hover:text-accent-strong"
     >
       {entry.atsToken}
     </a>
@@ -238,7 +238,7 @@ export const StarterPackResultPage: FC<{
                     <Td class="font-medium text-ink">{a.name}</Td>
                     <Td>
                       <Tag>{a.atsType}</Tag>{' '}
-                      <span class="font-mono text-xs text-ink-muted">{a.atsToken}</span>
+                      <span class="font-mono text-meta text-ink-muted">{a.atsToken}</span>
                     </Td>
                   </Tr>
                 ))}

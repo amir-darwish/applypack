@@ -59,6 +59,7 @@ module.exports = {
         section: ['18px', { lineHeight: '24px', letterSpacing: '-0.01em', fontWeight: '600' }],
         entity: ['15px', { lineHeight: '22px', fontWeight: '600' }],
         label: ['13px', { lineHeight: '18px', fontWeight: '550' }],
+        note: ['13px', { lineHeight: '20px', fontWeight: '400' }],
         meta: ['12px', { lineHeight: '16px', fontWeight: '400' }],
       },
       fontFamily: {

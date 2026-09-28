@@ -64,7 +64,7 @@ export const FetchRunPage: FC<{ run: FetchRun }> = ({ run }) => {
     <Layout title={failed ? heading : `${heading}…`} active="runs">
       <div class="w-full pt-6 lg:pt-16">
         <Card>
-          <div class="mb-1 text-sm font-semibold text-ink">{heading}</div>
+          <div class="mb-1 text-entity text-ink">{heading}</div>
           <div class="text-sm text-ink-muted">
             {run.classify
               ? 'Every enabled source, then the new jobs are scored and alerted — the hourly tick, just now.'
@@ -87,7 +87,7 @@ export const FetchRunPage: FC<{ run: FetchRun }> = ({ run }) => {
               <RunSteps steps={FETCH_RUN_STEPS} currentIdx={currentIdx} view={stepView(run)} />
               <div class="mt-5 flex items-center justify-between gap-3 border-t border-line pt-3">
                 <Hint>You can close this page — the run keeps going, and its row lands on Runs.</Hint>
-                <span id="run-elapsed" class="shrink-0 text-xs tabular-nums text-ink-faint">
+                <span id="run-elapsed" class="shrink-0 text-meta tabular-nums text-ink-faint">
                   {elapsed}s
                 </span>
               </div>

@@ -48,7 +48,7 @@ const GATE_VIEW: Record<string, { label: string; tone: Tone }> = {
   block: { label: 'fact-check block', tone: 'danger' },
 };
 
-const SUBHEAD = 'mb-2 text-[13px] font-medium text-ink-muted';
+const SUBHEAD = 'mb-2 text-note font-medium text-ink-muted';
 
 export const CoverLetterCard: FC<CoverLetterCardProps> = ({
   jobId,
@@ -127,28 +127,28 @@ export const CoverLetterCard: FC<CoverLetterCardProps> = ({
             </Hint>
           )}
           <details class="rounded-md border border-line px-3 py-2" open={hasAngles(angles)}>
-            <summary class="cursor-pointer text-[13px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
+            <summary class="cursor-pointer text-note font-medium text-ink-muted transition-colors duration-150 hover:text-ink">
               Angle — optional, saved for your next letters
             </summary>
             <div class="mt-2.5 grid gap-2.5 sm:grid-cols-3">
               <label class="block">
-                <span class="block text-xs text-ink-muted">Why this company</span>
-                <Input name="whyCompany" maxlength="300" class="mt-1 !text-xs" value={angles.whyCompany ?? ''} />
+                <span class="block text-meta text-ink-muted">Why this company</span>
+                <Input name="whyCompany" maxlength="300" class="mt-1 !text-meta" value={angles.whyCompany ?? ''} />
               </label>
               <label class="block">
-                <span class="block text-xs text-ink-muted">What problem you'd solve</span>
-                <Input name="problem" maxlength="300" class="mt-1 !text-xs" value={angles.problem ?? ''} />
+                <span class="block text-meta text-ink-muted">What problem you'd solve</span>
+                <Input name="problem" maxlength="300" class="mt-1 !text-meta" value={angles.problem ?? ''} />
               </label>
               <label class="block">
-                <span class="block text-xs text-ink-muted">Your approach</span>
-                <Input name="approach" maxlength="300" class="mt-1 !text-xs" value={angles.approach ?? ''} />
+                <span class="block text-meta text-ink-muted">Your approach</span>
+                <Input name="approach" maxlength="300" class="mt-1 !text-meta" value={angles.approach ?? ''} />
               </label>
             </div>
             <label class="mt-2.5 block">
-              <span class="block text-xs text-ink-muted">
+              <span class="block text-meta text-ink-muted">
                 Anything every letter should mention
               </span>
-              <Textarea name="notes" rows={2} maxlength="500" class="mt-1 !text-xs" placeholder="e.g. my open-source work matters to me; I can start immediately; I want to mention my blog">
+              <Textarea name="notes" rows={2} maxlength="500" class="mt-1 !text-meta" placeholder="e.g. my open-source work matters to me; I can start immediately; I want to mention my blog">
                 {angles.notes ?? ''}
               </Textarea>
             </label>
@@ -225,11 +225,11 @@ const LetterReport: FC<{ jobId: number; letter: CoverLetterWithResume }> = ({ jo
         <Badge tone={gate.tone}>{gate.label}</Badge>
         <span class="text-sm text-ink">
           {letter.resume.name}{' '}
-          <span class="font-mono text-xs text-ink-faint">v{letter.resumeVersion}</span>
+          <span class="font-mono text-meta text-ink-faint">v{letter.resumeVersion}</span>
         </span>
         <Badge tone="neutral">{letter.tone}</Badge>
         {letter.editedText && <Badge tone="info">edited</Badge>}
-        <span class="text-xs text-ink-faint">
+        <span class="text-meta text-ink-faint">
           <When at={letter.createdAt} /> · <span class="font-mono">{letter.model}</span>
         </span>
         <ActionForm
@@ -279,12 +279,12 @@ const LetterReport: FC<{ jobId: number; letter: CoverLetterWithResume }> = ({ jo
             Save edit
           </Button>
           <span
-            class="text-xs text-ink-faint transition-colors duration-150"
+            class="text-meta text-ink-faint transition-colors duration-150"
             data-save-status
             role="status"
             aria-live="polite"
           ></span>
-          <span class="ml-auto text-xs tabular-nums text-ink-faint">
+          <span class="ml-auto text-meta tabular-nums text-ink-faint">
             <span data-word-count>{words}</span> words · target {COVER_WORDS_MIN}–{COVER_WORDS_MAX}
           </span>
         </div>
@@ -316,7 +316,7 @@ const LetterReport: FC<{ jobId: number; letter: CoverLetterWithResume }> = ({ jo
           </div>
         )}
       </div>
-      <div class="text-xs text-ink-faint">
+      <div class="text-meta text-ink-faint">
         Company facts: {letter.usedVerification ? 'verification snapshot + posting' : 'posting only'}
         {letter.gateNotes.length > 0 && <> · {letter.gateNotes.join(' · ')}</>}
       </div>

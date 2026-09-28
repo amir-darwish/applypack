@@ -13,7 +13,7 @@ import { FRANCE_TRAVAIL_LICENCE_URL } from '../../fetchers/francetravail';
 export const AdzunaLabel: FC<{ market: string; class?: string }> = ({ market, class: cls }) => {
   const a = adzunaAttribution(market);
   return (
-    <span class={`inline-flex items-center gap-1 text-xs text-ink-muted ${cls ?? ''}`} title="Listing from the Adzuna API">
+    <span class={`inline-flex items-center gap-1 text-meta text-ink-muted ${cls ?? ''}`} title="Listing from the Adzuna API">
       <a href={a.url} target="_blank" rel="noopener" class="hover:underline">
         Jobs
       </a>
@@ -30,7 +30,7 @@ export const AdzunaLabel: FC<{ market: string; class?: string }> = ({ market, cl
  * a link to the licence, wherever an offer is shown.
  */
 export const FranceTravailLine: FC<{ updatedAt: Date | null; class?: string }> = ({ updatedAt, class: cls }) => (
-  <span class={`inline-flex flex-wrap items-center gap-1 text-xs text-ink-muted ${cls ?? ''}`}>
+  <span class={`inline-flex flex-wrap items-center gap-1 text-meta text-ink-muted ${cls ?? ''}`}>
     <span>Source: France Travail{updatedAt ? ` · updated ${updatedAt.toISOString().slice(0, 10)}` : ''}</span>
     <span>·</span>
     <a href={FRANCE_TRAVAIL_LICENCE_URL} target="_blank" rel="noopener" class="hover:underline">
@@ -65,7 +65,7 @@ export const JsonTree: FC<{ value: unknown; depth?: number }> = ({ value, depth 
       <dl class={`${depth > 0 ? 'ml-3 ' : ''}space-y-1`}>
         {entries.map(([k, v]) => (
           <div class="grid gap-x-3 sm:grid-cols-[minmax(8rem,14rem)_1fr]">
-            <dt class="font-mono text-xs text-ink-faint">{k}</dt>
+            <dt class="font-mono text-meta text-ink-faint">{k}</dt>
             <dd class="min-w-0 break-words text-sm">
               <JsonTree value={v} depth={depth + 1} />
             </dd>

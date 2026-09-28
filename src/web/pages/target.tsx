@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
-import { Badge, Button, Card, FitBadge, Flash, Hint, HistoryChip, SUBMIT_ONCE, TONE_TEXT, When } from '../ui';
+import { Badge, Button, Card, FitBadge, Flash, Hint, HistoryChip, More, SUBMIT_ONCE, TONE_TEXT, When } from '../ui';
 import type { FlashMessage } from '../flash';
 import { FIT_OK_FLOOR, fitTone } from '../format';
 import type { MatchWithResume } from '../../resume/store';
@@ -162,7 +162,7 @@ export const TargetPage: FC<TargetPageProps> = ({
   return (
     <Layout title={`Tailor resume · ${job.title}`} active="jobs">
       <div class="w-full">
-      <nav aria-label="Breadcrumb" class="mb-1.5 flex items-center gap-1.5 text-[13px] text-ink-faint">
+      <nav aria-label="Breadcrumb" class="mb-1.5 flex items-center gap-1.5 text-note text-ink-faint">
         <a href="/jobs" class="transition-colors duration-150 hover:text-ink">
           Jobs
         </a>
@@ -212,7 +212,7 @@ export const TargetPage: FC<TargetPageProps> = ({
             <details>
               {/* list-none + own caret so the label can right-align and stay put when
                   the open box grows to the chips' width. */}
-              <summary class="runs-toggle cursor-pointer list-none text-xs text-ink-faint transition-colors duration-150 hover:text-ink lg:text-right">
+              <summary class="runs-toggle cursor-pointer list-none text-meta text-ink-faint transition-colors duration-150 hover:text-ink lg:text-right">
                 {olderRuns.length} older runs
               </summary>
               <ul class="mt-2 flex flex-wrap gap-2 lg:justify-end">
@@ -287,7 +287,7 @@ export const TargetPage: FC<TargetPageProps> = ({
             <div
               id="score-help"
               role="tooltip"
-              class="pointer-events-none absolute left-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-3rem)] space-y-1.5 rounded-lg border border-line bg-surface-raised p-3 text-xs leading-5 text-ink-muted opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+              class="pointer-events-none absolute left-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-3rem)] space-y-1.5 rounded-lg border border-line bg-surface-raised p-3 text-meta leading-5 text-ink-muted opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
             >
               <p>
                 <span class="font-medium text-ink">Match score, 0–100.</span> How well this resume answers
@@ -324,13 +324,13 @@ export const TargetPage: FC<TargetPageProps> = ({
                 threshold: READY_TO_APPLY,
                 edits: actions.length + removals.length,
               }) && (
-                <p class="text-[13px] font-medium text-ok">Ready to apply — stop polishing, send it.</p>
+                <p class="text-note font-medium text-ok">Ready to apply — stop polishing, send it.</p>
               )}
             {(fast || actions.length > 0 || removals.length > 0) && (
               <button
                 type="button"
                 data-goto-tab="changes"
-                class="cursor-pointer text-left text-[13px] font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep"
+                class="cursor-pointer text-left text-note font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep"
               >
                 {fast ? (
                   'Keywords only — get edit suggestions'
@@ -375,7 +375,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                     required
                     aria-label="Resume file"
                     accept={ACCEPTED_EXTENSIONS.join(',')}
-                    class="block w-full text-xs text-ink file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-surface-overlay file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-ink"
+                    class="block w-full text-meta text-ink file:mr-2 file:cursor-pointer file:rounded-md file:border-0 file:bg-surface-overlay file:px-2.5 file:py-1 file:text-meta file:font-medium file:text-ink"
                   />
                   <Button size="sm" class="w-full" title="Compares this file against the posting and opens the result here">
                     Compare this file
@@ -461,7 +461,7 @@ export const TargetPage: FC<TargetPageProps> = ({
           {orientation !== undefined && orientation.length > 0 && (
             <div class="border-t border-line pt-3 lg:col-span-3">
               <div class="text-label text-ink-muted">About this posting</div>
-              <dl class="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[13px] leading-6">
+              <dl class="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-note leading-6">
                 {orientation.map((row) => (
                   <>
                     <dt class="text-ink-faint">{row.label}</dt>
@@ -473,14 +473,14 @@ export const TargetPage: FC<TargetPageProps> = ({
           )}
           {postingNotice && (
             <div class="border-t border-line pt-3 lg:col-span-3">
-              <p class="text-[13px] leading-6 text-ink-muted">
+              <p class="text-note leading-6 text-ink-muted">
                 <span class="font-medium text-warn">Thin posting.</span> {postingNotice}
               </p>
             </div>
           )}
           {domainNotice && (
             <div class="border-t border-line pt-3 lg:col-span-3">
-              <p class="text-[13px] leading-6 text-ink-muted">
+              <p class="text-note leading-6 text-ink-muted">
                 <span class="font-medium text-info">Another sector.</span> {domainNotice}
               </p>
             </div>
@@ -519,13 +519,13 @@ export const TargetPage: FC<TargetPageProps> = ({
               aria-controls="panes"
               aria-selected={t.key === 'both'}
               tabindex={t.key === 'both' ? 0 : -1}
-              class="tab cursor-pointer rounded-[5px] px-3 py-1 text-[13px] text-ink-muted transition-colors duration-150 hover:text-ink aria-selected:bg-surface-raised aria-selected:font-medium aria-selected:text-ink aria-selected:shadow-sm"
+              class="tab cursor-pointer rounded-[5px] px-3 py-1 text-note text-ink-muted transition-colors duration-150 hover:text-ink aria-selected:bg-surface-raised aria-selected:font-medium aria-selected:text-ink aria-selected:shadow-sm"
             >
               {t.label}
             </button>
           ))}
         </div>
-        <label class="ml-auto inline-flex min-h-[28px] cursor-pointer items-center gap-1.5 text-xs text-ink-faint">
+        <label class="ml-auto inline-flex min-h-[28px] cursor-pointer items-center gap-1.5 text-meta text-ink-faint">
           <input id="show-matched" type="checkbox" checked class="h-3.5 w-3.5 accent-accent" />
           show matched highlights
         </label>
@@ -535,7 +535,7 @@ export const TargetPage: FC<TargetPageProps> = ({
         <Card class="pane-job">
           <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div class="text-label text-ink">Job description</div>
-            <div class="flex flex-wrap items-center gap-2 text-xs text-ink-faint">
+            <div class="flex flex-wrap items-center gap-2 text-meta text-ink-faint">
               {/* One axis, four colours: green is a word you already have, and
                   every other colour is a gap graded by how hard the posting
                   asks for it. The old legend named four AI statuses and then
@@ -555,10 +555,12 @@ export const TargetPage: FC<TargetPageProps> = ({
           ></div>
           <Hint class="mt-2">
             A dashed underline means nothing in your resume backs the word yet — write it in where
-            it is true and it counts, or confirm it below; the number reads your text, not our guess
-            about you. Benefits and equal-opportunity text stay unmarked on purpose: nobody is
-            screened on them.
+            it is true and it counts, or confirm it below.
           </Hint>
+          <More class="mt-1">
+            The number reads your text, not our guess about you. Benefits and equal-opportunity text
+            stay unmarked on purpose: nobody is screened on them.
+          </More>
         </Card>
 
         <Card class="pane-resume">
@@ -567,7 +569,7 @@ export const TargetPage: FC<TargetPageProps> = ({
               Your resume · {resume.name}
               {resume.ephemeral ? '' : ` v${match.resumeVersion}`}
             </div>
-            <div class="flex flex-wrap items-center gap-3 text-xs text-ink-faint">
+            <div class="flex flex-wrap items-center gap-3 text-meta text-ink-faint">
               <span><mark class="kw-present rounded px-1">matched</mark></span>
               <span><mark class="edit-change rounded px-1">change</mark></span>
               <span><mark class="edit-remove rounded px-1">remove</mark></span>
@@ -670,7 +672,7 @@ export const TargetPage: FC<TargetPageProps> = ({
               {/* Wide screens open it on boot (target-page.mjs); narrow ones keep
                   it shut, because it is the longest block on the page by far. */}
               <details class="kw-fold">
-                <summary class="cursor-pointer text-[13px] font-medium text-ink-muted">
+                <summary class="cursor-pointer text-note font-medium text-ink-muted">
                   Keyword coverage — {keywords.length} terms
                 </summary>
                 <div class="mt-3">
@@ -698,7 +700,7 @@ export const TargetPage: FC<TargetPageProps> = ({
             <span class="text-sm font-medium text-ink">Unsaved changes</span>
             {/* A live region whose text never changed announced nothing; this one is written when the bar appears. */}
             <span id="dirty-live" class="sr-only" aria-live="polite"></span>
-            <span class="ml-2 text-xs text-ink-faint">
+            <span class="ml-2 text-meta text-ink-faint">
               kept in this browser tab{resume.ephemeral ? ' — copy them out before you leave' : ' until you save'}
             </span>
           </div>

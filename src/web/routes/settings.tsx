@@ -263,7 +263,8 @@ async function loadSettingsProps(spendPeriod: SpendPeriod = '7d') {
       action: '/settings/ai/openai-base',
       envVar: 'OPENAI_BASE_URL',
       label: 'Server address',
-      hint: 'OpenRouter, Groq, LM Studio (http://127.0.0.1:1234/v1) — any server that speaks /chat/completions; Ollama is better through the Local model engine. From Docker, host.docker.internal instead of 127.0.0.1. Test lists the models it runs.',
+      hint: 'Any server that speaks /chat/completions — OpenRouter, Groq, LM Studio (http://127.0.0.1:1234/v1). Test lists the models it runs.',
+      more: 'Ollama is better through the Local model engine. From Docker, write host.docker.internal instead of 127.0.0.1.',
       value: openAiServer,
       stored: openAiBaseUrl !== null,
       local: isLocalUrl(openAiServer),
@@ -778,7 +779,7 @@ const SOURCE_KEY_META: Record<
 > = {
   ADZUNA: {
     label: 'Adzuna',
-    what: 'A job-ad aggregator covering nineteen countries — Germany, France, Spain, Italy, the Netherlands, Poland, the UK, the US, Canada, Australia, India and more — including ads from boards this app has no other way to see.',
+    what: 'A job-ad aggregator in nineteen countries — Germany, France, Poland, the UK, the US, India and more — with ads from boards this app has no other way to see.',
     worthIt:
       'you hunt in a country the free sources barely cover (ES, IT, BE, CH, AT, IN, BR, MX, ZA, AU, NZ, SG, CA) or want a wider net than the tech-specific boards. Skip it if you hunt remote-first English roles or in UA, PL, DE, GB, NL, PT, SE — the free sources already cover those.',
     cost: 'personal research only (a company needs its own licence from Adzuna), a "Jobs by Adzuna" label on every listing shown, and 2 500 calls a month — so a market is checked four times a day and ten markets is the ceiling. Descriptions arrive as snippets, so the classifier and the resume match see less than usual.',

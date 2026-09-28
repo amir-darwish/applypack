@@ -131,6 +131,8 @@ export interface EngineServer {
   envVar: string;
   label: string;
   hint: string;
+  /** The rest of the explanation, folded under the hint. */
+  more?: string;
   value: string;
   stored: boolean;
   local: boolean;
@@ -475,7 +477,7 @@ export const SettingsPage: FC<SettingsProps> = ({
           <a
             href={`/settings?tab=${t.id}`}
             aria-current={t.id === activeTab ? 'page' : undefined}
-            class={`rounded-[6px] px-3 py-1.5 text-[13px] transition-colors duration-150 lg:-ml-px lg:rounded-none lg:border-l-2 lg:py-1.5 lg:pl-3 lg:text-sm ${
+            class={`rounded-[6px] px-3 py-1.5 text-note transition-colors duration-150 lg:-ml-px lg:rounded-none lg:border-l-2 lg:py-1.5 lg:pl-3 lg:text-sm ${
               t.id === activeTab
                 ? 'bg-surface-raised font-medium text-ink shadow-sm lg:border-accent-strong lg:bg-transparent lg:shadow-none'
                 : 'text-ink-muted hover:text-ink lg:border-transparent lg:hover:border-line-strong'
@@ -531,7 +533,7 @@ export const SettingsPage: FC<SettingsProps> = ({
           </Notice>
         )}
         {activeProfile && !profiles.some((p) => p.id === activeProfile.id && p.running) && (
-          <div class="rounded-md border border-line bg-surface-overlay px-3.5 py-2.5 text-[13px] leading-5 text-ink-muted">
+          <div class="rounded-md border border-line bg-surface-overlay px-3.5 py-2.5 text-note leading-5 text-ink-muted">
             Editing a paused search — it scores nothing until you press Run below.
             {isBlankProfile(activeProfile) &&
               ' It starts running automatically on the first save with a required stack or role types.'}
@@ -630,21 +632,21 @@ export const SettingsPage: FC<SettingsProps> = ({
                 />
                 {/* On a narrow screen the name takes its own line — the row's
                     four actions otherwise squeeze it down to "S…". */}
-                <span class="min-w-0 basis-[calc(100%-1.5rem)] truncate text-[13px] text-ink sm:basis-0 sm:flex-1">
+                <span class="min-w-0 basis-[calc(100%-1.5rem)] truncate text-note text-ink sm:basis-0 sm:flex-1">
                   {p.name}
                   {p.primary && (
-                    <span class="ml-1.5 text-xs text-ink-faint">· primary</span>
+                    <span class="ml-1.5 text-meta text-ink-faint">· primary</span>
                   )}
                   {p.blank && (
-                    <span class="ml-1.5 text-xs text-warn">· empty, fill it in first</span>
+                    <span class="ml-1.5 text-meta text-warn">· empty, fill it in first</span>
                   )}
                   {!p.running && !p.blank && (
-                    <span class="ml-1.5 text-xs text-ink-faint">· paused</span>
+                    <span class="ml-1.5 text-meta text-ink-faint">· paused</span>
                   )}
                 </span>
                 <a
                   href={`/settings?tab=profile&profile=${p.id}`}
-                  class="text-[13px] text-ink-muted underline-offset-2 hover:text-ink hover:underline"
+                  class="text-note text-ink-muted underline-offset-2 hover:text-ink hover:underline"
                 >
                   Edit
                 </a>
@@ -696,7 +698,7 @@ export const SettingsPage: FC<SettingsProps> = ({
         more="An engine is an AI subscription or an API key of yours. How to set each one up, locally and in Docker: docs/ai-engines.md in the repo."
       >
         <div class="space-y-3">
-          <div class="text-[13px] text-ink-muted">
+          <div class="text-note text-ink-muted">
             Active now: <span class="font-medium text-ink">{aiStatus.active}</span>
             {aiStatus.chain.length > 1 && (
               <span> → fallback: {aiStatus.chain.slice(1).join(' → ')}</span>
@@ -832,7 +834,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                   {s.fixed ? (
                     <>
                       <span class="min-w-0 flex-1 text-sm text-ink">{s.label}</span>
-                      <span class="text-xs tabular-nums text-ink-faint">
+                      <span class="text-meta tabular-nums text-ink-faint">
                         {s.count} job{s.count === 1 ? '' : 's'}
                       </span>
                       <Tag>fixed</Tag>
@@ -856,7 +858,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                           Save
                         </Button>
                       </form>
-                      <span class="text-xs tabular-nums text-ink-faint">
+                      <span class="text-meta tabular-nums text-ink-faint">
                         {s.count} job{s.count === 1 ? '' : 's'}
                       </span>
                       <ActionForm action={`/settings/stages/${s.key}/move`} hidden={{ dir: 'up' }}>
@@ -887,7 +889,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                           confirm={`Delete the "${s.label}" column?`}
                         />
                       ) : (
-                        <span class="text-xs text-ink-faint">
+                        <span class="text-meta text-ink-faint">
                           {s.count > 0 ? 'move jobs out to delete' : 'last column'}
                         </span>
                       )}
@@ -970,8 +972,8 @@ export const SettingsPage: FC<SettingsProps> = ({
                   <Td>
                     <Badge tone="neutral">{KIND_LABEL[t.kind]}</Badge>
                   </Td>
-                  <Td class="font-mono text-xs text-ink-muted">{t.destination}</Td>
-                  <Td class="whitespace-nowrap text-[13px] text-ink-faint">
+                  <Td class="font-mono text-meta text-ink-muted">{t.destination}</Td>
+                  <Td class="whitespace-nowrap text-note text-ink-faint">
                     <When at={t.lastUsed} />
                   </Td>
                   <Td>
@@ -1077,12 +1079,12 @@ export const SettingsPage: FC<SettingsProps> = ({
           {sourceGroups.map((g) => (
             <div>
               <div class="text-label text-ink">{g.title}</div>
-              <p data-ui="hint" class="mb-2 text-xs leading-5 text-ink-faint">{g.caption}</p>
+              <p data-ui="hint" class="mb-2 text-meta leading-5 text-ink-faint">{g.caption}</p>
               <div class="flex flex-wrap gap-1.5">
                 {g.pills.map((p) => (
                   <PillCheckbox name="enabled" value={p.atsType} checked={!disabledSources.includes(p.atsType)}>
                     {p.label}
-                    <span data-ui="hint" class="text-xs text-ink-faint">
+                    <span data-ui="hint" class="text-meta text-ink-faint">
                       {p.locked ? (
                         <a href="#source-keys" class="text-warn hover:underline">
                           needs a key
@@ -1127,7 +1129,7 @@ export const SettingsPage: FC<SettingsProps> = ({
         </div>
         <Hint>
           {loginItem.on ? `On: ${loginItem.kind} at ` : `This writes ${loginItem.kind} at `}
-          <span class="break-all font-mono text-xs">{loginItem.file}</span>
+          <span class="break-all font-mono text-meta">{loginItem.file}</span>
           {loginItem.on
             ? '. It takes effect at your next login; npm run stop still stops it.'
             : ', which runs npm start from this folder when you log in. The button above takes it away again.'}
@@ -1179,7 +1181,7 @@ export const SettingsPage: FC<SettingsProps> = ({
               A job page compares and drafts a letter from a resume. Upload one on the Resumes page.
             </Empty>
           )}
-          <a href="/resumes" class="mt-3 inline-block text-[13px] font-medium text-accent-strong hover:text-accent-deep">
+          <a href="/resumes" class="mt-3 inline-block text-note font-medium text-accent-strong hover:text-accent-deep">
             Upload &amp; manage resumes →
           </a>
         </div>
@@ -1278,7 +1280,7 @@ export const SettingsPage: FC<SettingsProps> = ({
             decision is automatic, what the tool never sees, and how to ask for a human review — the duties GDPR
             art. 13–14 and the AI Act's transparency rule put on the employer.
           </Hint>
-          <pre class="mt-3 whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-[13px] leading-5 text-ink">{screening.notice}</pre>
+          <pre class="mt-3 whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-note leading-5 text-ink">{screening.notice}</pre>
         </div>
       </Section>
       )}
@@ -1335,7 +1337,7 @@ const SourceKeysSection: FC<{ rows: SourceKeyRow[] }> = ({ rows }) => (
               <span class="font-medium text-ink-muted">In exchange:</span> {r.cost}
             </p>
           </More>
-          <p class="mt-1.5 text-[13px] leading-5">
+          <p class="mt-1.5 text-note leading-5">
             <a href={r.signupUrl} target="_blank" rel="noopener" class="text-accent-strong hover:underline">
               {r.signupLabel}
             </a>
@@ -1348,7 +1350,7 @@ const SourceKeysSection: FC<{ rows: SourceKeyRow[] }> = ({ rows }) => (
             <form method="post" action="/settings/sources/key" class="mt-2.5 flex flex-wrap items-end gap-2">
               <input type="hidden" name="source" value={r.source} />
               <input type="hidden" name="field" value={f.field} />
-              <div class="flex min-w-[9rem] flex-col gap-1 text-xs text-ink-muted">
+              <div class="flex min-w-[9rem] flex-col gap-1 text-meta text-ink-muted">
                 <span class="font-medium text-ink">{f.label}</span>
                 {f.origin === 'db' && (
                   <span>
@@ -1404,7 +1406,7 @@ const EngineKeyRow: FC<{ engine: AiEngineRow }> = ({ engine: e }) => {
         {e.keySource === 'db' && (
           <>
             <Badge tone="ok">saved</Badge>
-            <span class="font-mono text-xs text-ink-muted">{e.maskedKey}</span>
+            <span class="font-mono text-meta text-ink-muted">{e.maskedKey}</span>
           </>
         )}
         {e.keySource === 'env' && <Badge tone="neutral">from .env</Badge>}
@@ -1486,6 +1488,7 @@ const EngineServerRow: FC<{ server: EngineServer }> = ({ server }) => (
       </Button>
     </form>
     <Hint class="mt-2">{server.hint}</Hint>
+    {server.more && <More class="mt-1">{server.more}</More>}
     {server.context && (
       <form method="post" action={server.action} class="mt-3 flex flex-wrap items-end gap-2">
         <Field
@@ -1619,7 +1622,7 @@ const AiEngine: FC<{ engine: AiEngineRow }> = ({ engine: e }) => (
             Save models
           </Button>
           <span
-            class="text-xs text-ink-faint"
+            class="text-meta text-ink-faint"
             data-save-status
             role="status"
             aria-live="polite"
@@ -1825,7 +1828,7 @@ const ProfileEditor: FC<{
     </fieldset>
 
     <details class="rounded-md border border-line" open={advancedOpen}>
-      <summary class="cursor-pointer select-none rounded-md px-4 py-3 text-[13px] font-medium text-ink transition-colors duration-150 hover:text-accent-strong">
+      <summary class="cursor-pointer select-none rounded-md px-4 py-3 text-note font-medium text-ink transition-colors duration-150 hover:text-accent-strong">
         Advanced — excludes, notes, priority rules, thresholds
         <span class="ml-2 font-normal text-ink-faint">
           Excludes, notes, priority rules, thresholds.
@@ -1899,7 +1902,7 @@ const ProfileEditor: FC<{
       >
         Save &amp; re-classify
       </Button>
-      <span data-dirty-indicator hidden={!draft} class="text-[13px] font-medium text-warn">
+      <span data-dirty-indicator hidden={!draft} class="text-note font-medium text-warn">
         Unsaved changes
       </span>
     </div>
@@ -1912,7 +1915,7 @@ const PriorityRulesEditor: FC<{ profile: Profile }> = ({ profile }) => {
   const text = formatPriorityRulesText(rules);
   return (
     <details class="rounded-md border border-line" open={rules.length > 0}>
-      <summary class="cursor-pointer select-none rounded-md px-4 py-3 text-[13px] font-medium text-ink transition-colors duration-150 hover:text-accent-strong">
+      <summary class="cursor-pointer select-none rounded-md px-4 py-3 text-note font-medium text-ink transition-colors duration-150 hover:text-accent-strong">
         Priority rules (post-classifier overrides)
         <span class="ml-2 font-normal text-ink-faint">
           {rules.length > 0

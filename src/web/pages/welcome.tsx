@@ -177,7 +177,7 @@ export const WelcomePage: FC<WelcomeProps> = (p) => (
       <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div>
           <h1 class="text-title text-ink">Welcome to ApplyPack</h1>
-          <p data-ui="hint" class="mt-1 text-[13px] leading-5 text-ink-faint">
+          <p data-ui="hint" class="mt-1 text-note leading-5 text-ink-faint">
             Everything stays editable in Settings.
           </p>
         </div>
@@ -209,7 +209,7 @@ export const WelcomePage: FC<WelcomeProps> = (p) => (
               }`}
             >
               <span
-                class={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-xs font-medium ${
+                class={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-meta font-medium ${
                   state === 'done'
                     ? 'bg-ok/10 text-ok'
                     : state === 'active'
@@ -274,7 +274,7 @@ const LocalModelCard: FC<{ local: LocalModelView; offerInstall: boolean }> = ({ 
           <form method="post" action="/welcome/ai/local" class="mt-2">
             <input type="hidden" name="engine" value={s.engine} />
             <input type="hidden" name="base" value={s.base} />
-            <p data-ui="hint" class="text-[13px] leading-5 text-ink-faint">
+            <p data-ui="hint" class="text-note leading-5 text-ink-faint">
               {s.name} answers at {s.host} with {s.models.length === 1 ? 'one model' : `${s.models.length} models`}. Free and
               private — nothing leaves this machine — but slower than a hosted model, and a small one judges postings less
               well.{' '}
@@ -297,12 +297,12 @@ const LocalModelCard: FC<{ local: LocalModelView; offerInstall: boolean }> = ({ 
           </form>
         ))
       ) : empty ? (
-        <p data-ui="hint" class="mt-1 text-[13px] leading-5 text-ink-faint">
+        <p data-ui="hint" class="mt-1 text-note leading-5 text-ink-faint">
           {empty.name} answers at {empty.host} but has no model yet. Pull one — <Code>ollama pull llama3.1:8b</Code>, or
           download one in LM Studio — then press Check again.
         </p>
       ) : (
-        <p data-ui="hint" class="mt-1 text-[13px] leading-5 text-ink-faint">
+        <p data-ui="hint" class="mt-1 text-note leading-5 text-ink-faint">
           Free and private, slower than a hosted model. Install Ollama from ollama.com, run{' '}
           <Code>ollama pull llama3.1:8b</Code> (or start LM Studio's server), then press Check again. Nothing answers at
           127.0.0.1:11434 or 127.0.0.1:1234 right now.
@@ -355,7 +355,7 @@ const AiStep: FC<WelcomeProps> = ({ ai, steps }) => {
               return (
                 <li class="rounded-md border border-line px-4 py-3">
                   <div class="text-sm font-medium text-ink">{card.title}</div>
-                  <p data-ui="hint" class="mt-1 text-[13px] leading-5 text-ink-faint">{card.how}</p>
+                  <p data-ui="hint" class="mt-1 text-note leading-5 text-ink-faint">{card.how}</p>
                   {status?.keyEnvVar && (
                     <form
                       method="post"
@@ -380,10 +380,10 @@ const AiStep: FC<WelcomeProps> = ({ ai, steps }) => {
                     </form>
                   )}
                   {status && (
-                    <p data-ui="hint" class="mt-2 text-xs text-ink-faint">Right now: {status.detail}</p>
+                    <p data-ui="hint" class="mt-2 text-meta text-ink-faint">Right now: {status.detail}</p>
                   )}
                   {card.env && (
-                    <p data-ui="hint" class="mt-1 text-xs text-ink-faint">
+                    <p data-ui="hint" class="mt-1 text-meta text-ink-faint">
                       Prefer a file? <Code>{card.env}</Code> in <Code>.env</Code> works too.
                     </p>
                   )}
@@ -451,7 +451,7 @@ const SearchStep: FC<WelcomeProps> = ({ search, steps }) => {
             company boards join the hourly watch once your profile exists.
           </More>
           {last && last.fetched === 0 && (
-            <p class="mt-2 text-[13px] leading-5 text-warn">
+            <p class="mt-2 text-note leading-5 text-warn">
               The last search got nothing from {last.sources} sources — that usually means no
               network. Check the connection and try again; the Companies page shows which boards
               stopped answering.
@@ -513,7 +513,7 @@ const ProfileStep: FC<WelcomeProps> = ({ profile, steps }) => {
             {d.roleTypes.length > 0 ? d.roleTypes.join(' / ') : 'matching'} roles using these.
           </p>
           {d.warnings.length > 0 && (
-            <p class="mt-2 text-[13px] leading-5 text-warn">Note: {d.warnings.join('; ')}.</p>
+            <p class="mt-2 text-note leading-5 text-warn">Note: {d.warnings.join('; ')}.</p>
           )}
           <div class="mt-4 flex flex-wrap items-center gap-2">
             {d.asNew ? (
@@ -564,7 +564,7 @@ const ProfileStep: FC<WelcomeProps> = ({ profile, steps }) => {
             </Button>
           </div>
           <details class="mt-5 rounded-md border border-line">
-            <summary class="cursor-pointer select-none px-4 py-2.5 text-[13px] font-medium text-ink hover:text-accent-strong">
+            <summary class="cursor-pointer select-none px-4 py-2.5 text-note font-medium text-ink hover:text-accent-strong">
               Another resume for a different kind of role?
             </summary>
             <div class="space-y-3 border-t border-line px-4 py-4">
@@ -643,7 +643,7 @@ const ProfileStep: FC<WelcomeProps> = ({ profile, steps }) => {
             </form>
           )}
           <details class="mt-5 rounded-md border border-line">
-            <summary class="cursor-pointer select-none px-4 py-2.5 text-[13px] font-medium text-ink hover:text-accent-strong">
+            <summary class="cursor-pointer select-none px-4 py-2.5 text-note font-medium text-ink hover:text-accent-strong">
               No file handy? Answer three questions instead.
             </summary>
             <form method="post" action="/welcome/profile" class="space-y-4 border-t border-line px-4 py-4">
@@ -708,7 +708,7 @@ const SourcesStep: FC<WelcomeProps> = ({ sources, steps }) => {
               <li class="flex items-center justify-between gap-4 px-4 py-2.5 text-sm">
                 <span class="min-w-0">
                   <span class="block truncate font-medium text-ink">{s.name}</span>
-                  <span class="block truncate text-[13px] text-ink-faint">{s.reason}</span>
+                  <span class="block truncate text-note text-ink-faint">{s.reason}</span>
                 </span>
                 <Badge tone={s.state === 'on' ? 'ok' : 'neutral'}>
                   {s.state === 'on' ? 'on' : s.state === 'off' ? 'added, off' : 'not added yet'}
@@ -795,7 +795,7 @@ const MatchesStep: FC<WelcomeProps> = (p) => {
                   >
                     <span class="min-w-0">
                       <span class="block truncate font-medium text-ink">{j.title}</span>
-                      <span class="block truncate text-[13px] text-ink-faint">{j.companyName}</span>
+                      <span class="block truncate text-note text-ink-faint">{j.companyName}</span>
                     </span>
                     <FitBadge score={j.fitScore} label="match" />
                   </a>
@@ -804,7 +804,7 @@ const MatchesStep: FC<WelcomeProps> = (p) => {
             </ul>
           )}
           {matches.waiting > 0 && (
-            <p data-ui="hint" class="mt-3 text-[13px] leading-5 text-ink-faint">
+            <p data-ui="hint" class="mt-3 text-note leading-5 text-ink-faint">
               {matches.waiting.toLocaleString()} more stored jobs mention your words and are still
               unscored — score the next {SCORE_BATCH} whenever you like, or let the hourly watch
               score new ones as they arrive. {matches.scoreCost}
@@ -822,7 +822,7 @@ const MatchesStep: FC<WelcomeProps> = (p) => {
             to half a minute on a CLI one; press again for the next {SCORE_BATCH}. {matches.scoreCost}
           </p>
           {matches.waiting === 0 && (
-            <p class="mt-2 text-[13px] leading-5 text-warn">
+            <p class="mt-2 text-note leading-5 text-warn">
               None of the stored jobs mention your technologies or role words yet — the hourly watch
               keeps looking once you start it below.
             </p>

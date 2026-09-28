@@ -83,7 +83,7 @@ const CriterionAnswerRow: FC<{ r: ScoreRow }> = ({ r }) => {
     <Tr>
       <Td class="align-top">
         <div class="text-ink">{r.label}</div>
-        <div class="text-xs text-ink-faint">
+        <div class="text-meta text-ink-faint">
           {CRITERION_KIND_LABELS[r.kind as keyof typeof CRITERION_KIND_LABELS] ?? r.kind} · {r.mode === 'gate' ? 'gate' : r.mode === 'note' ? 'note' : <Stars n={r.weight} />}
         </div>
       </Td>
@@ -94,7 +94,7 @@ const CriterionAnswerRow: FC<{ r: ScoreRow }> = ({ r }) => {
       </Td>
       <Td class="align-top text-ink-muted">
         {r.quote ? <q class="text-ink">{r.quote}</q> : null}
-        {r.detail && <div class={`text-xs ${r.quote ? 'mt-1' : ''} text-ink-faint`}>{r.detail}</div>}
+        {r.detail && <div class={`text-meta ${r.quote ? 'mt-1' : ''} text-ink-faint`}>{r.detail}</div>}
         {!r.quote && !r.detail && '—'}
       </Td>
       <Td class="whitespace-nowrap text-right align-top tabular-nums">{r.mode === 'scored' ? (r.max === 0 ? '—' : `${r.pts} / ${r.max}`) : ''}</Td>
@@ -117,7 +117,7 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
               <Badge tone={breakdown.gateBucket === 'pass' ? 'ok' : breakdown.gateBucket === 'ask' ? 'warn' : 'danger'}>
                 {GATE_BUCKET_LABELS[breakdown.gateBucket]}
               </Badge>
-              <span class="text-base font-semibold text-ink">{adjustedScore(breakdown.score, applicant.adjustment)}</span>
+              <span class="text-entity text-ink">{adjustedScore(breakdown.score, applicant.adjustment)}</span>
               <span>
                 / 100
                 {applicant.adjustment !== 0 ? ` (computed ${breakdown.score}, your ${applicant.adjustment > 0 ? '+' : ''}${applicant.adjustment})` : ''} · confidence{' '}
@@ -160,7 +160,7 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
         </Card>
       )}
       {applicant.sameAs !== null && (
-        <div class="mb-4 rounded-md border border-line bg-surface-overlay px-3.5 py-2.5 text-[13px] leading-5 text-ink-muted" role="status">
+        <div class="mb-4 rounded-md border border-line bg-surface-overlay px-3.5 py-2.5 text-note leading-5 text-ink-muted" role="status">
           Another document of{' '}
           <a href={`${back}#results`} class="text-ink hover:underline">
             applicant №{applicant.sameAs}
@@ -238,7 +238,7 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
             <Card>
               <h2 class="text-entity text-ink">Roles as the text gives them</h2>
               {career && career.roles > 0 && (
-                <p class="mt-1 text-[13px] text-ink-muted">
+                <p class="mt-1 text-note text-ink-muted">
                   Career, read off the dates: {trajectoryLine(career)}. Employer count and tenure are facts to ask about, never points.
                 </p>
               )}
@@ -331,7 +331,7 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
                       <tr class={r.max === 0 ? 'text-ink-faint' : ''}>
                         <th scope="row" class="py-1.5 pr-2 text-left align-top font-normal">
                           <div class="text-ink">{r.label}</div>
-                          <div class="text-xs text-ink-faint">
+                          <div class="text-meta text-ink-faint">
                             {r.answer}
                             {r.max === 0 ? ' — not counted' : ''}
                           </div>
@@ -347,7 +347,7 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
                   </tr>
                 </tbody>
               </table>
-              {capExplanation(breakdown) && <p class="mt-2 text-[13px] text-warn">{capExplanation(breakdown)}</p>}
+              {capExplanation(breakdown) && <p class="mt-2 text-note text-warn">{capExplanation(breakdown)}</p>}
               <Hint class="mt-2">
                 Points are the answers × your stars, over the criteria the text could answer ({breakdown.weightTotal}{' '}
                 star{breakdown.weightTotal === 1 ? '' : 's'} counted). Confidence {breakdown.confidence.band}:{' '}
@@ -398,7 +398,7 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
             <Card>
               <h2 class="text-entity text-ink">What the model did not see</h2>
               <p class="mt-1 text-sm text-ink-muted">Removed before the call: {describeRedactions(applicant.redactions)}.</p>
-              <p data-ui="hint" class="mt-1 text-[13px] text-ink-faint">
+              <p data-ui="hint" class="mt-1 text-note text-ink-faint">
                 {applicant.leaks.length === 0
                   ? 'Leak check after redaction: nothing identifying left.'
                   : `Leak check found: ${applicant.leaks.join(', ')} — read the text below before trusting the mark.`}
@@ -420,13 +420,13 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
           <Hint class="mt-1">Came with the resume. For you to read — never scored, never sent to a model.</Hint>
           {letters.map((l) => (
             <details class="mt-3">
-              <summary class="cursor-pointer text-sm font-semibold text-ink">
+              <summary class="cursor-pointer text-label text-ink">
                 {l.sourceFilename}{' '}
-                <a href={`${back}/applicants/${applicant.id}/letters/${l.id}/file`} class="ml-2 text-xs font-normal text-ink-muted hover:text-ink">
+                <a href={`${back}/applicants/${applicant.id}/letters/${l.id}/file`} class="ml-2 text-meta font-normal text-ink-muted hover:text-ink">
                   Download
                 </a>
               </summary>
-              <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-[13px] leading-5 text-ink">{l.text}</pre>
+              <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-note leading-5 text-ink">{l.text}</pre>
             </details>
           ))}
         </Card>
@@ -435,16 +435,16 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
       <div class="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>
           <details>
-            <summary class="cursor-pointer text-sm font-semibold text-ink">
+            <summary class="cursor-pointer text-label text-ink">
               {applicant.status === 'held' ? 'Text a model would read (redacted)' : 'Text the model read (redacted)'}
             </summary>
-            <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-[13px] leading-5 text-ink">{applicant.redactedText}</pre>
+            <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-note leading-5 text-ink">{applicant.redactedText}</pre>
           </details>
         </Card>
         <Card>
           <details>
-            <summary class="cursor-pointer text-sm font-semibold text-ink">Full text (you only)</summary>
-            <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-[13px] leading-5 text-ink">{applicant.text}</pre>
+            <summary class="cursor-pointer text-label text-ink">Full text (you only)</summary>
+            <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-note leading-5 text-ink">{applicant.text}</pre>
           </details>
         </Card>
       </div>

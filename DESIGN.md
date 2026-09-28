@@ -260,7 +260,9 @@ align (`tabular-nums`); nothing is ever uppercase-tracked or display-sized.
 ### Hierarchy
 Each step is one Tailwind class (`tailwind.config.js` carries size, line,
 tracking and weight together), so a page writes `text-title`, not four
-utilities.
+utilities. `src/web/type-ladder.test.ts` fails a raw size (`text-xs`,
+`text-[13px]`, `text-base` …) or a `text-sm font-semibold` heading anywhere
+in `src/web`; the stat value and the score ring are its two named exceptions.
 - **Title** (`text-title`, 650, 26px/32px, tracking -0.02em): the page's one
   `h1`, in the header row next to meta and actions.
 - **Section** (`text-section`, 600, 18px/24px, tracking -0.01em): a page-level
@@ -271,7 +273,11 @@ utilities.
   buttons, nav, a page's one-sentence intro (muted ink). Medium (500) marks
   emphasis: row titles, button labels.
 - **Label** (`text-label`, 550, 13px/18px): field labels, table headers,
-  fieldset legends, sidebar group labels, filter-row labels.
+  fieldset legends, sidebar group labels, filter-row labels, a disclosure's
+  summary inside a card.
+- **Note** (`text-note`, 400, 13px/20px): a standing notice, a quiet
+  disclosure, a tab's link, a table's secondary line, the small print of a
+  card — prose one step under the body that is not a helper line.
 - **Meta** (`text-meta`, 400, 12px/16px): timestamps, counts, the header's
   meta line, helper prose under a control (`Hint`).
 - **Stat Value** (600, 28px/32px, tabular-nums): the metric strip's numbers.

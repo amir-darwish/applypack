@@ -141,9 +141,9 @@ const CandidateTable: FC<{ rows: CompanyCandidate[]; actions?: boolean }> = ({
             <Tr>
               <Td class="max-w-[20rem]">
                 <div class="truncate font-medium text-ink">{c.name ?? c.atsToken}</div>
-                <div class="truncate font-mono text-xs text-ink-faint">{c.atsToken}</div>
+                <div class="truncate font-mono text-meta text-ink-faint">{c.atsToken}</div>
                 {c.signal && (
-                  <div class="mt-0.5 truncate text-xs italic text-ink-faint" title={c.signal}>
+                  <div class="mt-0.5 truncate text-meta italic text-ink-faint" title={c.signal}>
                     {c.signal}
                   </div>
                 )}
@@ -151,7 +151,7 @@ const CandidateTable: FC<{ rows: CompanyCandidate[]; actions?: boolean }> = ({
               <Td>
                 <Tag>{sourceLabel(c.atsType)}</Tag>
               </Td>
-              <Td class="text-[13px] text-ink-muted">
+              <Td class="text-note text-ink-muted">
                 {c.sourceUrl ? (
                   <a
                     href={c.sourceUrl}
@@ -167,7 +167,7 @@ const CandidateTable: FC<{ rows: CompanyCandidate[]; actions?: boolean }> = ({
                 )}
               </Td>
               <Td class="text-right tabular-nums text-ink-muted">{c.jobsSeen}</Td>
-              <Td class="whitespace-nowrap text-right text-[13px] text-ink-faint">
+              <Td class="whitespace-nowrap text-right text-note text-ink-faint">
                 <When at={c.discoveredAt} />
               </Td>
               {actions && (

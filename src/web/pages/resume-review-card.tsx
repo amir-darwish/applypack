@@ -1,7 +1,7 @@
 /** @jsxImportSource hono/jsx */
 import type { FC } from 'hono/jsx';
 import type { ResumeReview } from '@prisma/client';
-import { ActionForm, Badge, Button, Card, FitBadge, Hint, Input, SectionTitle, When } from '../ui';
+import { ActionForm, Badge, Button, Card, FitBadge, Hint, Input, More, SectionTitle, When } from '../ui';
 import type { Tone } from '../format';
 
 import { readReviewAdvice, readReviewGrades, type ReviewAdvice } from '../../resume/prompts';
@@ -57,7 +57,7 @@ const PRIORITY_TONE: Record<ReviewAdvice['priority'], Tone> = {
   low: 'neutral',
 };
 
-const SUBHEAD = 'mb-2 text-[13px] font-medium text-ink-muted';
+const SUBHEAD = 'mb-2 text-note font-medium text-ink-muted';
 
 export interface ResumeReviewCardProps {
   resume: { id: number; version: number; scannedAt: Date | null };
@@ -95,18 +95,18 @@ const ReviewExplainer: FC = () => (
       A hiring manager's read of this resume on its own — no job posting. Six dimensions get a
       grade with quotes from your own text, and you get a prioritized list of what to change.
     </p>
-    <ul class="grid gap-x-6 gap-y-1.5 text-[13px] leading-5 text-ink-muted sm:grid-cols-2">
+    <ul class="grid gap-x-6 gap-y-1.5 text-note leading-5 text-ink-muted sm:grid-cols-2">
       {(Object.keys(DIMENSION_LABEL) as ReviewDimension[]).map((d) => (
         <li>
           <span class="font-medium text-ink">{DIMENSION_LABEL[d]}</span> — {DIMENSION_BLURB[d]}
         </li>
       ))}
     </ul>
-    <Hint>
-      One AI call, about a minute. Nothing runs on its own and nothing is rewritten for you: where
-      a stronger line would need a number your resume doesn't have, the advice asks you for it
-      instead of inventing one.
-    </Hint>
+    <Hint>One AI call, about a minute; nothing runs on its own.</Hint>
+    <More>
+      Nothing is rewritten for you: where a stronger line would need a number your resume doesn't
+      have, the advice asks you for it instead of inventing one.
+    </More>
   </div>
 );
 
@@ -132,7 +132,7 @@ const ReviewReport: FC<{
         ) : (
           <Badge tone="info">v{review.resumeVersion}</Badge>
         )}
-        <span class="text-xs text-ink-faint">
+        <span class="text-meta text-ink-faint">
           <When at={review.createdAt} /> · <span class="font-mono">{review.model}</span>
         </span>
       </div>
@@ -147,7 +147,7 @@ const ReviewReport: FC<{
       </Hint>
       {delta && <DeltaLine delta={delta} />}
       {capLine && (
-        <p class="rounded-md border border-warn/40 bg-surface-overlay/50 px-3 py-2 text-[13px] leading-5 text-ink">
+        <p class="rounded-md border border-warn/40 bg-surface-overlay/50 px-3 py-2 text-note leading-5 text-ink">
           {capLine}
         </p>
       )}
@@ -166,17 +166,17 @@ const ReviewReport: FC<{
                 <Badge tone={GRADE_VIEW[g.grade].tone}>{GRADE_VIEW[g.grade].label}</Badge>
                 <span class="text-label text-ink">{DIMENSION_LABEL[g.dimension]}</span>
                 {bd && (
-                  <span class="font-mono text-xs text-ink-faint">
+                  <span class="font-mono text-meta text-ink-faint">
                     {bd.points[g.dimension] ?? 0}/{REVIEW_SCORING.weight[g.dimension]}
                   </span>
                 )}
               </div>
-              <div class="min-w-0 flex-1 text-[13px] leading-5 text-ink-muted">
+              <div class="min-w-0 flex-1 text-note leading-5 text-ink-muted">
                 {g.why}
                 {g.evidence.length > 0 && (
                   <ul class="mt-1.5 space-y-1">
                     {g.evidence.map((e) => (
-                      <li class="whitespace-pre-line border-l-2 border-line-strong pl-2 font-mono text-xs text-ink-faint">
+                      <li class="whitespace-pre-line border-l-2 border-line-strong pl-2 font-mono text-meta text-ink-faint">
                         {e}
                       </li>
                     ))}
@@ -199,21 +199,21 @@ const ReviewReport: FC<{
                   <Badge tone="neutral">{DIMENSION_LABEL[a.dimension]}</Badge>
                   <span class="text-sm font-medium text-ink">{a.issue}</span>
                 </div>
-                <div class="text-[13px] leading-5 text-ink-muted">{a.why}</div>
-                <div class="text-[13px] leading-5 text-ink">→ {a.fix}</div>
+                <div class="text-note leading-5 text-ink-muted">{a.why}</div>
+                <div class="text-note leading-5 text-ink">→ {a.fix}</div>
                 {a.quote && (
-                  <div class="whitespace-pre-line border-l-2 border-line-strong pl-2 font-mono text-xs text-ink-faint">
+                  <div class="whitespace-pre-line border-l-2 border-line-strong pl-2 font-mono text-meta text-ink-faint">
                     {a.quote}
                   </div>
                 )}
                 {a.example && (
-                  <div class="whitespace-pre-line rounded-md border border-ok/30 bg-surface-overlay/50 px-2.5 py-1.5 text-[13px] leading-5 text-ink">
+                  <div class="whitespace-pre-line rounded-md border border-ok/30 bg-surface-overlay/50 px-2.5 py-1.5 text-note leading-5 text-ink">
                     <span class="text-ink-faint">Rewrite: </span>
                     {a.example}
                   </div>
                 )}
                 {a.ask && (
-                  <div class="rounded-md border border-line bg-surface-overlay/50 px-2.5 py-1.5 text-[13px] leading-5 text-ink">
+                  <div class="rounded-md border border-line bg-surface-overlay/50 px-2.5 py-1.5 text-note leading-5 text-ink">
                     <span class="text-ink-faint">Only you can answer: </span>
                     {a.ask}
                   </div>
@@ -229,7 +229,7 @@ const ReviewReport: FC<{
       {review.strengths.length > 0 && (
         <div>
           <div class={SUBHEAD}>Keep these — they already work</div>
-          <ul class="space-y-1 text-[13px] leading-5 text-ink-muted">
+          <ul class="space-y-1 text-note leading-5 text-ink-muted">
             {review.strengths.map((s) => (
               <li class="flex gap-2">
                 <span class="text-ok" aria-hidden="true">
@@ -252,7 +252,7 @@ const ReviewReport: FC<{
  */
 const DeltaLine: FC<{ delta: ReviewDelta }> = ({ delta }) => (
   <div class="space-y-2 rounded-md border border-line bg-surface-overlay/50 px-3 py-2">
-    <div class="text-[13px] leading-5 text-ink">{deltaSentence(delta)}</div>
+    <div class="text-note leading-5 text-ink">{deltaSentence(delta)}</div>
     {delta.moves.length > 0 && (
       <ul class="flex flex-wrap gap-1.5">
         {delta.moves.map((m) => (
@@ -297,7 +297,7 @@ const AnswerBlock: FC<{ resumeId: number; advice: ReviewAdvice[]; answers: Revie
           const stored = answerFor(answers, question);
           return (
             <li class="space-y-2 p-3">
-              <div class="text-[13px] leading-5 text-ink">{question}</div>
+              <div class="text-note leading-5 text-ink">{question}</div>
               <form
                 method="post"
                 action={`/resumes/${resumeId}/answers`}
@@ -310,7 +310,7 @@ const AnswerBlock: FC<{ resumeId: number; advice: ReviewAdvice[]; answers: Revie
                   value={stored?.answer ?? ''}
                   placeholder="the figure, in your words"
                   aria-label={question}
-                  class="!w-64 !px-2 !py-1 !text-xs"
+                  class="!w-64 !px-2 !py-1 !text-meta"
                 />
                 <Button size="sm" variant="secondary">
                   {stored ? 'Update' : 'Save'}

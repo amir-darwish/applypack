@@ -37,6 +37,9 @@ import { withDisplayZone } from './display-zone';
 import { getSchedule } from '../settings';
 import { DEFAULT_BODY_BYTES, hasOwnBodyLimit } from './body-limits';
 
+/** The bundled typeface changes far less often than a release: a week, and its URL carries no version. */
+const STATIC_FONT_CACHE = 'public, max-age=604800';
+
 const app = new Hono();
 
 app.use(
@@ -99,6 +102,15 @@ app.use('*', originGuard());
 app.use('*', async (c, next) => {
   await next();
   if (c.req.path.endsWith('/state')) c.header('Cache-Control', 'no-store');
+});
+
+// serveStatic sends Last-Modified and no Cache-Control, so a browser kept a
+// module by heuristic for days after an upgrade and ran last release's code
+// against this release's page (#318). It asks every time now; the bundled
+// fonts keep a week.
+app.use('/static/*', async (c, next) => {
+  await next();
+  c.header('Cache-Control', c.req.path.startsWith('/static/fonts/') ? STATIC_FONT_CACHE : 'no-cache');
 });
 
 // Static files (the browser modules of ADR 0010 among them) never touch the

@@ -127,7 +127,7 @@ export const ResumesPage: FC<{
                   </Badge>
                   {r.isDefault && <Badge tone="ok" class={HIDE_SM_INLINE}>default</Badge>}
                 </div>
-                <div class="mt-0.5 hidden truncate font-mono text-xs text-ink-faint sm:block">
+                <div class="mt-0.5 hidden truncate font-mono text-meta text-ink-faint sm:block">
                   {r.sourceFilename}
                 </div>
               </Td>
@@ -145,7 +145,7 @@ export const ResumesPage: FC<{
               <Td class="whitespace-nowrap">
                 <StrengthCell resume={r} />
               </Td>
-              <Td class="whitespace-nowrap text-[13px] text-ink-faint">
+              <Td class="whitespace-nowrap text-note text-ink-faint">
                 {r.scannedAt ? <When at={r.scannedAt} /> : <Badge tone="warn">not scanned</Badge>}
               </Td>
               <Td>
@@ -184,7 +184,7 @@ export const ResumesPage: FC<{
                 <div class="flex flex-wrap items-baseline gap-x-2.5">
                   <span class="truncate text-entity text-ink">{f.term}</span>
                   <span
-                    class={`inline-flex items-center gap-1 text-[13px] ${
+                    class={`inline-flex items-center gap-1 text-note ${
                       f.status === 'confirmed' ? 'font-medium text-ok' : 'text-ink-muted'
                     }`}
                   >
@@ -272,14 +272,14 @@ const PrimaryStack: FC<{ resume: ResumeRow }> = ({ resume }) => {
   const core = resume.primarySkills.slice(0, PRIMARY_PREVIEW);
   const rest = resume.skills.length - core.length;
   if (core.length === 0) {
-    return <span class="text-[13px] text-ink-faint">{resume.scannedAt ? '—' : 'not scanned'}</span>;
+    return <span class="text-note text-ink-faint">{resume.scannedAt ? '—' : 'not scanned'}</span>;
   }
   return (
     <div class="flex flex-wrap items-center gap-1">
       {core.map((skill) => (
         <Tag>{skill}</Tag>
       ))}
-      {rest > 0 && <span class="text-xs text-ink-faint">+{rest}</span>}
+      {rest > 0 && <span class="text-meta text-ink-faint">+{rest}</span>}
     </div>
   );
 };
@@ -287,14 +287,14 @@ const PrimaryStack: FC<{ resume: ResumeRow }> = ({ resume }) => {
 /** Is this resume actually working? Count plus the best score it has reached. */
 const MatchCell: FC<{ matches: ResumeRow['matches'] }> = ({ matches }) =>
   matches === null ? (
-    <span class="text-[13px] text-ink-faint">
+    <span class="text-note text-ink-faint">
       <span class="sm:hidden">—</span>
       <span class="hidden sm:inline">never compared</span>
     </span>
   ) : (
     <div class="flex items-center gap-2">
       <FitBadge score={matches.best} />
-      <span class="hidden text-xs text-ink-faint sm:inline">
+      <span class="hidden text-meta text-ink-faint sm:inline">
         {matches.count === 1 ? '1 run' : `${matches.count} runs`}
       </span>
     </div>
@@ -309,7 +309,7 @@ const StrengthCell: FC<{ resume: ResumeRow }> = ({ resume }) =>
   resume.review === null ? (
     <a
       href={`/resumes/${resume.id}`}
-      class="text-[13px] text-ink-faint underline-offset-2 transition-colors duration-150 hover:text-ink hover:underline"
+      class="text-note text-ink-faint underline-offset-2 transition-colors duration-150 hover:text-ink hover:underline"
     >
       not reviewed
     </a>
