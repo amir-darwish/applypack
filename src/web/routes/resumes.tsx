@@ -19,6 +19,7 @@ import {
   getResumeOriginal,
   latestReviewByResume,
   listFacts,
+  listLatestKeywordTables,
   listMatchesForResume,
   listResumes,
   matchStatsByResume,
@@ -38,6 +39,8 @@ import { readProps, withProps, type DocxProps } from '../../resume/docx-props';
 import { DOCX_MIME } from '../../resume/docx-write';
 import { deltaSentence, reviewDelta, type ReviewDelta, type ReviewSnapshot } from '../../resume/review-delta';
 import { readReviewAdvice, readReviewGrades } from '../../resume/prompts';
+import { coverage, MIN_POSTINGS } from '../../resume/coverage';
+import { loadKeywordMatcher } from '../../resume/keyword-matcher';
 import { readReviewPromptVersion } from '../../resume/review-score';
 import { parseWarnings } from '../../resume/parse-warnings';
 import { listProfilesForResume } from '../../profiles';
@@ -116,14 +119,21 @@ resumesRoute.post('/resumes/:id/replace', resumeUploadLimit('/resumes'), onceGua
 resumesRoute.get('/resumes/:id', async (c) => {
   const id = idParam(c.req.param('id'));
   if (!Number.isFinite(id)) return c.text('Bad id', 400);
-  const [resume, matches, review, linkedProfiles, impact] = await Promise.all([
+  const [resume, matches, review, linkedProfiles, impact, tables, facts] = await Promise.all([
     getResume(id),
     listMatchesForResume(id),
     getLatestReviewForResume(id),
     listProfilesForResume(id),
     deleteImpact(id),
+    listLatestKeywordTables(id),
+    listFacts(),
   ]);
   if (!resume) return c.text('Not found', 404);
+  // What the compared postings keep asking for (N10): no AI, the stored
+  // tables read against the text as it is now. The scratch row's tables
+  // belong to one-off files, not to a resume.
+  const missing =
+    resume.hidden || tables.length < MIN_POSTINGS ? null : coverage(tables, resume.text, facts, await loadKeywordMatcher());
   // The template check is recomputed from the bytes on every view (ADR 0038) —
   // 40 KB of XML, sub-millisecond. Only a .docx is read; a 5 MB PDF is not
   // pulled out of the database to learn its extension.
@@ -137,6 +147,7 @@ resumesRoute.get('/resumes/:id', async (c) => {
     <ResumeDetailPage
       resume={resume}
       matches={matches}
+      coverage={missing}
       review={review}
       answers={readAnswers(resume.answers)}
       reviewDelta={deltaFor(review, previous)}

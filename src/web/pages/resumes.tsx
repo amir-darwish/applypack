@@ -144,7 +144,7 @@ export const ResumesPage: FC<{
       </Card>
     )}
 
-    <Card class="mt-4">
+    <Card class="mt-4" id="facts">
       <SectionTitle>Confirmed facts</SectionTitle>
       <Hint class="mb-3">
         Your answers to a comparison's "do you have this?" questions. They feed every future
