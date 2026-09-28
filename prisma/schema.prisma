@@ -959,6 +959,7 @@ model Applicant {
   createdAt DateTime @default(now())
 
   verdicts ScreeningVerdict[]
+  letters  ApplicantLetter[]
 
   @@unique([screeningId, number])
   // The same document twice is one row (ADR 0053): the request-time check
@@ -966,6 +967,23 @@ model Applicant {
   @@unique([screeningId, textHash])
   @@index([screeningId, parseStatus])
   @@map("applicant")
+}
+
+// A cover letter uploaded beside an applicant's resume (TASKS E3, Q9):
+// kept for the person to read on the scorecard, never scored, never sent to
+// a model. It goes with its applicant, and so with the screening's retention.
+model ApplicantLetter {
+  id             Int       @id @default(autoincrement())
+  applicantId    Int
+  applicant      Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  sourceFilename String
+  mimeType       String
+  original       Bytes
+  text           String    @db.Text
+  createdAt      DateTime  @default(now())
+
+  @@index([applicantId])
+  @@map("applicant_letter")
 }
 
 // A shortlist read head to head (plan §5.1): two to five applicants in one

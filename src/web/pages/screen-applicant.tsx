@@ -44,6 +44,8 @@ export interface ScreenApplicantProps {
     text: string;
     redactedText: string;
   };
+  /** Cover letters that came with the resume (TASKS E3): read here, never by a model. */
+  letters: { id: number; sourceFilename: string; text: string }[];
   rubric: Rubric;
   reply: ScreenReply | null;
   breakdown: ScreenBreakdown | null;
@@ -85,7 +87,7 @@ const CriterionAnswerRow: FC<{ r: ScoreRow }> = ({ r }) => {
   );
 };
 
-export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, applicant, rubric, reply, breakdown, stale, model, promptVersion, scoredAt, now, flash }) => {
+export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, applicant, letters, rubric, reply, breakdown, stale, model, promptVersion, scoredAt, now, flash }) => {
   const title = `№${applicant.number}${applicant.name ? ` — ${applicant.name}` : ''}`;
   const back = `/screen/${screening.id}`;
   const career = reply ? trajectoryOf(reply.roles, now) : null;
@@ -385,6 +387,24 @@ export const ScreenApplicantPage: FC<ScreenApplicantProps> = ({ screening, appli
       {!reply && applicant.status === 'ok' && (
         <Card class="mb-4">
           <p class="text-sm text-ink-muted">Not scored yet — press Score on the screening page.</p>
+        </Card>
+      )}
+
+      {letters.length > 0 && (
+        <Card class="mt-4">
+          <h2 class="text-entity text-ink">{letters.length === 1 ? 'Cover letter' : 'Cover letters'}</h2>
+          <Hint class="mt-1">Came with the resume. For you to read — never scored, never sent to a model.</Hint>
+          {letters.map((l) => (
+            <details class="mt-3">
+              <summary class="cursor-pointer text-sm font-semibold text-ink">
+                {l.sourceFilename}{' '}
+                <a href={`${back}/applicants/${applicant.id}/letters/${l.id}/file`} class="ml-2 text-xs font-normal text-ink-muted hover:text-ink">
+                  Download
+                </a>
+              </summary>
+              <pre class="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-md bg-surface-overlay p-3 font-sans text-[13px] leading-5 text-ink">{l.text}</pre>
+            </details>
+          ))}
         </Card>
       )}
 

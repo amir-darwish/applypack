@@ -23,6 +23,8 @@ test('the industry criterion matches by meaning, and only by meaning when it can
   assert.ok(!sectorMatches('software services', ['financial services']), 'a shared generic word is not a sector');
   assert.ok(!sectorMatches('hospitality', ['fintech']));
   assert.ok(!sectorMatches('machine learning research', ['education']), '"learning" alone is not edtech');
+  assert.ok(!sectorMatches('new ventures studio', ['news media']), '"news" is not the plural of "new"');
+  assert.deepEqual(sectorGroups('intellectual property law'), ['legal'], 'property here is not real estate');
   assert.ok(!sectorMatches(null, ['fintech']));
   // Outside the vocabulary a shared word still counts.
   assert.ok(sectorMatches('web design agency', ['web design agencies']));

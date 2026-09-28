@@ -34,7 +34,7 @@ export const SECTORS: readonly SectorGroup[] = [
   { label: 'automotive', names: ['automotive', 'mobility'] },
   { label: 'telecom', names: ['telecom', 'telecommunication', 'telco'] },
   { label: 'advertising', names: ['advertising', 'adtech', 'ad tech', 'marketing', 'martech', 'marketing technology'] },
-  { label: 'real estate', names: ['real estate', 'proptech', 'property'] },
+  { label: 'real estate', names: ['real estate', 'proptech', 'property management'] },
   { label: 'energy', names: ['energy', 'utilities', 'cleantech', 'climate', 'renewable', 'oil and gas'] },
   { label: 'public sector', names: ['government', 'public sector', 'govtech', 'civic'] },
   { label: 'security', names: ['cybersecurity', 'cyber security', 'infosec', 'information security'] },
@@ -60,7 +60,8 @@ function words(text: string): string {
     .trim()
     .split(' ')
     .filter(Boolean)
-    .map((w) => (w.length > 3 ? w.replace(/s$/, '') : w));
+    // "news", "gas", "business" are not plurals.
+    .map((w) => (w.length > 3 && !/(?:ss|us|is|ws)$/.test(w) ? w.replace(/s$/, '') : w));
   return ` ${out.join(' ')} `;
 }
 

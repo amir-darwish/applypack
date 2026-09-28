@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
-import { displayName, expandUploads, findDuplicate, fingerprintBytes, fingerprintText, isAcceptedResume, planIntake, type ReadFile } from './intake';
+import { displayName, expandUploads, findDuplicate, fingerprintBytes, fingerprintText, isAcceptedResume, coverLetterSignal, letterOwners, planIntake, type ReadFile, type UploadedDocument } from './intake';
 
 /** The same in-memory zip writer zip.test.ts uses. */
 function buildZip(entries: { name: string; data: Buffer }[]): Buffer {
@@ -119,4 +119,57 @@ test('planIntake decides the whole upload before a row is written (TASKS H23/H25
     { file: 3, sameAs: null },
     { file: 5, sameAs: { id: 41 } },
   ]);
+});
+
+// TASKS E3 (Q9): a cover letter is attached to its person, never scored.
+const LETTER = `Dear Hiring Team,
+
+I am writing to apply for the QA Automation Engineer role. At Acme I built the Playwright suite that cut our regression cycle from three days to four hours.
+
+I would welcome a conversation.
+
+Kind regards,
+Ann Lee`;
+const CV = `Ann Lee
+QA Automation Engineer
+
+EXPERIENCE
+Acme — QA Engineer, 2021 – Present
+
+SKILLS
+Playwright, TypeScript`;
+
+test('coverLetterSignal reads the name, or a salutation and a valediction with no resume heading', () => {
+  assert.equal(coverLetterSignal('Ann Lee/letter.pdf', LETTER), 'text', 'the text alone says it');
+  assert.equal(coverLetterSignal('Ann_Lee_Cover_Letter.pdf', 'Short note about me.'), 'name', 'the file name alone says it');
+  assert.equal(coverLetterSignal('Anschreiben.docx', 'Sehr geehrte Damen und Herren'), 'name');
+  assert.equal(coverLetterSignal('Ann Lee/cv.pdf', CV), null);
+  assert.equal(coverLetterSignal('cv_and_cover_letter.pdf', `${LETTER}\n\n${CV}`), null, 'a letter on top of a CV is the CV');
+  assert.equal(coverLetterSignal('notes.txt', 'Hello team, I shipped the release. Regards from Kyiv are not a signature.'), null);
+  assert.equal(coverLetterSignal('ann.pdf', `${LETTER}\n\nEXPERIENCE\nAcme 2021 – Present`), null, 'one resume heading and it is not a letter by its words');
+});
+
+test('letterOwners: the folder, then the email or phone, then the file name', () => {
+  const doc = (name: string, email: string | null = null, phone: string | null = null, archive: string | null = null): UploadedDocument => ({ name, archive, email, phone });
+  const resumes = [doc('Ann Lee/cv.pdf', 'ann@x.io'), doc('Bob Stone/cv.pdf', 'bob@x.io'), doc('Cara_Diaz_CV.pdf'), doc('Dan_Fox_resume.pdf', null, '+48 600 100 200')];
+  const known = [{ id: 41, number: 7, email: 'eve@x.io', phone: null, hash: 'h', simhash: null }];
+  assert.deepEqual(
+    letterOwners(
+      [
+        doc('Ann Lee/letter.pdf'), // her folder
+        doc('letter-bob.pdf', 'BOB@x.io'), // his email
+        doc('Cara_Diaz_Cover_Letter.pdf'), // the same stem
+        doc('motivation.pdf', null, '600 100 200'), // the number without its country code is another number
+        doc('eve-letter.pdf', 'eve@x.io'), // a stored applicant's email
+        doc('Stranger_Cover_Letter.pdf'), // nobody's
+      ],
+      resumes,
+      known,
+    ),
+    [{ add: 0 }, { add: 1 }, { add: 2 }, null, { id: 41 }, null],
+  );
+  // Two files at the top of an upload, one of them a resume: the letter is that person's.
+  assert.deepEqual(letterOwners([doc('letter.pdf')], [doc('cv.pdf')], []), [{ add: 0 }]);
+  // The same folder name in two archives is two folders.
+  assert.deepEqual(letterOwners([doc('x/letter.pdf', null, null, 'b.zip')], [doc('x/cv.pdf', null, null, 'a.zip')], []), [null]);
 });

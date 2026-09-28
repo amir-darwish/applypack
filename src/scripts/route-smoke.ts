@@ -39,6 +39,8 @@ const MAY_404 = new Set([
   '/runs/fetch-now/:id/state',
   '/companies/watchlist/:id/state',
   '/jobs/:id/cover/:letterId/file/:fmt',
+  // No letter is attached until the upload below runs.
+  '/screen/:id/applicants/:aid/letters/:lid/file',
 ]);
 /** GETs the route patterns do not reach: a page under its query parameters (`:id` = the fixture job). */
 const QUERY_VARIANTS = [
@@ -192,6 +194,7 @@ function fill(path: string, f: Fixtures): string {
   return path
     .replace(':aid', String(f.applicantId))
     .replace(':letterId', '1')
+    .replace(':lid', '1')
     .replace(':matchId', '1')
     .replace(':index', '0')
     .replace(':fmt', 'pdf')
@@ -276,16 +279,25 @@ async function main(): Promise<void> {
         // Two copies of one file no text comes out of: one unreadable row, the copy skipped — not a unique-key 500.
         body.append('files', new File(['x'], 'scan-a.txt', { type: 'text/plain' }));
         body.append('files', new File(['x'], 'scan-b.txt', { type: 'text/plain' }));
+        // TASKS E3: a cover letter goes to its person (the file name's stem is Mark's), never scored; one with nobody's resume is left out.
+        const letter = (who: string) =>
+          `Dear Hiring Team,\n\nI would like to apply for the backend role. At Acme I built the billing service in Node.js and TypeScript, moved it from MySQL to PostgreSQL and cut p95 latency by 40%. I would bring the same care for the details to your scheduling product.\n\nKind regards,\n${who}`;
+        body.append('files', new File([letter('Mark')], 'mark_cover_letter.txt', { type: 'text/plain' }));
+        body.append('files', new File([letter('Zed')], 'Zed_Cover_Letter.txt', { type: 'text/plain' }));
+        // Only its words call this one a letter and nobody's resume came with it: it may be a polite resume, so it is added as one.
+        body.append('files', new File([letter('Quinn')], 'quinn.txt', { type: 'text/plain' }));
         return { method: 'POST', headers: ORIGIN, body } satisfies RequestInit;
       })(),
       expect: (res) => {
         const flash = decodeURIComponent(res.headers.get('set-cookie') ?? '');
         return (
           res.status === 303 &&
-          flash.includes('2 applicants added') &&
+          flash.includes('3 applicants added') &&
           flash.includes('2 files already added') &&
           flash.includes('1 held for a look') &&
-          flash.includes('1 file could not be read')
+          flash.includes('1 file could not be read') &&
+          flash.includes('1 cover letter attached') &&
+          flash.includes('1 cover letter left out')
         );
       },
     },

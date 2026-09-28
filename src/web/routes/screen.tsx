@@ -17,7 +17,7 @@ import { ResumeTextError } from '../../resume/docx-text';
 import { extractResumeText } from '../../resume/resume-text';
 import { MAX_ZIP_ENTRIES } from '../../resume/zip';
 import { applyPreset, draftRubric, PRESETS, rubricEquals, rubricFromForm, rubricSummary, type Preset } from '../../screening/rubric';
-import { displayName, expandUploads, fingerprintBytes, fingerprintText, MAX_APPLICANTS_PER_SCREENING, MAX_BATCH_UPLOAD_MB, planIntake } from '../../screening/intake';
+import { displayName, expandUploads, fingerprintBytes, fingerprintText, coverLetterSignal, letterOwners, MAX_APPLICANTS_PER_SCREENING, MAX_BATCH_UPLOAD_MB, planIntake } from '../../screening/intake';
 import { findLeaks, heldNote, leakKinds, readRedactions, redactApplicant } from '../../screening/redact';
 import { MAX_COMPARE, MIN_COMPARE, readScreenReply } from '../../screening/prompts';
 import { comparisonMarkdown, comparisonView, readStoredComparison } from '../../screening/comparison';
@@ -29,6 +29,9 @@ import { screeningRun, startScreeningRun } from '../../screening/batch';
 import {
   countApplicants,
   createApplicants,
+  createLetters,
+  getLetterFile,
+  listLetters,
   releaseApplicant,
   createScreening,
   DECISIONS,
@@ -418,11 +421,28 @@ screenRoute.post('/screen/:id/applicants', (c, next) => batchUploadLimit(c.req.p
     const leaks = redacted ? leakKinds(findLeaks(redacted.text, redacted)) : [];
     read.push({ file, text, note, redacted, print, leaks });
   }
-  const plan = planIntake(
-    read.map((r) => ({ text: r.text, email: r.redacted?.email ?? null, phone: r.redacted?.phone ?? null, print: r.print })),
-    known,
-  );
-  const adding = plan.adds.map(({ file, sameAs }) => ({ ...read[file]!, sameAs }));
+  // TASKS E3 (Q9): a cover letter goes to its person and is never scored.
+  const signals = read.map((r) => (r.text === null ? null : coverLetterSignal(r.file.name, r.text)));
+  const lettersFound = read.flatMap((r, i) => (signals[i] ? [{ ...r, signal: signals[i]! }] : []));
+  const documentOf = (r: (typeof read)[number]) => ({ name: r.file.name, archive: r.file.archive, email: r.redacted?.email ?? null, phone: r.redacted?.phone ?? null });
+  const planFor = (files: typeof read) => {
+    const plan = planIntake(files.map((r) => ({ text: r.text, email: r.redacted?.email ?? null, phone: r.redacted?.phone ?? null, print: r.print })), known);
+    return { plan, adding: plan.adds.map(({ file, sameAs }) => ({ ...files[file]!, sameAs })) };
+  };
+  let resumesRead = read.filter((_, i) => signals[i] === null);
+  let { plan, adding } = planFor(resumesRead);
+  const found = letterOwners(lettersFound.map(documentOf), adding.map(documentOf), known);
+  // A file only its words call a letter, with no resume of its writer beside it,
+  // may be a resume that opens politely: it is added as one — a lost applicant
+  // costs more than a scored letter. Appended, so every earlier decision (and
+  // every owner above) stands.
+  const orphans = lettersFound.filter((l, i) => found[i] === null && l.signal === 'text');
+  if (orphans.length > 0) {
+    resumesRead = [...resumesRead, ...orphans];
+    ({ plan, adding } = planFor(resumesRead));
+  }
+  const lettersRead = lettersFound.filter((l, i) => !(found[i] === null && l.signal === 'text'));
+  const owners = found.filter((o, i) => !(o === null && lettersFound[i]!.signal === 'text'));
   const { created, skipped } = await createApplicants(
     screening.id,
     adding.map(({ file, text, note, redacted, print, leaks, sameAs }) => ({
@@ -450,6 +470,14 @@ screenRoute.post('/screen/:id/applicants', (c, next) => batchUploadLimit(c.req.p
       'screening: applicant added',
     );
   }
+  const idOfAdd = new Map(created.map((row) => [row.input, row.id]));
+  const attached = lettersRead.flatMap((r, i) => {
+    const owner = owners[i] ?? null;
+    const applicantId = owner === null ? undefined : 'id' in owner ? owner.id : idOfAdd.get(owner.add);
+    return applicantId === undefined ? [] : [{ applicantId, sourceFilename: displayName(r.file), mimeType: mimeOf(r.file.name), original: r.file.bytes, text: r.text ?? '' }];
+  });
+  const lettersAttached = await createLetters(attached);
+  const lettersLeft = lettersRead.length - attached.length;
   const ok = created.filter((r) => r.parseStatus === 'ok').length;
   const held = created.filter((r) => r.parseStatus === 'held').length;
   const unreadable = created.filter((r) => r.parseStatus === 'unreadable').length;
@@ -465,6 +493,10 @@ screenRoute.post('/screen/:id/applicants', (c, next) => batchUploadLimit(c.req.p
   if (versions > 0) parts.push(`${versions} of them another document of someone already in the list`);
   if (repeats > 0) parts.push(`${repeats} file${repeats === 1 ? '' : 's'} already added, skipped`);
   if (unreadable > 0) parts.push(`${unreadable} file${unreadable === 1 ? '' : 's'} could not be read`);
+  if (lettersAttached > 0) parts.push(`${lettersAttached} cover letter${lettersAttached === 1 ? '' : 's'} attached to ${lettersAttached === 1 ? 'its applicant' : 'their applicants'}, not scored`);
+  if (lettersLeft > 0) {
+    parts.push(`${lettersLeft} cover letter${lettersLeft === 1 ? '' : 's'} left out — no resume of ${lettersLeft === 1 ? 'its' : 'their'} writer came with ${lettersLeft === 1 ? 'it' : 'them'} (put each in its person's folder, or upload it with the CV)`);
+  }
   if (notResumes.length > 0) parts.push(`${notResumes.length} file${notResumes.length === 1 ? '' : 's'} of other types left out`);
   if (badArchives.length > 0) parts.push(`${badArchives.length} archive${badArchives.length === 1 ? '' : 's'} could not be opened`);
   if (oversized.length > 0) parts.push(`${oversized.length} zip entr${oversized.length === 1 ? 'y' : 'ies'} over ${MAX_UPLOAD_MB} MB left out`);
@@ -722,6 +754,7 @@ screenRoute.get('/screen/:id/applicants/:aid', async (c) => {
         text: applicant.text,
         redactedText: applicant.redactedText,
       }}
+      letters={await listLetters(applicant.id)}
       rubric={rubricOf(s)}
       reply={reply}
       breakdown={breakdown}
@@ -741,6 +774,18 @@ screenRoute.get('/screen/:id/applicants/:aid/file', async (c) => {
   const aid = idParam(c.req.param('aid'));
   const file = Number.isInteger(aid) ? await getApplicantFile(aid) : null;
   if (!file) return c.text('Not found', 404);
+  const filename = file.sourceFilename.replace(/ \(from .*\)$/, '').replace(/["\r\n]/g, '');
+  return c.body(new Uint8Array(file.original), 200, {
+    'Content-Type': file.mimeType,
+    'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+  });
+});
+
+// A cover letter's own file (TASKS E3) — only through the applicant it is attached to.
+screenRoute.get('/screen/:id/applicants/:aid/letters/:lid/file', async (c) => {
+  const lid = idParam(c.req.param('lid'));
+  const file = Number.isInteger(lid) ? await getLetterFile(lid) : null;
+  if (!file || file.applicantId !== idParam(c.req.param('aid'))) return c.text('Not found', 404);
   const filename = file.sourceFilename.replace(/ \(from .*\)$/, '').replace(/["\r\n]/g, '');
   return c.body(new Uint8Array(file.original), 200, {
     'Content-Type': file.mimeType,
