@@ -85,6 +85,8 @@ export interface Classifications {
 export interface ClassifyOutcome extends Classifications {
   /** True when stage-1 prefilter rejected — counted separately in stats. */
   preFiltered: boolean;
+  /** The prefilter's own one-line reason, when it rejected. */
+  prefilterReason?: string;
 }
 
 const EMPTY: ClassifyOutcome = { results: new Map(), location: null, preFiltered: false };
@@ -127,7 +129,7 @@ async function runStages(
         { title: input.title, reason: pre.reason },
         'classifier: stage1 not-relevant, skipping stage2',
       );
-      return { results: new Map(), location: null, preFiltered: true };
+      return { results: new Map(), location: null, preFiltered: true, prefilterReason: pre.reason };
     }
     if (pre === null) {
       logger.warn(
