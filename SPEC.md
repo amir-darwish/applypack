@@ -87,6 +87,7 @@ runAllFetchers()         Company.active, minus AppSettings.disabledSources, minu
                          whose nextCheckAt is later than dueCutoff(now) (a manual run asks every row)
    ↓
 NormalizedJob[]          unified shape (companyId, externalId, title, location, …)
+                         + employer from an aggregator's own field (ADR 0056)
                          + locationHints where the feed has structured geodata (ADR 0031);
                          geo-filtered sources (Jobicy, Himalayas, 4dayweek) read the FetchContext —
                          the union of the running searches' countries + regions — instead of the whole feed
@@ -94,6 +95,10 @@ NormalizedJob[]          unified shape (companyId, externalId, title, location, 
 passesAnyBaseFilter()    admit if ANY running search admits it: a whole-word title hit on its
                          stackRequired OR roleTypes, no hit on its stackExclude, and a place and
                          arrangement that do not contradict its own (an unknown one passes)
+   ↓
+employerGate()           who hires, before any AI (ADR 0056): a muted company's posting is
+                         turned away, and with the re-apply window on, one at a company applied
+                         to inside it — no row, no call; the funnel counts both
    ↓
 one query per batch      the batch's (companyId, externalId) pairs already stored are skipped
    ↓
@@ -262,6 +267,7 @@ clause at the start of the affected job/handler. The toggles live on
 | `disabledSources` (String[])     | `[]`     | Skip whole AtsType families in runAllFetchers (and the monthly HN pull, for HN_HIRING); a switched-off family is never called quiet |
 | `employerMode`                   | false    | Employer mode (ADR 0049): the Screening menu item and every `/screen` route exist only while on; the worker never reads it |
 | `screeningRetentionDays`         | 90       | How long a screening keeps its applicant files and verdicts before the weekly cleanup deletes it (ADR 0048) |
+| `reapplyDays`                    | null     | Off. 30 / 60 / 90 / 180: a new posting at a company with a job marked Applied inside that many days is turned away before any AI (a watched company on "every posting" excepted). Settings → General → Application tracking (ADR 0056) |
 | `updateCheck`                    | false    | Off: ApplyPack never asks anyone about itself. On: one request a week (the cleanup job, and once when turned on) to GitHub's latest-release API; the sidebar says "vX.Y.Z is out" and Settings → General → Updates gives the commands. It never updates anything |
 | `aiBudgetCents`                  | NULL     | A monthly ceiling on billed AI money: one line to the alert chats at 80 % and at 100 %, once each per UTC month (`aiBudgetAlerted` holds the last one sent). NULL = no budget. Nothing is ever stopped (ADR 0055) |
 
@@ -389,6 +395,27 @@ Measured on twenty JavaScript-heavy companies and sixteen European ones
 resolved to a board, 0 to a feed, and the rest to a change watch or an honest
 refusal. The sitemap + JSON-LD rung the plan called stage B was measured and
 **not built** — across 41 career pages, none publishes `JobPosting`.
+
+## Muted companies and the re-apply window (ADR 0056)
+
+- **Who hires.** An aggregator's fetcher hands over the employer its feed
+  names (`NormalizedJob.employer`, null when the feed does not say). A vendor
+  board, a feed and a pasted posting are the employer themselves. `Job.employer`
+  keeps the name, `Job.employerKey` the key of whoever hires
+  (`employer.ts:employerKey`: accents, case, punctuation and trailing legal
+  forms folded, never fuzzy). Rows stored before 2.23.0 get their keys once,
+  at the next worker boot.
+- **Mute.** `company_mute` (key, name, optional reason, date). From the job
+  page's rail, or by name on `/companies` → Muted companies. The tick turns
+  a muted company's postings away before any AI, from every source.
+  `/jobs` hides the stored ones behind a line that says how many; Filters →
+  Show → Muted companies brings them back. Nothing changes status, and
+  Unmute undoes both.
+- **Re-apply window.** `reapplyDays`: off by default, or 30 / 60 / 90 / 180
+  days. Read once per tick from the jobs marked Applied.
+- **Names on pages and in prompts.** Everything that names a posting's
+  company reads `employer ?? company.name`: the list ("Acme · via
+  Remotive"), the alerts, the classifier, the verifier, the letter.
 
 ## Resumes (Phase 8.1)
 

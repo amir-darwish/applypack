@@ -252,6 +252,8 @@ src/
   filter.ts                    ← pure: passesAnyBaseFilter over passesBaseFilter, titleHasKeyword, placesOverlap;
                                  baseFilterReason / anyBaseFilterReason name the gate that turned a posting away
   funnel.ts                    ← pure: the search funnel — the tick counters it keeps, the stages, the reasons in words
+  employer.ts                  ← pure: who hires — employerKey (one key for two spellings), hiringKey, the mute /
+                                 re-apply gate (ADR 0056)
   fingerprint.ts               ← SimHash of a JD body + cross-listing search, pure (ADR 0018)
   apply-link.ts                ← pure: flags an apply link nobody can apply through (ADR 0023)
   countries.{json,ts}          ← the gazetteer: 86 countries, cities, region groups; lookups (pure, ADR 0031)
@@ -437,6 +439,7 @@ src/
     fetch-job.ts                ← runFetchJob (cron entry; {manual:true} from "Fetch now"), under the fetch lock
     fetch-lock.ts               ← tryFetchLock: the Postgres advisory lock that keeps one fetch running across processes
     funnel-store.ts             ← addToFunnel (the fetch + HN wrappers) into funnel_day; loadFunnel, loadSourceYield for the pages
+    employer-store.ts           ← the mute list, the tick's employer rules, the one-time fill of older rows' keys (ADR 0056)
     fetch-pause.ts              ← makeFetchPauseProbe: a pause on /settings stops a running tick within seconds
     process-jobs.ts             ← processNormalizedJobs: the shared inner loop used by fetch + HN
     verdict-merge.ts            ← pure: one verdict per search, the winner, the score line (ADR 0028)
@@ -628,7 +631,7 @@ src/
       health.ts                 ← JSON liveness for external monitoring
 
 prisma/
-  schema.prisma                 ← 22 models: Company, Job, JobScore, CronRun, FunnelDay, AiCall, AppSettings, CompanyCandidate,
+  schema.prisma                 ← 23 models: Company, Job, JobScore, CronRun, FunnelDay, AiCall, CompanyMute, AppSettings, CompanyCandidate,
                                   NotificationTarget, Profile, Resume, ResumeReview, ResumeMatch, CandidateFact,
                                   CoverLetter, JobStageEvent, PostingBrief, JobVerification, Screening, Applicant,
                                   ScreeningComparison, ScreeningVerdict; 6 enums: AtsType, JobStatus, Workplace,
@@ -683,8 +686,9 @@ user's schedule, read in the schedule's own time zone.
 Every model of `prisma/schema.prisma` with its key fields, in Prisma's own
 types. The six enums are `AtsType`, `JobStatus`, `Workplace`,
 `CronRunStatus`, `CandidateStatus` and `NotificationKind`. `CronRun`,
-`FunnelDay`, `AiCall` and `CandidateFact` stand alone (an `AiCall` keeps
-its job and resume ids without a foreign key, so the history outlives them). `CompanyCandidate` has no
+`FunnelDay`, `AiCall`, `CompanyMute` and `CandidateFact` stand alone (an
+`AiCall` keeps its job and resume ids without a foreign key, so the history
+outlives them; a `CompanyMute` meets `Job` only through `employerKey`). `CompanyCandidate` has no
 foreign key either: it meets `Company` only through the pair
 `(atsType, atsToken)`, which is unique in each table, so a pair has at most
 one row on each side.
@@ -732,6 +736,8 @@ erDiagram
     String latestVersion "the last release the check saw"
     Int aiBudgetCents "monthly ceiling on billed AI money, NULL = none (ADR 0055)"
     String aiBudgetAlerted "the last budget warning sent, YYYY-MM:080 / :100"
+    Int reapplyDays "the re-apply window, NULL = off (ADR 0056)"
+    DateTime employersFilledAt "the one-time fill of older rows' employer keys"
     Boolean sourceHealthAlerts
     Json coverAngles
     Json pipelineStages "user-named funnel columns (ADR 0025)"
@@ -812,6 +818,8 @@ erDiagram
     Int id PK
     Int companyId FK
     String externalId
+    String employer "who hires, when an aggregator named them (ADR 0056)"
+    String employerKey "employer.ts:employerKey of whoever hires; NULL = nobody said"
     String title
     String url
     String location "as fetched, never rewritten"
@@ -892,6 +900,13 @@ erDiagram
     Int costMicroUsd "ours, from the dated price table"
     Int reportedMicroUsd "the vendor's own figure"
     Int jobId "no foreign key"
+  }
+
+  CompanyMute {
+    String key PK "employer.ts:employerKey of the name"
+    String name "as the user saw it"
+    String reason
+    DateTime createdAt
   }
 
   CompanyCandidate {
