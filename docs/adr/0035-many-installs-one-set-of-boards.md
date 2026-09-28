@@ -211,3 +211,16 @@ the validators into the `Company` row starts paying for its migration.
 - "surfacing the chosen minute in the dashboard rather than only in the
   boot log": done in v1.47.0. `src/web/schedule-view.ts:loadNextCheck` reads
   `instanceId` for the next-check line on `/` and `/settings`.
+
+## Addendum (2026-09-28): a site's own Crawl-delay
+
+The first trigger above fired with the watchlist: a user can add a FEED or a
+CAREER_PAGE row on any host, and any host may declare a `Crawl-delay`. When
+the watchlist adds such a row, `robots.ts:crawlDelayMs` reads the delay the
+group that binds our own client states (our group, else `*`; capped at
+30 s) from the robots.txt the resolver already fetched, and
+`Company.crawlDelayMs` keeps it. `politeDelayMs` takes it as one more floor
+beside Lever's. A feed on another host than the page gets none. Rows added
+before 2.26.0 have none until they are added again. Nothing re-reads
+robots.txt on the tick, so a site that changes its delay later is honoured
+from the next add, not the next hour.

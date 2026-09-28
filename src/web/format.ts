@@ -3,6 +3,22 @@ import type { JobStatus } from '@prisma/client';
 import { displayZone } from './display-zone';
 
 /** The posting's own money and period (src/currency.ts); null columns read as USD a year. */
+/**
+ * A URL from outside — a feed's link, the verifier's finding, a typed career
+ * page — as an href only when it is http(s). A `javascript:` link from a
+ * feed would run in the dashboard's own origin on a click; anything else is
+ * no link at all (audit FETCH-5, found while making feed links absolute).
+ */
+export function safeHref(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url.trim());
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function formatSalary(
   min: number | null,
   max: number | null,

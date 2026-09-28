@@ -122,6 +122,8 @@ describe('fourDayWeekPlaces — the country= values a context needs (stage 3a)',
     assert.deepEqual(fourDayWeekPlaces({ countries: ['PL', 'DE'], regions: ['EU', 'DACH'] }), ['Poland', 'Germany', 'Europe']);
     assert.deepEqual(fourDayWeekPlaces({ countries: ['US'], regions: ['AMERICAS', 'APAC'] }), ['United States', 'North America', 'South America', 'Asia', 'Oceania']);
     assert.deepEqual(fourDayWeekPlaces({ countries: [], regions: [] }), []);
+    // A code the gazetteer does not know never becomes `country=XX`.
+    assert.deepEqual(fourDayWeekPlaces({ countries: ['PL', 'XX'], regions: [] }), ['Poland']);
   });
 
   it('builds a scoped page URL, or the plain one', () => {

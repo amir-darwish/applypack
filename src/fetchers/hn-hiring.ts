@@ -8,6 +8,8 @@ import { cleanEmployer } from '../employer';
 const ALGOLIA_BASE = 'https://hn.algolia.com/api/v1';
 const THREAD_TIMEOUT_MS = 30_000;
 const MAX_THREAD_AGE_DAYS = 60;
+/** A monthly thread holds a few hundred top-level comments; more is cut, and said so (audit FETCH-5). */
+const MAX_COMMENTS = 2_000;
 const HIRING_TITLE_RE = /^Ask HN: Who is hiring\??\s*\(/i;
 
 const SearchHitSchema = z
@@ -106,7 +108,10 @@ export async function fetchHnHiring(companyId: number): Promise<NormalizedJob[]>
   const out: NormalizedJob[] = [];
   let total = 0;
   let parsedOk = 0;
-  for (const child of parsed.data.children) {
+  if (parsed.data.children.length > MAX_COMMENTS) {
+    logger.warn({ comments: parsed.data.children.length, kept: MAX_COMMENTS }, 'hn-hiring: thread cut at the cap');
+  }
+  for (const child of parsed.data.children.slice(0, MAX_COMMENTS)) {
     total++;
     if (!child.text) continue;
     const cleanedText = stripHtml(child.text);

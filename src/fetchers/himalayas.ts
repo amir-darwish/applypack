@@ -88,13 +88,20 @@ export async function fetchHimalayas(
   return [...out.values()];
 }
 
-/** The calls a context needs: per-country searches + worldwide, or the browse feed. */
+/**
+ * The calls a context needs: per-country searches + worldwide, or the browse
+ * feed. A search that names a group as well as countries ("PL, DE and the
+ * EU") also reads the browse feed: the country calls alone missed a posting
+ * open to Spain only, which the group admits (audit FETCH-5). The base
+ * filter narrows what it brings.
+ */
 export function himalayasUrls(context: FetchContext): string[] {
   const countries = context.countries.slice(0, MAX_COUNTRY_CALLS);
   if (countries.length === 0) return [ENDPOINT];
   return [
     ...countries.map((c) => `${SEARCH_ENDPOINT}?country=${encodeURIComponent(c)}&exclude_worldwide=true&limit=20`),
     `${SEARCH_ENDPOINT}?worldwide=true&limit=20`,
+    ...(context.regions.length > 0 ? [ENDPOINT] : []),
   ];
 }
 

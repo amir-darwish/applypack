@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { placeLabel } from '../countries';
-import { HttpError, fetchWithRetry } from '../http';
+import { HttpError, fetchWithRetry, stripHtml } from '../http';
 import { SourceKeyMissingError, redactSecrets, resolveSourceKeys } from '../source-keys';
 import type { NormalizedJob } from '../types';
 import { EMPTY_CONTEXT, type FetchContext } from './fetch-context';
@@ -228,7 +228,8 @@ function buildDescription(ad: AdzunaAd, market: AdzunaMarket): string {
   if (contract.length > 0) head.push(`Contract: ${contract.join(', ')}.`);
   const salary = formatSalary(ad, market);
   if (salary) head.push(salary);
-  const snippet = (ad.description ?? '').trim();
+  // The snippet carries markup now and then (`<strong>`); one pass, on text never stripped before (gotcha 12).
+  const snippet = stripHtml(ad.description ?? '');
   const note = 'Snippet only (Jobs by Adzuna) — the full posting is behind the apply link.';
   return [head.join(' '), snippet, note].filter((s) => s.length > 0).join('\n\n');
 }

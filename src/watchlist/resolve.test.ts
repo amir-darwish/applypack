@@ -150,7 +150,7 @@ describe('rung 4 — a feed', () => {
       },
     });
     const r = await resolveCompanyUrl(paste('https://acme.com/careers'), stub);
-    assert.deepEqual(r.resolution, { kind: 'feed', url: 'https://acme.com/jobs.rss', items: 12, via: 'https://acme.com/jobs.rss' });
+    assert.deepEqual(r.resolution, { kind: 'feed', url: 'https://acme.com/jobs.rss', items: 12, via: 'https://acme.com/jobs.rss', crawlDelayMs: null });
   });
 
   it('never fetches a declared blog feed (posthog.com declares /rss.xml)', async () => {
@@ -274,7 +274,18 @@ describe('rung 5 — the change watch', () => {
     assert.equal((r.resolution as { url: string }).url, 'https://acme.com/careers');
   });
 
-  // Hashing a loading shell reports the shell, not the careers page.
+  // ADR 0035's trigger: a host any user can add may ask for its own pacing.
+  it("keeps the site's Crawl-delay for our client on the row it offers", async () => {
+    const stub = io({
+      pages: {
+        'https://acme.com/robots.txt': { status: 200, body: 'User-agent: *\nCrawl-delay: 3\nDisallow: /admin' },
+        'https://acme.com/careers': { status: 200, body: prose },
+      },
+    });
+    const r = await resolveCompanyUrl(paste('https://acme.com/careers'), stub, CLAUDE);
+    assert.deepEqual(r.resolution, { kind: 'changeWatch', url: 'https://acme.com/careers', chars: r.resolution.kind === 'changeWatch' ? r.resolution.chars : 0, crawlDelayMs: 3_000 });
+  });
+
   // TASKS N8: a loading shell is a page drawn in the browser. Hashing it would
   // report the shell, so it is offered for the paste box instead.
   it('offers a page with almost no text for pasting, not for a change watch', async () => {

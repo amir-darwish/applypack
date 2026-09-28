@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { FIT_INFO_FLOOR, FIT_OK_FLOOR, FIT_WARN_FLOOR, fitTone, fitWord, formatDate, formatDateShort, formatStamp, formatUntil } from './format';
+import { FIT_INFO_FLOOR, FIT_OK_FLOOR, FIT_WARN_FLOOR, fitTone, fitWord, formatDate, formatDateShort, formatStamp, formatUntil, safeHref } from './format';
 import { displayZoneLabel, withDisplayZone } from './display-zone';
 
 /** ICU writes a narrow no-break space before AM/PM; the tests read plain spaces. */
@@ -82,3 +82,14 @@ describe('fitWord', () => {
   });
 });
 
+describe('safeHref', () => {
+  it('lets through http(s) and nothing else', () => {
+    assert.equal(safeHref('https://acme.example/jobs/1'), 'https://acme.example/jobs/1');
+    assert.equal(safeHref(' http://acme.example '), 'http://acme.example/');
+    assert.equal(safeHref('javascript:alert(1)'), null);
+    assert.equal(safeHref('data:text/html,hi'), null);
+    assert.equal(safeHref('/relative'), null);
+    assert.equal(safeHref(null), null);
+    assert.equal(safeHref(''), null);
+  });
+});

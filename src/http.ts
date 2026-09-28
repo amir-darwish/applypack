@@ -2,6 +2,12 @@ import { APP_VERSION } from './app-version';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const RETRY_DELAYS_MS = [1_000, 3_000];
+/**
+ * A 429 that names a short wait is waited out and asked again; a longer one
+ * is not worth holding the tick for, and fails as a rate limit the source
+ * health records (audit FETCH-5).
+ */
+const MAX_RETRY_AFTER_MS = 10_000;
 // major.minor from package.json so the UA stops rotting on version bumps
 // (it sat on 0.1 for ten releases).
 const packageMajorMinor = (): string => APP_VERSION.split('.').slice(0, 2).join('.');
@@ -48,6 +54,15 @@ export async function fetchWithRetry(
         signal: controller.signal,
       });
       clearTimeout(timer);
+
+      if (resp.status === 429 && attempt < RETRY_DELAYS_MS.length) {
+        const wait = retryAfterMs(resp.headers.get('retry-after'), Date.now());
+        if (wait !== null && wait <= MAX_RETRY_AFTER_MS) {
+          await resp.body?.cancel().catch(() => undefined);
+          await sleep(wait);
+          continue;
+        }
+      }
 
       if (resp.status >= 500 && attempt < RETRY_DELAYS_MS.length) {
         const delay = RETRY_DELAYS_MS[attempt];
@@ -102,6 +117,15 @@ export async function fetchWithRetry(
   throw lastError instanceof Error
     ? lastError
     : new Error(`fetchWithRetry exhausted retries for ${url}`);
+}
+
+/** `Retry-After` in milliseconds from now: seconds or an HTTP date; null when it says neither. */
+export function retryAfterMs(header: string | null, now: number): number | null {
+  const value = header?.trim();
+  if (!value) return null;
+  if (/^\d+$/.test(value)) return Number(value) * 1000;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? null : Math.max(0, at - now);
 }
 
 export function sleep(ms: number): Promise<void> {

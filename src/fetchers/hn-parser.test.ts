@@ -14,6 +14,15 @@ describe('parseHnComment — pipe format (most common)', () => {
     assert.equal(out!.url, 'https://stripe.com/jobs/123');
   });
 
+  it('keeps a salary range whole: a bare en-dash is a range, a spaced one a separator', () => {
+    const out = parseHnComment('Acme | Senior Backend Engineer | Remote (EU) | $120–160k | https://acme.example/jobs');
+    assert.equal(out?.companyName, 'Acme');
+    assert.equal(out?.title, 'Senior Backend Engineer');
+    assert.equal(out?.location, 'Remote (EU)');
+    const spaced = parseHnComment('Acme – Platform Engineer – Berlin');
+    assert.equal(spaced?.title, 'Platform Engineer');
+  });
+
   it('parses with em-dash separators', () => {
     const out = parseHnComment(
       'PrairieLearn — Full-Stack Software Engineer — TypeScript / Postgres / React / AI',

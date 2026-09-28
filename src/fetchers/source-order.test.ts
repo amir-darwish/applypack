@@ -65,6 +65,13 @@ describe('tickSeed', () => {
 });
 
 describe('politeDelayMs', () => {
+  it('waits the Crawl-delay a site asked for when its row was added', () => {
+    assert.equal(politeDelayMs('ok', AtsType.FEED, 5_000), 5_000);
+    assert.equal(politeDelayMs('not_modified', AtsType.CAREER_PAGE, 400), 400);
+    assert.equal(politeDelayMs('ok', AtsType.FEED, 200), POLITE_DELAY_MS);
+    assert.equal(politeDelayMs('ok', AtsType.FEED, null), POLITE_DELAY_MS);
+  });
+
   it('leaves the full second after a board that sent us a feed', () => {
     assert.equal(politeDelayMs('ok', AtsType.GREENHOUSE), POLITE_DELAY_MS);
     assert.equal(politeDelayMs('empty', AtsType.GREENHOUSE), POLITE_DELAY_MS);

@@ -141,6 +141,11 @@ model Company {
   // TASKS N8 — BROWSER_PAGE rows: the lines of the page's text as the user
   // last pasted it (watchlist/paste.ts), the lines that were new against the
   // paste before, and when. Nothing reads them but the watchlist row.
+  // The site's own `Crawl-delay` for our token, read from its robots.txt when
+  // a FEED or CAREER_PAGE row is added (ADR 0035's trigger: rows on any host).
+  // The tick waits at least this long after reading the row; null = none.
+  crawlDelayMs Int?
+
   pastedLines String[]  @default([])
   pastedNew   String[]  @default([])
   pastedAt    DateTime?

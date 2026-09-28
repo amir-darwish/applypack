@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { stripHtml, sleep, DEFAULT_USER_AGENT } from './http';
+import { stripHtml, sleep, DEFAULT_USER_AGENT, retryAfterMs } from './http';
 
 describe('DEFAULT_USER_AGENT', () => {
   it('carries the package.json major.minor, never a stale hardcode', () => {
@@ -154,5 +154,17 @@ describe('sleep', () => {
     const elapsed = Date.now() - before;
     assert.ok(elapsed >= 45, `expected >=45ms, got ${elapsed}`);
     assert.ok(elapsed < 200, `expected <200ms, got ${elapsed}`);
+  });
+});
+
+describe('retryAfterMs', () => {
+  it('reads seconds or a date, and nothing else', () => {
+    const now = Date.parse('Mon, 28 Sep 2026 07:00:00 GMT');
+    assert.equal(retryAfterMs('5', now), 5_000);
+    assert.equal(retryAfterMs(' 0 ', now), 0);
+    assert.equal(retryAfterMs('Mon, 28 Sep 2026 07:00:03 GMT', now), 3_000);
+    assert.equal(retryAfterMs('Mon, 28 Sep 2026 06:59:00 GMT', now), 0);
+    assert.equal(retryAfterMs('soon', now), null);
+    assert.equal(retryAfterMs(null, now), null);
   });
 });

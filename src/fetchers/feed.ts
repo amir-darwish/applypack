@@ -62,7 +62,7 @@ export async function fetchFeed(company: FeedCompany): Promise<NormalizedJob[]> 
     init: { headers: conditionalHeaders(company.id, url) },
   });
   const feed = await parser.parseString(await resp.text());
-  const jobs = feed.items.flatMap((item) => mapFeedItem(item, company.id) ?? []);
+  const jobs = feed.items.flatMap((item) => mapFeedItem(item, company.id, resp.url || url) ?? []);
   rememberResponse(company.id, url, resp, jobs.length);
   return jobs;
 }
@@ -80,14 +80,31 @@ export function looksLikeFeed(body: string): boolean {
 }
 
 /**
+ * A `<link>` as a URL someone can open: a relative one ("/jobs/42") is read
+ * against the feed's own address (audit FETCH-5). Anything that does not end
+ * up http(s) is left as the feed wrote it.
+ */
+export function absoluteLink(link: string, feed: string | undefined): string {
+  if (link.length === 0 || feed === undefined) return link;
+  try {
+    const url = new URL(link, feed);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : link;
+  } catch {
+    return link;
+  }
+}
+
+/**
  * Pure mapper. A feed carries no structured location, so `location` is left
  * empty and `parseLocation` reads what the title and description say — the
- * same position every text-only source is in.
+ * same position every text-only source is in. `feed` is the address the feed
+ * answered from, for its relative links.
  */
-export function mapFeedItem(item: FeedItem, companyId: number): NormalizedJob | null {
+export function mapFeedItem(item: FeedItem, companyId: number, feed?: string): NormalizedJob | null {
   const link = (item.link ?? '').trim();
   // The link is the stable identity; guid is a fallback because some feeds
-  // reuse a permalink as guid and some publish an opaque one.
+  // reuse a permalink as guid and some publish an opaque one. The identity is
+  // the link as written: made absolute, a stored row would come back as new.
   const externalId = feedItemKey(link, item.guid, item.title);
   if (!externalId) return null;
   const title = (item.title ?? '').trim();
@@ -101,7 +118,7 @@ export function mapFeedItem(item: FeedItem, companyId: number): NormalizedJob | 
     companyId,
     externalId,
     title,
-    url: link,
+    url: absoluteLink(link, feed),
     location: '',
     description: [stripHtml(body), categories.length > 0 ? `Tags: ${categories.join(', ')}.` : '']
       .filter((s) => s.length > 0)

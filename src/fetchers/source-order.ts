@@ -72,8 +72,12 @@ const DECLARED_CRAWL_DELAY_MS: Partial<Record<AtsType, number>> = {
   [AtsType.LEVER]: 1_000,
 };
 
-/** How long to wait after this source before the next request goes out. */
-export function politeDelayMs(status: FetchStatus, atsType: AtsType): number {
+/**
+ * How long to wait after this source before the next request goes out: the
+ * vendor's declared pacing, and a site's own `Crawl-delay` read when its row
+ * was added — any host a user adds can ask for one (ADR 0035's trigger).
+ */
+export function politeDelayMs(status: FetchStatus, atsType: AtsType, rowCrawlDelayMs: number | null = null): number {
   const base = status === 'not_modified' ? UNCHANGED_DELAY_MS : POLITE_DELAY_MS;
-  return Math.max(base, DECLARED_CRAWL_DELAY_MS[atsType] ?? 0);
+  return Math.max(base, DECLARED_CRAWL_DELAY_MS[atsType] ?? 0, rowCrawlDelayMs ?? 0);
 }
