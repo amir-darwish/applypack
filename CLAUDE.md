@@ -237,8 +237,14 @@
   database alone; `npm run stop` stops a running launcher.
 - Docker is the server option and does not use the launcher: compose sets
   `DATABASE_URL` and runs `node dist/index.js` / `node dist/web/server.js`.
-- Multi-stage Dockerfile: `deps → build → runtime`; the build stage deletes
-  the built-in database's binaries.
+  `NODE_ENV=production` there makes the logs JSON (`logger.ts`); both
+  services carry a healthcheck, `node dist/scripts/health-check.js web|worker`
+  (`/health` with the Basic Auth credentials, or the age of the worker's
+  `HEARTBEAT_FILE` — `src/heartbeat.ts`).
+- Multi-stage Dockerfile: `deps → build → runtime`; `npm ci` from the
+  lockfile, the build stage prunes the dev dependencies and deletes the
+  built-in database's binaries, and the three CLI engines are pinned
+  (`ARG CLAUDE_CODE_VERSION` …) — bump them together.
 - Runtime image: `node:24-alpine`.
 - `init.ts` runs `prisma migrate deploy` if `prisma/migrations/` exists,
   else falls back to `prisma db push`. Real migrations exist from
@@ -827,7 +833,7 @@ Always:
 | Pull HN Who-is-hiring now | `docker compose exec app node dist/scripts/hn-once.js` |
 | Send the stale-applications digest now | `docker compose exec app node dist/scripts/stale-once.js` |
 | Send 4 test Telegram messages | `npm run test:telegram` (locally, .env loaded) |
-| Tail the worker | `docker compose logs -f app` |
+| Tail the worker | `docker compose logs -f app` (JSON; add `--no-log-prefix … \| npx pino-pretty` for lines) |
 | Tail the dashboard | `docker compose logs -f web` |
 | psql into the DB | `docker compose exec postgres psql -U jobhunter -d jobhunter` |
 | psql / Prisma from the HOST | port **5433** (`postgresql://jobhunter:jobhunter@localhost:5433/jobhunter`) — compose publishes the DB on loopback only, on 5433 so a host Postgres on 5432 cannot shadow it |

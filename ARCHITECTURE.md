@@ -220,11 +220,12 @@ as a whole: `src/docs-paths.test.ts`, `src/prompt-fence-registry.test.ts`,
 
 ```
 src/
-  index.ts                     ← the worker: cron registration (6 jobs) + graceful shutdown
+  index.ts                     ← the worker: cron registration (6 jobs), the HEARTBEAT_FILE timer, graceful shutdown
+  heartbeat.ts                 ← pure: when the worker's heartbeat is stale, the Basic Auth header /health needs
   init.ts                      ← boot: prisma migrate deploy (db push without migrations) + seed
                                  + first boot: a blank profile, alert targets from .env
   config.ts                    ← zod-validated env (worker + web); an empty DATABASE_URL reads the built-in database's db.json
-  logger.ts                    ← pino instance
+  logger.ts                    ← pino instance: JSON when NODE_ENV=production (Docker), pino-pretty otherwise
   db.ts                        ← PrismaClient singleton
   types.ts                     ← NormalizedJob, ClaudeClassification, ClassifyInput, AlertJob
   http.ts                      ← fetchWithRetry, stripHtml, AbortController timeout
@@ -453,6 +454,7 @@ src/
   scripts/                      ← hand-run; CI runs route-smoke.ts only
     {fetch,digest,cleanup,stale,hn,discovery}-once.ts ← one cron job now (npm run fetch:once …)
     test-telegram.ts            ← validate token + send 4 sample messages
+    health-check.ts             ← the containers' healthcheck: /health with the lock's credentials, or the heartbeat's age
     route-smoke.ts              ← every GET route, the first run's POSTs, one PDF render (npm run smoke:routes)
     backfill-{descriptions,fingerprints,apply-link-flags,locations}.ts ← one-shot backfills (--dry-run first)
     refetch-descriptions.ts     ← re-pulls the boards and updates stored descriptions in place

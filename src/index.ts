@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import cron from 'node-cron';
 import { config } from './config';
 import { logger } from './logger';
@@ -14,6 +15,7 @@ import { spreadMinute } from './schedule';
 import { getInstanceId, getSchedule } from './settings';
 import { isDigestHour, isFirstDigestHour, type Schedule } from './user-schedule';
 import { announceReady, onLauncherStop } from './local/child';
+import { HEARTBEAT_EVERY_MS } from './heartbeat';
 
 const SHUTDOWN_POLL_MS = 250;
 const SHUTDOWN_MAX_WAIT_MS = 60_000;
@@ -62,7 +64,25 @@ async function main(): Promise<void> {
   onLauncherStop((reason) => void shutdown(reason));
 
   logger.info({ tz: config.TZ }, 'applypack: cron registered, idle');
+  if (config.HEARTBEAT_FILE) startHeartbeat(config.HEARTBEAT_FILE);
   announceReady();
+}
+
+/** The container healthcheck's evidence that this process still turns (heartbeat.ts). */
+function startHeartbeat(file: string): void {
+  let failing = false;
+  const beat = (): void => {
+    try {
+      writeFileSync(file, new Date().toISOString());
+      failing = false;
+    } catch (err) {
+      // Once per streak: the healthcheck reports the stale file either way.
+      if (!failing) logger.error({ err, file }, 'heartbeat: cannot write the file');
+      failing = true;
+    }
+  };
+  beat();
+  setInterval(beat, HEARTBEAT_EVERY_MS);
 }
 
 /**

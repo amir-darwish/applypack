@@ -37,6 +37,17 @@ services:
     environment:
       DATABASE_URL: postgresql://jobhunter:jobhunter@postgres:5432/jobhunter
       NODE_ENV: production
+      # The worker touches it every minute; the healthcheck below reads its age.
+      HEARTBEAT_FILE: /tmp/applypack-worker.heartbeat
+    # Unhealthy after three missed minutes: the process is stuck or gone. A
+    # long fetch tick does not count, the timer fires through it
+    # (src/heartbeat.ts). The first check waits for the migrations init runs.
+    healthcheck:
+      test: ["CMD", "node", "dist/scripts/health-check.js", "worker"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
     # For the CLI engines (claude_code / gemini_cli / codex_cli): mount the
     # credentials (the image runs as user "node"), or use
     # CLAUDE_CODE_OAUTH_TOKEN / GEMINI_API_KEY in .env instead.
@@ -67,6 +78,14 @@ services:
     ports:
       # Bind to localhost only — never expose dashboard publicly.
       - "127.0.0.1:4747:4747"
+    # /health answers 503 when the database is gone. The check signs in with
+    # WEB_BASIC_AUTH when it is set, so the lock stays on for everyone else.
+    healthcheck:
+      test: ["CMD", "node", "dist/scripts/health-check.js", "web"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
     # For the CLI engines (resume scan / match / verify
     # run in this service too): mount the CLI credentials, or use
     # CLAUDE_CODE_OAUTH_TOKEN / GEMINI_API_KEY in .env instead.
