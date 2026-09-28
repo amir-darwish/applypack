@@ -1,6 +1,6 @@
-import { JobStatus } from '@prisma/client';
+import { AtsType, JobStatus } from '@prisma/client';
 import { prisma } from '../db';
-import { addCounts, funnelCounts, funnelView, readCounts, sumDays, utcDay, type FunnelView } from '../funnel';
+import { addCounts, funnelView, readCounts, runCounts, sumDays, utcDay, type FunnelView } from '../funnel';
 import type { CronStats } from './cron-run';
 
 /**
@@ -11,7 +11,7 @@ import type { CronStats } from './cron-run';
 
 /** One run's counters into its day's row; a run that counted nothing (a skipped beat) writes nothing. */
 export async function addToFunnel(startedAt: Date, stats: CronStats): Promise<void> {
-  const counts = funnelCounts(stats);
+  const counts = runCounts(stats);
   if (Object.keys(counts).length === 0) return;
   const day = utcDay(startedAt);
   await prisma.$transaction(async (tx) => {
@@ -47,10 +47,13 @@ export interface SourceYield {
  * What each source brought in the last 30 days, off the jobs themselves:
  * stored, and kept as a match (scored, not dismissed). The window is the
  * cleanup's: a dismissed job older than that is deleted, so a longer one
- * would undercount.
+ * would undercount. A pasted posting is not a source's (its MANUAL row).
  */
 export async function loadSourceYield(now = new Date()): Promise<SourceYield[]> {
-  const where = { fetchedAt: { gte: new Date(now.getTime() - MONTH_DAYS * DAY_MS) } };
+  const where = {
+    fetchedAt: { gte: new Date(now.getTime() - MONTH_DAYS * DAY_MS) },
+    company: { atsType: { not: AtsType.MANUAL } },
+  };
   const [stored, matched] = await Promise.all([
     prisma.job.groupBy({ by: ['companyId'], where, _count: { _all: true } }),
     prisma.job.groupBy({

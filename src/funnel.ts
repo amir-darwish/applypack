@@ -45,6 +45,23 @@ export function funnelCounts(stats: Record<string, unknown>): FunnelCounts {
   return out;
 }
 
+/** What still counts from a run cut short: what it delivered. */
+const DELIVERED: readonly FunnelKey[] = ['alerted', 'heldDelivered'];
+
+/**
+ * What one finished run adds to its day. A run cut short — paused mid-run, or
+ * with every running search blank — read postings it never judged: counting
+ * them would put them past the filter and new to you, and the next tick would
+ * count them again. Only what it delivered counts. The backfill in
+ * `20260928120000_funnel_day` applies the same rule to the stored runs.
+ */
+export function runCounts(stats: Record<string, unknown>): FunnelCounts {
+  const counts = funnelCounts(stats);
+  const cutShort = stats.reason === 'paused-mid-run' || stats.abortedMidRun === 1 || stats.skippedBlankProfile === 1;
+  if (!cutShort) return counts;
+  return Object.fromEntries(DELIVERED.filter((key) => counts[key] !== undefined).map((key) => [key, counts[key]]));
+}
+
 /** Two sets of counters as one. */
 export function addCounts(a: FunnelCounts, b: FunnelCounts): FunnelCounts {
   const out: FunnelCounts = { ...a };

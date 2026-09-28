@@ -1,13 +1,23 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { addCounts, FUNNEL_KEYS, funnelCounts, funnelView, readCounts, reasonsText, stageCount, sumDays, utcDay } from './funnel';
+import { addCounts, FUNNEL_KEYS, funnelCounts, funnelView, readCounts, reasonsText, runCounts, stageCount, sumDays, utcDay } from './funnel';
 
 test('a run gives the funnel its counts and nothing else', () => {
   assert.deepEqual(
     funnelCounts({ fetched: 540, filterRejected: 500, rejectedTitle: 480, durationMs: 90_000, skipped: 1, profile: 'QA', matched: 0, bySource: [] }),
     { fetched: 540, filterRejected: 500, rejectedTitle: 480 },
   );
+});
+
+test('a run cut short adds only what it delivered', () => {
+  // Paused after the walk: 540 read, none judged. Counting them would put all 540 past the filter.
+  assert.deepEqual(runCounts({ fetched: 540, aborted: 1, reason: 'paused-mid-run', heldDelivered: 2 }), { heldDelivered: 2 });
+  // Paused inside the loop, or every running search blank: the same.
+  assert.deepEqual(runCounts({ fetched: 540, filterRejected: 90, alerted: 1, abortedMidRun: 1 }), { alerted: 1 });
+  assert.deepEqual(runCounts({ fetched: 540, skippedBlankProfile: 1 }), {});
+  // A whole run counts whole.
+  assert.deepEqual(runCounts({ fetched: 540, filterRejected: 500, abortedMidRun: 0 }), { fetched: 540, filterRejected: 500 });
 });
 
 test('days add up key by key, and a stored day that is not counts reads as nothing', () => {
