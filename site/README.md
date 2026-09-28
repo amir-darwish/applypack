@@ -5,7 +5,10 @@ Static landing for the project. Zero build step, zero dependencies —
 
 - `index.html` is the landing; `demo/` is the live-scoring demo, and the
   landing embeds the same demo in its hero (both pages load
-  `demo/demo.mjs`).
+  `demo/demo.mjs`). `employers/` is employer mode's own page; the landing
+  keeps a short section that links to it. `sitemap.xml` lists the three.
+- `tour.webm` is the README's tour as a 20-second video for the launch
+  posts (the recipe is in `docs/screenshots/README.md`).
 - `demo/score.mjs` and `demo/target.mjs` are byte copies of
   `src/web/public/` (enforced by `src/web/site-vendor.test.ts` — re-copy
   when they change); `demo/fixture.json` is the synthetic Fernway /

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ApplyPack for employers: screen a folder of resumes, blind</title>
+<meta name="description" content="Employer mode in ApplyPack, the open-source job-search app: rank a folder of resumes against one position with criteria you write, every answer quoted from the resume, the score in code, names removed before any model reads a word. Off by default. MIT.">
+<meta name="theme-color" content="#f7f8fa">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<link rel="canonical" href="https://applypack.dev/employers/">
+<link rel="preload" href="../fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../style.css">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Screen a folder of resumes, blind">
+<meta property="og:description" content="Criteria in your own words, every answer with its quote from the resume, the score in code, and a person who decides. Names are removed before any model reads a word.">
+<meta property="og:url" content="https://applypack.dev/employers/">
+<meta property="og:image" content="https://applypack.dev/img/og-employers.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="An ApplyPack scorecard: one row per criterion with the answer, the quote from the resume and the points">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Screen a folder of resumes, blind">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <nav class="wrap nav" aria-label="Primary">
+    <a class="brand" href="../"><span class="mark" aria-hidden="true">AP</span><span class="word">ApplyPack</span></a>
+    <div class="links">
+      <a href="../#demo">Demo</a>
+      <a href="../#what">What it does</a>
+      <a href="./" aria-current="page">Employers</a>
+      <a class="open key" href="../#open">Open source</a>
+      <a href="../#install">Install</a>
+    </div>
+    <a class="btn small gh-btn" href="https://github.com/applypack/applypack" aria-label="GitHub"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="employer-h">
+    <div class="wrap hero-text">
+      <h1 id="employer-h">Screen a folder of resumes. Blind, quoted, and yours to decide.</h1>
+      <p class="free"><strong>Employer mode, off by default.</strong> One switch in Settings of the same free, open-source app.</p>
+      <p class="sub">The candidate side turned around: the criteria are yours, every answer carries its quote from the resume, the score is arithmetic, and a person decides.</p>
+      <div class="cta">
+        <a class="btn primary" href="../#install">Install ApplyPack</a>
+        <a class="btn" href="https://github.com/applypack/applypack/blob/main/docs/employer-mode.md">Read the employer-mode guide</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="raised" aria-labelledby="criteria-h">
+    <div class="wrap">
+      <div class="row">
+        <div class="row-text">
+          <h2 id="criteria-h">Criteria in your own words</h2>
+          <ul role="list">
+            <li><b>One position, drafted into a list you edit.</b> A gate that buckets, stars that score, a note that only shows. "Playwright / Cypress !", "0–2 years", "fintech, payments: 3+", "has led a team of three or more".</li>
+            <li><b>Presets bend the draft</b> — Junior hire, Senior / lead, Regulated, Agency work. A criterion naming age, gender, family, origin or health is refused, with the lawful one offered instead.</li>
+            <li><b>Blind by construction.</b> Name, contacts, links, date of birth, age, family, gender, citizenship, religion, health, street and graduation years are removed before any model reads a word. You see the name; the model sees "Applicant №7". It cannot be switched off, and a file where the check still finds something identifying waits for your look before any model reads it.</li>
+            <li><b>Files, a zip, or a whole folder.</b> Scoring starts as the files land, one independent call each, and every row says where it is. A cover letter in the upload is attached to its applicant and never scored.</li>
+          </ul>
+        </div>
+        <figure class="shot">
+          <img src="../img/screening-criteria.webp" srcset="../img/screening-criteria-720.webp 720w, ../img/screening-criteria.webp 1440w" sizes="(max-width: 900px) calc(100vw - 48px), 600px" width="1440" height="900" alt="A screening page: the position card and the criteria card with every criterion as a chip — gates, skills with stars, level, sector — and a button that opens the editor" decoding="async">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="quote-h">
+    <div class="wrap">
+      <div class="row flip">
+        <div class="row-text">
+          <h2 id="quote-h">Every answer with its quote. The score in code.</h2>
+          <ul role="list">
+            <li><b>A rung on the evidence ladder per skill</b> — absent, skills list, project, in a role, production — each with the verbatim line that earns it. A list of terms can carry "listed" at most; production is a work bullet with an outcome.</li>
+            <li><b>Stars × answer, in code,</b> with caps a rubric cannot say: none of the core stack anywhere is 30 at most. Years, sectors and company types are read off the dated roles.</li>
+            <li><b>Beside the score:</b> the facts no criterion asked for, the career read off the dates, three to five interview questions, the facts to discuss — and your own ±30 with its reason, which the export keeps.</li>
+            <li><b>The same resume as .docx and .pdf scores the same.</b> It did not, once; the rule that fixed it is a unit test now.</li>
+          </ul>
+        </div>
+        <figure class="shot">
+          <img src="../img/screening-scorecard.webp" srcset="../img/screening-scorecard-720.webp 720w, ../img/screening-scorecard.webp 1440w" sizes="(max-width: 900px) calc(100vw - 48px), 600px" width="1440" height="900" alt="A scorecard: who, did, verdict; the stands-out facts with their lines; one row per criterion with the answer, the quote from the resume and the points" loading="lazy" decoding="async">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="raised" aria-labelledby="compare-h">
+    <div class="wrap">
+      <div class="row">
+        <div class="row-text">
+          <h2 id="compare-h">Argue the shortlist on one page</h2>
+          <ul role="list">
+            <li><b>Tick two to five → Compare.</b> One column each, one row per criterion with the quotes. The stored scorecards, no new call.</li>
+            <li><b>Compare with AI</b> reads the same shortlist head to head, twice with the order reversed, and says who is stronger on each criterion and why, whom to talk to first, and the one question that would decide between the first two.</li>
+            <li><b>Where the two readings disagree is marked.</b> That is information, not a bug. Never a score: the table keeps its order. Copy as Markdown for the meeting.</li>
+          </ul>
+        </div>
+        <figure class="shot">
+          <img src="../img/screening-compare.webp" srcset="../img/screening-compare-720.webp 720w, ../img/screening-compare.webp 1440w" sizes="(max-width: 900px) calc(100vw - 48px), 600px" width="1440" height="900" alt="Compare with AI: three applicants read head to head, the order to talk to from two readings, and per criterion whether the readings agree" loading="lazy" decoding="async">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="calibration-h">
+    <div class="wrap">
+      <div class="row flip">
+        <div class="row-text">
+          <h2 id="calibration-h">Does it rank the way you do?</h2>
+          <ul role="list">
+            <li><b>The decision column is yours alone;</b> the tool never writes it.</li>
+            <li><b>Three decisions in, the calibration card reads them against the order:</b> how many of your picks sit in the top k, what share of your pairs the table orders your way, the surprises with the criteria behind each, and which criteria tell your picks from the rest.</li>
+            <li><b>It never re-weights a criterion by itself.</b> A gap on the card is an argument for the editor, not a knob that turns on its own.</li>
+            <li><b><code>npm run bench:screen</code></b> runs a ranked gold folder through the same path and prints τ, precision@5 and the score movement between runs.</li>
+          </ul>
+        </div>
+        <figure class="shot">
+          <img src="../img/screening-calibration.webp" srcset="../img/screening-calibration-720.webp 720w, ../img/screening-calibration.webp 1440w" sizes="(max-width: 900px) calc(100vw - 48px), 600px" width="1440" height="900" alt="Calibration: one of two interview picks in the table's top two, three quarters of the decided pairs ordered the way you did, the one surprise with the gates behind it, and per-criterion gaps between the interviewed and the declined" loading="lazy" decoding="async">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="raised" aria-labelledby="law-h">
+    <div class="wrap">
+      <h2 id="law-h">Read this before turning it on</h2>
+      <p class="lead">Screening other people's resumes with an AI tool is high-risk under the EU AI Act, GDPR forbids a decision made solely by automated means and requires applicants to be told, and several US jurisdictions add audit and notice duties.</p>
+      <p class="note">The mode is built to be the tool and not the decision. Telling applicants (a copy-ready notice is in the settings tab) and running it on an engine under a data-processing agreement or on a local model are yours. Applicants' files and every verdict are deleted with the screening on its date. <a href="https://github.com/applypack/applypack/blob/main/docs/employer-mode.md">The employer-mode guide says the rest</a>; this is not legal advice.</p>
+      <div class="cta left">
+        <a class="btn primary" href="../#install">Install ApplyPack</a>
+        <a class="btn" href="../">What it does for a job seeker</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <a class="brand" href="../"><span class="mark" aria-hidden="true">AP</span>ApplyPack</a>
+    <div class="links">
+      <a href="https://github.com/applypack/applypack">GitHub</a>
+      <a href="https://github.com/applypack/applypack/releases">Releases</a>
+      <a href="https://github.com/applypack/applypack/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/applypack/applypack/blob/main/CONTRIBUTING.md">Contributing</a>
+      <a href="https://github.com/applypack/applypack/blob/main/SECURITY.md">Security</a>
+    </div>
+    <p class="tail">MIT licensed. Built by <a href="https://github.com/nazboyko">Nazar Boyko</a>. Runs locally; your data stays in your Postgres.</p>
+  </div>
+</footer>
+</body>
+</html>
