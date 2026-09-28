@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.21.0] — 2026-09-28
+
+### Added
+- **What the AI spent, and on whose money.** Settings → AI engine → Usage &
+  cost lists every AI call: what it was for, which model answered, the
+  tokens the vendor reported, and the money. There are three totals, never
+  added together:
+  - billed per token (API keys);
+  - covered by your plans (the Claude Code, Codex and Gemini CLIs), shown at
+    API prices as an estimate, not a bill;
+  - local models, which are free.
+  Periods are the last 7 days, this month, last month and this year. Calls
+  that failed are counted too: a cut-off reply is billed.
+- **A monthly budget for billed calls.** One line to your alert chats at
+  80 % and at 100 %, once each a month. Nothing is ever stopped.
+- **Before the click.** Compare, Verify and Generate letter say what such a
+  call usually costs you. A posting's Details show what the AI has spent on
+  it so far.
+- **Each engine card says whose money it spends**, and warns when an engine
+  billed per token stands ahead of one your plan covers.
+- `npm run spend:report` prints the ledger per UTC day, engine and model,
+  for a comparison with the vendor's own usage page (docs/ai-engines.md).
+
+### Changed
+- The seven-day run counter on the AI engine tab is replaced by the ledger.
+- dotenv 18, loading `.env` quietly: dotenv 17 and later print a line on
+  every start, which would break the JSON logs in Docker.
+
 ## [2.20.0] — 2026-09-28
 
 ### Added
@@ -4103,6 +4131,7 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.21.0]: https://github.com/applypack/applypack/compare/v2.20.0...v2.21.0
 [2.20.0]: https://github.com/applypack/applypack/compare/v2.19.1...v2.20.0
 [2.19.1]: https://github.com/applypack/applypack/compare/v2.19.0...v2.19.1
 [2.19.0]: https://github.com/applypack/applypack/compare/v2.18.5...v2.19.0

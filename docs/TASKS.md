@@ -2339,6 +2339,23 @@ release-discipline skill, a docs/site block does not.
       pass name the reasons. Stage 3 as planned, read against the resume's
       current text. §22.3's SVG charts stay later: a table reads six numbers.
 
+- [x] **`ai-spend-ledger`** (minor) — **2026-09-28, v2.21.0**, ADR 0055
+      (the feature-gap analysis's file 13, owner answer Q28). One `ai_call`
+      row per AI attempt, the failed ones too, metadata only; usage as the
+      vendor reported it (NULL, never 0); money from the dated
+      `src/ai-prices.ts` beside the vendor's own figure; billed, plan and
+      local as three totals never added. Usage & cost on the AI engine tab,
+      a per-posting row, the estimate under Compare / Verify / Generate,
+      a monthly budget that warns at 80 % and 100 % and never stops, the
+      billing kind on each engine card with the "billed ahead of your plan"
+      warning (N4; `billingOf` replaced the static `PROVIDER_PAID`), and
+      `npm run spend:report` for the comparison with the vendor by hand.
+      `AppSettings.aiUsage` retired (column dropped in a later release).
+      Not built, with its reason in the ADR: the vendor admin-API
+      comparison (no organisation admin key to verify against), the
+      per-posting line for the first scoring (the posting does not exist
+      yet), a CSV of the ledger.
+
 ### 20.4 Owner items
 
 - GitHub About → the package description; social preview from

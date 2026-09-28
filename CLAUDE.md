@@ -83,6 +83,11 @@
   passes the filter unscored (no AI, no alert) — "Fetch now" while paused.
 - `AiProvider` calls are tool-free unless the request sets `webTools`; only
   `src/verification/verify.ts` does (ADR 0009). Never turn it on for the classifier.
+- `AiProvider.complete()` returns an attempt `{ text, outcome, spend }`, and
+  `ai-runtime.ts` writes every chain attempt to the `ai_call` ledger, the
+  failed ones too (ADR 0055). A call site's `label` is its ledger feature and
+  must be one of `ai-usage.ts`'s set; a count the vendor did not report is
+  NULL, never 0; billed, plan and local money are three totals, never one.
 - A fetcher that makes ONE request per tick sends `conditionalHeaders(id, url)`
   and calls `rememberResponse(id, url, resp, jobs.length)` after parsing
   (ADR 0035). It is a no-op for a vendor that offers no validator, so it goes
@@ -319,7 +324,7 @@ When the question is **"where does X live?"**, save yourself a `find`:
 | The Claude system prompt | `src/classifier.ts:buildSystemPrompt` |
 | Fence markers, the untrusted directive, the forged-marker sanitiser | `src/prompt-fence.ts` (pure, ADR 0022); guard `src/prompt-fence-registry.test.ts` |
 | Which AI engines run (priority chain + per-engine models, auto-failover) | `src/ai-runtime.ts:getAiRuntime().complete({role})` + pure chain merge in `src/ai-engine.ts` (ADR 0013/0014); UI on `/settings` → "AI engine" tab. A card reads `aiEngineCard`: enabled means in `aiEngineOrder` (stored, or `AI_PROVIDER` alone), not in `chain`, which drops a skipped engine and holds the `lastResort` nobody enabled; `toggleAiEngine` is what Enable / Disable store |
-| Adding a new AI backend | `src/ai-provider.ts` (`CliProvider` spec or fetch class) + `AI_PROVIDER_IDS`/labels/options in `src/ai-engine.ts` + probe in `src/ai-runtime.ts` + `AI_KEY_ENV_VARS` in `src/ai-keys.ts` if it takes a key |
+| Adding a new AI backend | `src/ai-provider.ts` (`CliProvider` spec or fetch class) + `AI_PROVIDER_IDS`/labels/options in `src/ai-engine.ts` + probe in `src/ai-runtime.ts` + `AI_KEY_ENV_VARS` in `src/ai-keys.ts` if it takes a key; its parser reports `spend` (usage, resolved model, the vendor's own figure) from a recorded output, its models get dated rows in `src/ai-prices.ts` (`ai-prices.test.ts` fails a picker model with no price), and `ai-usage.ts:billingOf` says whose money it spends (ADR 0055) |
 | Why a `max_tokens` budget is the ANSWER's size (thinking headroom), and why a cut-off reply is not retried | `src/ai-provider-parse.ts:anthropicMaxTokens` (pure, gotcha 16) + the `stop_reason` branch in `ai-provider.ts`; `src/ai-json.ts:askForJson` is the one parse-and-retry loop every resume call and the ghost-job check go through, and `text-utils.ts:jsonFailure` tells "cut off" from "not JSON" |
 | Per-engine API keys (DB-first, `.env` fallback, masking) | `src/ai-keys.ts` (pure, ADR 0027) + `settings.ts:getAiKeys/setAiKey`; resolved in `ai-runtime.ts`, spent as `AiRequest.apiKey` |
 | How users set up each engine (local + Docker) | `docs/ai-engines.md` |
@@ -447,7 +452,8 @@ When the question is **"how does the user toggle / configure X?"**:
 | See which keywords the compared postings keep asking for | `/resumes/:id` → **Missing across postings** (from five compared postings on; no AI) |
 | See which boards stopped answering | `/companies` → "Quiet sources" card (Re-probe to repair) |
 | Telegram line when a source goes quiet | `/settings` Notifications tab → "Source health alerts" |
-| Pick / order AI engines + models, test them | `/settings` AI engine tab (per-engine cards: Enable, ↑ priority, model selects, Test) |
+| Pick / order AI engines + models, test them | `/settings` AI engine tab (per-engine cards: Enable, ↑ priority, model selects, Test; each card says whether it is billed per token, covered by your plan or local) |
+| See what the AI spent — per period, feature and model, billed apart from plan-covered — and set a monthly budget | `/settings` AI engine tab → **Usage & cost** (last 7 days / this month / last month / this year, UTC days) and its **Monthly budget for billed calls** (a warning at 80 % and 100 %, nothing stopped); `/jobs/:id` → Details → "AI spent"; the estimate under Compare, Verify and Generate letter; `npm run spend:report` for the vendor comparison (docs/ai-engines.md) |
 | Paste an AI key without touching `.env` | `/settings` AI engine tab → the key row on each engine card, or step 1 of `/welcome` (ADR 0027) |
 | Add / remove tracked company | `/companies` → **Add sources** → **Add one company** (probed before save); Delete sits on the company's row. The table is the first thing on the page |
 | Watch specific companies (paste a list of career-page URLs) | `/companies` → **Add sources** → "Watch specific companies": one URL per line (optionally `Name — URL`), Resolve these → a progress page → a preview showing what each URL resolved to → pick the interval and the alert policy for the batch → Add. Watched rows go in switched ON |
