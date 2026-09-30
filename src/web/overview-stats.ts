@@ -2,6 +2,7 @@ import { JobStatus, type Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { funnelView, readCounts, sumDays, type FunnelView } from '../funnel';
 import { KPI_STATUSES, SPARK_DAYS, kpiTrends, readStackParam, topTerms, type KpiStatus, type KpiTrend, type TermCount } from './overview-numbers';
+import { techKey } from './tech-label';
 import {
   RANGES,
   countByDay,
@@ -136,14 +137,16 @@ export async function loadOverviewStats(
   const term = stack && options.some((o) => o.term === stack) ? stack : null;
 
   let counts: Map<number, number>;
+  // A period before this one that the install never lived through compares with nothing.
+  const installReaches = firstFunnelDay !== null && dayNumber(firstFunnelDay.day) <= today - (2 * days - 1);
   let comparable: boolean;
   if (term) {
-    counts = countByDay(matchRows.filter((r) => r.techMatch.some((t) => t.trim().toLowerCase() === term)).map((r) => r.fetchedAt));
+    counts = countByDay(matchRows.filter((r) => r.techMatch.some((t) => techKey(t) === term)).map((r) => r.fetchedAt));
     // The jobs reach back 30 days: a week has a week before it, a month does not.
-    comparable = 2 * days <= STACK_DAYS;
+    comparable = 2 * days <= STACK_DAYS && installReaches;
   } else {
     counts = new Map(funnelDays.map((r) => [dayNumber(r.day), r.counts.matched ?? 0]));
-    comparable = firstFunnelDay !== null && dayNumber(firstFunnelDay.day) <= today - (2 * days - 1);
+    comparable = installReaches;
   }
   const points = rangePoints(counts, range, now);
   const totals = rangeTotals(counts, range, now);

@@ -58,7 +58,15 @@ describe('technologies', () => {
     assert.deepEqual(terms, [
       { term: 'react', count: 2, share: 100 },
       { term: 'typescript', count: 2, share: 100 },
-      { term: 'node', count: 1, share: 50 },
+      { term: 'node.js', count: 1, share: 50 },
+    ]);
+  });
+
+  it('counts the spellings of one technology as one bar', () => {
+    const terms = topTerms([{ techMatch: ['node'] }, { techMatch: ['nodejs', 'golang'] }, { techMatch: ['Node.js', 'go'] }], 5);
+    assert.deepEqual(terms, [
+      { term: 'node.js', count: 3, share: 100 },
+      { term: 'go', count: 2, share: 67 },
     ]);
   });
 

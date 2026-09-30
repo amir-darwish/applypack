@@ -92,3 +92,11 @@ export function techLabel(tag: string): string {
   if (tag !== key) return tag.trim();
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
+
+/**
+ * The one key a technology is counted and filtered by: "node", "nodejs" and
+ * "node.js" are the same bar on the Overview, not three with the count split.
+ */
+export function techKey(tag: string): string {
+  return techLabel(tag).toLowerCase();
+}

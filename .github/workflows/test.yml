@@ -72,6 +72,12 @@ jobs:
       - name: Unused exports
         run: npm run exports:audit
 
+      # The stylesheet is generated and committed (npm run css). A class a page
+      # uses and the file lacks styles nothing: v2.41.0 shipped the Text /
+      # Document switch with no pressed state.
+      - name: Stylesheet matches the classes in use
+        run: npm run css && git diff --exit-code src/web/public/tailwind.css
+
       # The wiring: every GET route and the first run's POSTs, in-process,
       # against the migrated service database. claude_code as the engine so
       # the one background scan the upload starts fails fast on a missing

@@ -150,13 +150,14 @@ export function noticeFor(basis: Exclude<DocumentBasis, 'own'>, reason?: string)
 
 /** A file name a recruiter's inbox shows as written: the resume's own name, nothing a file system refuses. */
 export function documentFileName(name: string, ext: 'docx' | 'pdf'): string {
-  const base = name
+  const clean = name
     .replace(/\.(docx|pdf|md|txt)$/i, '')
     .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, MAX_FILE_NAME_CHARS)
     .trim();
+  // Cut by code point: half an emoji's surrogate pair made encodeURIComponent
+  // throw in contentDisposition, and the download answered 500.
+  const base = Array.from(clean).slice(0, MAX_FILE_NAME_CHARS).join('').trim();
   return `${base || 'Resume'}.${ext}`;
 }
 
