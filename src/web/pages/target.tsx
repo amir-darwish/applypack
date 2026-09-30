@@ -161,7 +161,7 @@ export const TargetPage: FC<TargetPageProps> = ({
   };
   return (
     <Layout title={`Tailor resume · ${job.title}`} active="jobs">
-      <div class="w-full">
+      <div class="w-full" id="target-root">
       <nav aria-label="Breadcrumb" class="mb-1.5 flex items-center gap-1.5 text-note text-ink-faint">
         <a href="/jobs" class="transition-colors duration-150 hover:text-ink">
           Jobs
@@ -344,16 +344,35 @@ export const TargetPage: FC<TargetPageProps> = ({
                 {' →'}
               </button>
             )}
+            {/* The one-click path: every suggestion written into the text, then
+                the Suggestions view, where the document shows the result.
+                Hidden until the script has counted what it can do. */}
+            {!fast && (actions.length > 0 || removals.length > 0) && (
+              <div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  data-apply-all
+                  data-goto-tab="changes"
+                  hidden
+                  title="Writes every suggestion the gate let through, the removals and the missing keywords into the text — nothing is saved until you download or save"
+                >
+                  Apply all suggestions (<span data-apply-all-count>0</span>)
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Right rail: actions on top, the live estimate below while editing. */}
           <div class="flex flex-col gap-3 lg:items-end">
             <div class="flex flex-wrap items-center gap-2">
-            {/* One visible action — a fresh file is how a better match usually happens.
-                Analyse and Save live in the ⋯ menu; the sticky bar resurfaces them while editing.
+            {/* A fresh file is the other way to a better match. Outlined: the
+                card's one solid button is Apply all. Analyse and Save live in
+                the ⋯ menu; the sticky bar resurfaces them while editing.
                 data-menu opts into light dismiss (outside click / Escape) in target-page.mjs. */}
             <details class="relative" data-menu>
-              <summary class={`${SUMMARY_BUTTON} bg-accent-strong px-3 text-white shadow-sm hover:bg-accent-deep`}>
+              <summary class={`${SUMMARY_BUTTON} border border-line-strong bg-surface-raised px-3 text-ink shadow-sm hover:bg-surface-overlay`}>
                 Re-upload resume
               </summary>
               <div class={MENU_PANEL}>
@@ -659,6 +678,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                       you change the text.
                     </Hint>
                   </div>
+                  <ApplyAllBar removals={removals.filter((r) => r.quote).length} />
                   <ActionsBlock
                     actions={actions}
                     interactive
@@ -732,6 +752,37 @@ export const TargetPage: FC<TargetPageProps> = ({
     </Layout>
   );
 };
+
+/**
+ * Apply all, beside the cards it acts on: the same press as the header's, the
+ * removals as a choice (they cut text, the rest only adds or rewords), Undo
+ * all, and the line that says what landed. The count is the script's — it is
+ * the only one that knows which quotes the text still carries.
+ */
+const ApplyAllBar: FC<{ removals: number }> = ({ removals }) => (
+  <div class="rounded-md border border-line bg-surface-overlay/60 p-3">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <Button type="button" variant="primary" size="sm" data-apply-all hidden>
+        Apply all (<span data-apply-all-count>0</span>)
+      </Button>
+      {removals > 0 && (
+        <label class="inline-flex min-h-[28px] cursor-pointer items-center gap-1.5 text-note text-ink-muted">
+          <input id="apply-all-removals" type="checkbox" checked class="h-3.5 w-3.5 accent-accent" />
+          include the {removals === 1 ? 'removal' : `${removals} removals`}
+        </label>
+      )}
+      <Button type="button" variant="ghost" size="sm" id="undo-all" hidden>
+        Undo all
+      </Button>
+      <span id="apply-all-status" class="text-note text-ink-muted" role="status"></span>
+    </div>
+    <Hint class="mt-1.5">
+      Every wording the check let through, the removals and the missing keywords a skills line can take, written
+      into your resume below in one press. Nothing is saved until you download it or save a version; each card keeps
+      its own Undo.
+    </Hint>
+  </div>
+);
 
 const RunChip: FC<{ m: MatchWithResume; currentId: number; jobId: number }> = ({
   m,
@@ -824,9 +875,10 @@ const TARGET_CSS = `
     #panes.editor-tall .editor { height: 75vh; }
   }
   /* The Button primitive is inline-flex, which outranks the user agent's
-     [hidden] { display: none } — without this, every card's Undo button is
-     visible from the first paint. */
-  #panes [hidden] { display: none !important; }
+     [hidden] { display: none } — without this, every card's Undo button (and
+     Apply all before the script counts what it can do) is visible from the
+     first paint. */
+  #target-root [hidden] { display: none !important; }
   /* A card that has been applied or skipped steps back without disappearing —
      it is still the record of what was suggested, and Undo lives on it. */
   .card-done { opacity: 0.55; }

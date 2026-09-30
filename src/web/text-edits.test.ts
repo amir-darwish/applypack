@@ -11,6 +11,9 @@ const edits = import('./public/text-edits.mjs') as Promise<{
   insertAfterLine: (text: string, anchor: string, wording: string) => Edit;
   inverseEdit: (before: string, after: string) => { start: number; removed: string; inserted: string };
   undoEdit: (text: string, edit: { start: number; removed: string; inserted: string }) => Edit;
+  withContext: (after: string, edit: { start: number; removed: string; inserted: string }) => {
+    start: number; removed: string; inserted: string; lead: string; trail: string;
+  };
 }>;
 
 const ok = (r: Edit) => {
@@ -220,6 +223,27 @@ test('inverseEdit round-trips every operation', async () => {
     const back = ok(undoEdit(after, inverseEdit(text, after)));
     assert.equal(back.text, text, 'undo restores the text exactly');
   }
+});
+
+test('an edit with its context is undone after edits above it moved it', async () => {
+  const { applyReplacement, removeSpan, inverseEdit, undoEdit, withContext } = await edits;
+  const text = 'SUMMARY\nShort summary.\n\nEXPERIENCE\n• Led backend architecture.\n• Improved SEO rankings.';
+  // A removal below, then a longer summary above it: the removal's offset is stale.
+  const cut = ok(removeSpan(text, '• Improved SEO rankings.')).text;
+  const removal = withContext(cut, inverseEdit(text, cut));
+  const longer = ok(applyReplacement(cut, 'Short summary.', 'A much longer summary that pushes every line below it down.')).text;
+  const back = ok(undoEdit(longer, removal));
+  assert.match(back.text, /• Led backend architecture\.\n• Improved SEO rankings\.$/);
+  assert.match(back.text, /^SUMMARY\nA much longer summary/, 'the later edit above stays');
+});
+
+test('an edit with its context refuses when the text around it was rewritten', async () => {
+  const { applyReplacement, inverseEdit, undoEdit, withContext } = await edits;
+  const text = 'EXPERIENCE\n• Led backend architecture.\n• Improved SEO rankings.';
+  const after = ok(applyReplacement(text, 'Led backend architecture.', 'Owned the payments backend.')).text;
+  const edit = withContext(after, inverseEdit(text, after));
+  const typed = after.replace('Owned the payments backend.', 'Owned it all.');
+  assert.equal(err(undoEdit(typed, edit)), 'moved-on');
 });
 
 test('insertAfterLine adds the wording as the next line and inherits the bullet marker', async () => {
