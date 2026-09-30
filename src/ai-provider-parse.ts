@@ -304,13 +304,22 @@ const CLI_BASE_ENV_KEYS = [
  * the CLI's default, it reasons over search results.
  */
 export const CLI_THINKING_CAP_ENV = 'MAX_THINKING_TOKENS';
+/**
+ * With thinking off, Opus 5 refuses an effort above `high` (400: "effort 'xhigh'
+ * is not supported when thinking is disabled"), and the CLI reads the effort
+ * from the user's own ~/.claude/settings.json — which a local install shares.
+ * Found 2026-09-30: every cover letter failed on an owner's `effortLevel: xhigh`.
+ * An older CLI ignores the variable; a flag would stop it with "unknown option".
+ */
+export const CLI_EFFORT_ENV = 'CLAUDE_CODE_EFFORT_LEVEL';
+const CAPPED_EFFORT = 'high';
 
 export function cliThinkingCap(webTools: boolean | undefined): Record<string, string> {
-  return webTools ? {} : { [CLI_THINKING_CAP_ENV]: '0' };
+  return webTools ? {} : { [CLI_THINKING_CAP_ENV]: '0', [CLI_EFFORT_ENV]: CAPPED_EFFORT };
 }
 
 export const CLI_PROVIDER_ENV_KEYS: Partial<Record<AiProviderId, readonly string[]>> = {
-  claude_code: ['CLAUDE_CODE_OAUTH_TOKEN', 'CLAUDE_CONFIG_DIR', CLI_THINKING_CAP_ENV],
+  claude_code: ['CLAUDE_CODE_OAUTH_TOKEN', 'CLAUDE_CONFIG_DIR', CLI_THINKING_CAP_ENV, CLI_EFFORT_ENV],
   gemini_cli: [
     'GEMINI_API_KEY',
     'GOOGLE_GENAI_USE_VERTEXAI',
