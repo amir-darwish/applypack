@@ -121,13 +121,13 @@ test('two lines inserted in a row keep their order', async () => {
   assert.equal(res.text, 'First.\nSecond.\nThird.\nLast.');
 });
 
-test('an insert inside a table is refused, and so is a rewrite of a table row', async () => {
+test('a rewrite of a table row whose cells hold several paragraphs is refused', async () => {
   const original = fixture('structural-table-layout');
   const before = docxToText(original);
   const row = before.split('\n')[0]!;
   const changed = await patchDocx(original, before, before.replace(row, row + ' and more'));
   assert.equal(changed.ok, false);
-  assert.match(changed.ok ? '' : changed.reason, /table row/);
+  assert.match(changed.ok ? '' : changed.reason, /table cell with several paragraphs/);
 });
 
 test('a mismatched analysed text is refused before anything is read into a plan', async () => {
@@ -194,4 +194,30 @@ test('fixProperties rewrites the properties in the same save', async () => {
   const props = readProps(res.docx);
   assert.equal(props.creator, 'Alex Example');
   assert.equal(props.title, 'Alex Example — Résumé');
+});
+
+test('a body line cut down to capitals reads back as the heading the reader calls it, and the gate expects that', async () => {
+  const original = fixture('flow-simple');
+  const before = docxToText(original);
+  const after = before.replace('PHP 8, Laravel, Docker, MySQL, Redis', 'PHP 8, AWS, SQL');
+  const res = ok(await patchDocx(original, before, after));
+  assert.match(res.text, /^## PHP 8, AWS, SQL$/m, 'the reader marks it a heading, and the patch still lands');
+  assert.equal(docxToText(res.docx), res.text);
+});
+
+test('a table row is rewritten cell by cell when the edit keeps its cells', async () => {
+  const original = docxOf(
+    `<w:tbl><w:tr><w:tc>${p(r('Programming:'))}</w:tc><w:tc>${p(r('PHP, Go, JavaScript'))}</w:tc></w:tr>` +
+      `<w:tr><w:tc>${p(r('Data:'))}</w:tc><w:tc>${p(r('MySQL, Redis'))}</w:tc></w:tr></w:tbl>${p(r('After the table.'))}`,
+  );
+  const before = docxToText(original);
+  assert.match(before, /^Programming: \| PHP, Go, JavaScript$/m);
+  const after = before.replace('PHP, Go, JavaScript', 'PHP, Go, JavaScript, Kafka');
+  const res = ok(await patchDocx(original, before, after));
+  assert.equal(res.text, after);
+  assert.match(await documentXml(res.docx), /PHP, Go, JavaScript, Kafka/);
+  // A row that loses a cell, or a cell emptied, says why instead of guessing.
+  const merged = await patchDocx(original, before, before.replace('Programming: | PHP, Go, JavaScript', 'Programming: PHP, Go'));
+  assert.equal(merged.ok, false);
+  assert.match(merged.ok ? '' : merged.reason, /how many cells/);
 });

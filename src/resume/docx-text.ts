@@ -122,11 +122,23 @@ function descendantsUntil(root: Element, name: string, stop: string): Element[] 
   return out;
 }
 
-function paragraphBlock(p: Element): Block {
+/**
+ * The marker the reader writes before a paragraph's text: "- " for a list
+ * item, "# " for the Title style, "## " for a heading style or a line that
+ * looks like one, nothing otherwise. The patcher asks the same question of a
+ * line it writes, so its read-back gate expects what the reader will say.
+ */
+export function markerFor(p: Element, text: string): string {
   const props = children(p).find((c) => isW(c, 'pPr'));
   const isListItem = props ? descendantsUntil(props, 'numPr', 'p').length > 0 : false;
   const style = props ? (descendantsUntil(props, 'pStyle', 'p')[0]?.getAttribute('w:val') ?? '') : '';
+  if (isListItem) return '- ';
+  if (/^Title$/i.test(style)) return '# ';
+  if (/^Heading/i.test(style) || looksLikeHeading(text)) return '## ';
+  return '';
+}
 
+function paragraphBlock(p: Element): Block {
   let raw = '';
   let tabbed = false;
   const visit = (n: Node) => {
@@ -148,12 +160,9 @@ function paragraphBlock(p: Element): Block {
   if (lines.length === 0) return { kind: 'body', node: p, lines: [''] };
 
   const text = lines.join('\n');
-  let kind: BlockKind = tabbed ? 'tabbed' : 'body';
-  let rendered = text;
-  if (isListItem) { kind = 'bullet'; rendered = `- ${text}`; }
-  else if (/^Title$/i.test(style)) { kind = 'heading'; rendered = `# ${text}`; }
-  else if (/^Heading/i.test(style) || looksLikeHeading(text)) { kind = 'heading'; rendered = `## ${text}`; }
-  return { kind, node: p, lines: rendered.split('\n') };
+  const marker = markerFor(p, text);
+  const kind: BlockKind = marker === '- ' ? 'bullet' : marker ? 'heading' : tabbed ? 'tabbed' : 'body';
+  return { kind, node: p, lines: `${marker}${text}`.split('\n') };
 }
 
 /**
