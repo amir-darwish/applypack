@@ -117,7 +117,7 @@ test('normaliseHex and isMetricTwin', () => {
 test('the plan drops a section the resume has nothing for', () => {
   const plan = planRender(emptyResume(), KNOBS);
   assert.deepEqual(plan.blocks, []);
-  assert.deepEqual(plan.header, { name: null, label: null, contact: null });
+  assert.deepEqual(plan.header, { name: null, label: null, contact: null, extra: [] });
 });
 
 test('the plan puts the dates and the place on the right of their line', () => {

@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import PDFDocument from 'pdfkit';
 import type { JsonResume } from '../json-resume';
-import { planRender, type Run } from './sections';
+import { planRender, type RenderPlan, type Run } from './sections';
 import { BUNDLED_FAMILY, isMetricTwin, type RenderKnobs } from './knobs';
 
 /*
@@ -44,7 +44,11 @@ function fitOnPage(doc: PDFKit.PDFDocument, needed: number): void {
 }
 
 export async function renderPdf(resume: JsonResume, knobs: RenderKnobs): Promise<Buffer> {
-  const plan = planRender(resume, knobs);
+  return drawPdf(planRender(resume, knobs), knobs);
+}
+
+/** The .pdf of a plan — the twin of clean-docx.ts's `drawDocx`. */
+export async function drawPdf(plan: RenderPlan, knobs: RenderKnobs): Promise<Buffer> {
   const name = plan.header.name ?? 'Resume';
   const doc = new PDFDocument({
     size: knobs.page,
@@ -76,7 +80,7 @@ export async function renderPdf(resume: JsonResume, knobs: RenderKnobs): Promise
   const accent = knobs.accentHex ? `#${knobs.accentHex}` : INK;
   const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const setRun = (r: Run, size: number) => {
-    doc.font(r.bold ? 'bold' : 'body').fontSize(size).fillColor(r.muted ? MUTED : INK);
+    doc.font(r.bold ? 'bold' : 'body').fontSize(size).fillColor(r.accent && knobs.accentHex ? accent : r.muted ? MUTED : INK);
   };
 
   if (plan.header.name) {
@@ -87,9 +91,9 @@ export async function renderPdf(resume: JsonResume, knobs: RenderKnobs): Promise
     doc.font('body').fontSize(knobs.headingPt).fillColor(MUTED)
       .text(plan.header.label, { align: knobs.nameCentered ? 'center' : 'left' });
   }
-  if (plan.header.contact) {
-    doc.font('body').fontSize(knobs.bodyPt).fillColor(MUTED)
-      .text(plan.header.contact, { align: knobs.nameCentered ? 'center' : 'left' });
+  for (const line of [plan.header.contact, ...plan.header.extra]) {
+    if (!line) continue;
+    doc.font('body').fontSize(knobs.bodyPt).fillColor(MUTED).text(line, { align: knobs.nameCentered ? 'center' : 'left' });
   }
 
   for (const block of plan.blocks) {

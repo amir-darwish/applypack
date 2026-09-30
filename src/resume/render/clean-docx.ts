@@ -11,7 +11,7 @@ import {
   type IParagraphOptions,
 } from 'docx';
 import type { JsonResume } from '../json-resume';
-import { planRender } from './sections';
+import { planRender, type RenderPlan } from './sections';
 import type { RenderKnobs } from './knobs';
 
 /*
@@ -39,19 +39,23 @@ const BULLET_INDENT_IN = 0.22;
 const BULLET_HANG_IN = 0.15;
 
 export async function renderDocx(resume: JsonResume, knobs: RenderKnobs): Promise<Buffer> {
-  const plan = planRender(resume, knobs);
+  return drawDocx(planRender(resume, knobs), knobs);
+}
+
+/** The .docx of a plan — `renderDocx` for a structure, the draft's line-by-line plan when a structure would lose a line. */
+export async function drawDocx(plan: RenderPlan, knobs: RenderKnobs): Promise<Buffer> {
   const font = knobs.fontFamily;
   const body = halfPoints(knobs.bodyPt);
   const accent = knobs.accentHex ?? undefined;
   const name = plan.header.name ?? 'Resume';
 
-  const run = (text: string, o: { bold?: boolean; muted?: boolean; size?: number; color?: string } = {}) =>
+  const run = (text: string, o: { bold?: boolean; muted?: boolean; accent?: boolean; size?: number; color?: string } = {}) =>
     new TextRun({
       text,
       font,
       size: o.size ?? body,
       bold: o.bold,
-      color: o.color ?? (o.muted ? MUTED : undefined),
+      color: o.color ?? (o.accent && accent ? accent : o.muted ? MUTED : undefined),
     });
   const para = (children: TextRun[], options: Omit<IParagraphOptions, 'children'> = {}) =>
     new Paragraph({ children, ...options });
@@ -65,6 +69,7 @@ export async function renderDocx(resume: JsonResume, knobs: RenderKnobs): Promis
     children.push(para([run(plan.header.label, { size: halfPoints(knobs.headingPt), muted: true })], centred));
   }
   if (plan.header.contact) children.push(para([run(plan.header.contact, { muted: true })], centred));
+  for (const line of plan.header.extra) children.push(para([run(line, { muted: true })], centred));
 
   // The right-hand run of a line sits on a right tab at the text width, which
   // is what makes a role's dates line up with the margin.

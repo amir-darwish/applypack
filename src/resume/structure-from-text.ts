@@ -19,6 +19,10 @@ import { emptyResume, JsonResumeSchema, type JsonResume } from './json-resume';
 
 /** A bare line is a heading only if it is short — a shouted sentence is not a section. */
 const MAX_HEADING_CHARS = 44;
+/** A heading the text marks itself ("## Skills") may be longer than a shouted one, but not a paragraph. */
+const MAX_MD_HEADING_CHARS = 80;
+/** Two commas make a line a list: no section heading the corpus writes carries them. */
+const LIST_LIKE = /,.*,/;
 /** "Austin, Texas, 78758" or "Kyiv, Ukraine (open to relocation)": a place is a few short words either side of a comma. */
 const MAX_PLACE_CHARS = 60;
 const MAX_PLACE_WORDS = 4;
@@ -45,6 +49,18 @@ const SECTION_WORDS: Array<[SectionKind, RegExp]> = [
   ['projects', /\bprojects?\b/i],
 ];
 
+/** Where a section's heading is kept: the render's section key. `other` sections carry their own. */
+const HEADING_KEY: Record<SectionKind, string | null> = {
+  summary: 'summary',
+  skills: 'skills',
+  work: 'work',
+  education: 'education',
+  languages: 'languages',
+  certificates: 'certificates',
+  projects: 'projects',
+  other: null,
+};
+
 interface Section {
   heading: string;
   kind: SectionKind;
@@ -60,6 +76,9 @@ export function structureFromText(text: string): JsonResume {
   for (const section of sections) {
     const lines = section.lines.filter((l) => l.trim().length > 0);
     if (lines.length === 0) continue;
+    // The resume's own words for the section, not ours ("KEY SKILLS", not "Skills").
+    const key = HEADING_KEY[section.kind];
+    if (key && out.headings[key] === undefined) out.headings[key] = section.heading;
     switch (section.kind) {
       case 'summary':
         out.basics.summary = joinWrapped(lines).join(' ') || null;
@@ -114,10 +133,14 @@ function split(lines: string[]): { header: string[]; sections: Section[] } {
 
 function headingOf(line: string): string | null {
   const md = MD_HEADING.exec(line);
-  if (md) return md[1] ?? null;
+  // A Word heading style on a whole table row (the fixture's run-on line) is
+  // styled content, and the section it would open would swallow it.
+  if (md) return (md[1] ?? '').length <= MAX_MD_HEADING_CHARS && !LIST_LIKE.test(md[1] ?? '') ? (md[1] ?? null) : null;
   const t = line.trim();
   if (t.length === 0 || t.length > MAX_HEADING_CHARS) return null;
   if (BULLET.test(line) || EMAIL.test(t) || URL.test(t)) return null;
+  // "AWS, S3, EC2, SQS, RDS, OWASP" is shouting too, and it is a list, not a section.
+  if (LIST_LIKE.test(t)) return null;
   // All-caps with no lower-case letter, and at least one letter to shout with.
   if (!/\p{Lu}/u.test(t) || /\p{Ll}/u.test(t)) return null;
   if (/[.:;]$/.test(t)) return null;
@@ -141,19 +164,32 @@ function basicsFrom(header: string[]): JsonResume['basics'] {
   // details — a resume that opens straight into an email has no label.
   const labelLine = rest.find((l) => !EMAIL.test(l) && !PHONE.test(l) && !URL.test(l));
   if (labelLine) basics.label = labelLine.trim();
-  const parts = rest.flatMap((l) => l.split(SEPARATORS)).map((p) => p.trim()).filter(Boolean);
-  for (const part of parts) {
-    const email = EMAIL.exec(part);
-    if (email && !basics.email) { basics.email = email[0]; continue; }
-    const phone = PHONE.exec(part);
-    if (phone && !basics.phone) { basics.phone = phone[0].trim(); continue; }
-    const url = URL.exec(part);
-    if (url) { if (!basics.url) basics.url = url[0]; else basics.profiles.push(url[0]); continue; }
-    if (part === basics.label || part === basics.name) continue;
-    // A comma-joined place is the likeliest remaining part of a contact line.
-    if (!basics.location && looksLikePlace(part)) basics.location = part;
+  for (const line of rest) {
+    const unread: string[] = [];
+    for (const part of line.split(SEPARATORS).map((p) => p.trim()).filter(Boolean)) {
+      if (!readContactPart(basics, part)) unread.push(part);
+    }
+    if (unread.length === 0) continue;
+    // What no field reads — "Fully Work Authorized ∙ No Visa Sponsorship
+    // Required" — stays as the resume writes it: dropping it lost a line of
+    // the owner's own header, and a renderer cannot put back what it never got.
+    basics.lines.push(unread.length === line.split(SEPARATORS).filter((p) => p.trim()).length ? line.trim() : unread.join(' · '));
   }
   return basics;
+}
+
+/** Put one part of a contact line where it belongs; false when nothing reads it. */
+function readContactPart(basics: JsonResume['basics'], part: string): boolean {
+  const email = EMAIL.exec(part);
+  if (email && !basics.email) { basics.email = email[0]; return true; }
+  const phone = PHONE.exec(part);
+  if (phone && !basics.phone) { basics.phone = phone[0].trim(); return true; }
+  const url = URL.exec(part);
+  if (url) { if (!basics.url) basics.url = url[0]; else basics.profiles.push(url[0]); return true; }
+  if (part === basics.label || part === basics.name) return true;
+  // A comma-joined place is the likeliest remaining part of a contact line.
+  if (!basics.location && looksLikePlace(part)) { basics.location = part; return true; }
+  return false;
 }
 
 /** Not a sentence: a resume with no headings is all header, and its prose has commas too. */
@@ -212,11 +248,11 @@ function rolesFrom(lines: string[]): JsonResume['work'] {
     const positionAt = dated >= 0 ? dated : heads.length - 1;
     const companyAt = positionAt > 0 ? positionAt - 1 : -1;
     // Anything above the company line closed the PREVIOUS role — the
-    // "Technology Stack: …" tail every resume in the corpus writes. Losing it
-    // would lose resume text, which is worse than a badly placed sentence.
+    // "Technology Stack: …" tail every resume in the corpus writes after its
+    // bullets, and where it stays when the role is drawn again.
     const before = heads.slice(0, Math.max(companyAt, 0));
     const previous = out[out.length - 1];
-    if (before.length > 0 && previous) previous.summary = [previous.summary, ...before].filter(Boolean).join(' ');
+    if (before.length > 0 && previous) previous.after = [previous.after, ...before].filter(Boolean).join(' ');
 
     const { text: position, start, end } = withDates(heads[positionAt] ?? '');
     const [name, location] = splitTail(companyAt >= 0 ? heads[companyAt] ?? '' : '');
@@ -229,6 +265,7 @@ function rolesFrom(lines: string[]): JsonResume['work'] {
       endDate: end,
       summary: [...(before.length > 0 && !previous ? before : []), ...after].join(' ') || null,
       highlights: [],
+      after: null,
     };
     out.push(current);
     heads.length = 0;
@@ -240,7 +277,7 @@ function rolesFrom(lines: string[]): JsonResume['work'] {
       seenBullet = true;
       // Bullets before any role line belong to a role we could not name.
       if (!current) {
-        current = { name: null, position: null, location: null, startDate: null, endDate: null, summary: null, highlights: [] };
+        current = { name: null, position: null, location: null, startDate: null, endDate: null, summary: null, highlights: [], after: null };
         out.push(current);
       }
       current.highlights.push(line.replace(BULLET, '').trim());
@@ -267,7 +304,7 @@ function settle(roles: JsonResume['work']): JsonResume['work'] {
     const previous = out[out.length - 1];
     if (empty && previous) {
       const tail = [role.name, role.position, role.summary].filter(Boolean).join(' ');
-      previous.summary = [previous.summary, tail].filter(Boolean).join(' ') || null;
+      previous.after = [previous.after, tail].filter(Boolean).join(' ') || null;
       continue;
     }
     if (empty && role.name === null && role.position === null) continue;
