@@ -149,9 +149,39 @@ backfilled the days the stored runs covered, with the totals only.
 
 `/runs` opens on the funnel over the last 7 and 30 days, the reasons in
 words and, folded, what each source brought in 30 days (read off the jobs
-themselves). The Overview carries one line of it; a "Fetch now" verdict names
+themselves). The Overview carries its four stages under the matches chart,
+for the range the chart shows; a "Fetch now" verdict names
 the two gates that took the most, and the wizard's scoring pass says why the
 rest did not match. None of it spends an AI call.
+
+### The Overview's statistics
+
+The Overview answers three questions without a click, none of them with an
+AI call (`web/overview-stats.ts`):
+
+- **What is where?** Four status cards — New, Alerted, Applied, Saved — each
+  with its count, what took that status in the last 24 hours and the last
+  fortnight as bars. A job counts on the day it took its status: the alert
+  for an alerted job, the application for an applied one, the day it was
+  found for the rest.
+- **Is it finding more or fewer?** *Jobs matching your searches*: matches per
+  day over 7, 30, 90 or 180 days (UTC days; the longer ranges in steps of 3
+  and 6 days), the total, and the change against the equal range before — a
+  percentage only when that range holds ten or more, and nothing when the
+  install does not reach back that far. The series is `funnel_day.matched`,
+  which outlives the jobs. Under it, the funnel's four stages for the same
+  range.
+- **What do the matches ask for?** *Jobs by stack*: the technologies of the
+  running searches that the last 30 days' matches name (`Job.techMatch`), and
+  the same list as the chart's **All stack** filter. Anything by technology
+  reads the jobs, and a dismissed job is deleted after 30 days — so the
+  filter covers 7D and 30D and is off beyond. A match here is a job that was
+  scored and kept, or alerted or held before the user dismissed it.
+
+Beside them: pipeline health (the latest run of each scheduled job), recent
+activity (new jobs, matches and alerts in the last 24 hours, and the watched
+companies) and the newest alerts. The chart is server-rendered SVG
+(`web/chart-svg.ts`); `?range=` and `?stack=` ride in the URL.
 
 ## Cron schedule (in `TZ`, `UTC` by default)
 
@@ -418,8 +448,8 @@ as `BROWSER_PAGE`, unchecked and never active. Under **Pages drawn in the
 browser** on `/companies` the user pastes the page's text as they see it.
 `watchlist/paste.ts` keeps its lines, says what is new against the last
 paste, and marks the lines a running search would take by its title words.
-No AI is involved and nothing becomes a `Job`. The Overview's watched line
-counts these as *to paste by hand* (TASKS N8, ADR 0036 addendum
+No AI is involved and nothing becomes a `Job`. The Overview's watched row
+(Recent activity) counts these as *to paste by hand* (TASKS N8, ADR 0036 addendum
 2026-09-28).
 
 Measured on twenty JavaScript-heavy companies and sixteen European ones

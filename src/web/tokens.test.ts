@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import { TOKENS, blend, contrast, hex, rootBlock, type Rgb, type TokenName } from './tokens';
 
 const AA = 4.5;
+/** Helper and meta text is small and everywhere: it is held a step above AA (2.40.0). */
+const HELPER = 5;
+/** The pill's tint over white — `pill-*` in src/web/tailwind.css paints the same share. */
+const PILL_TINT = 0.12;
 const WHITE: Rgb = [255, 255, 255];
 const SURFACES: TokenName[] = ['surface', 'surface-raised', 'surface-overlay', 'surface-selected'];
 const TONES: TokenName[] = ['ok', 'warn', 'danger', 'info', 'violet'];
@@ -26,21 +30,22 @@ describe('contrast arithmetic', () => {
 
 describe('text on surfaces (WCAG 2.1 AA, normal text)', () => {
   for (const ink of ['ink', 'ink-muted', 'ink-faint', 'accent-strong'] as const) {
+    const floor = ink === 'accent-strong' ? AA : HELPER;
     for (const surface of SURFACES) {
-      it(`${ink} on ${surface}`, () => passes(TOKENS[ink], TOKENS[surface], AA, `${ink} on ${surface}`));
+      it(`${ink} on ${surface}`, () => passes(TOKENS[ink], TOKENS[surface], floor, `${ink} on ${surface}`));
     }
   }
 
   it('the row hover — selected at 50 % over white — still carries faint text', () => {
-    passes(TOKENS['ink-faint'], blend(TOKENS['surface-selected'], WHITE, 0.5), AA, 'ink-faint on the row hover');
+    passes(TOKENS['ink-faint'], blend(TOKENS['surface-selected'], WHITE, 0.5), HELPER, 'ink-faint on the row hover');
   });
 });
 
 describe('status tones', () => {
   for (const tone of TONES) {
-    it(`${tone}: on white, on its 10 % pill, on its 5 % flash, on the canvas`, () => {
+    it(`${tone}: on white, on its 12 % pill, on its 5 % flash, on the canvas`, () => {
       passes(TOKENS[tone], WHITE, AA, `${tone} on white`);
-      passes(TOKENS[tone], blend(TOKENS[tone], WHITE, 0.1), AA, `${tone} on its pill`);
+      passes(TOKENS[tone], blend(TOKENS[tone], WHITE, PILL_TINT), AA, `${tone} on its pill`);
       passes(TOKENS[tone], blend(TOKENS[tone], WHITE, 0.05), AA, `${tone} on its flash`);
       passes(TOKENS[tone], TOKENS.surface, AA, `${tone} on the canvas`);
     });
@@ -74,8 +79,8 @@ describe('the :root block', () => {
   });
 
   it('writes a hex for the places a CSS variable cannot reach', () => {
-    assert.equal(hex(TOKENS['ink-faint']), '#5F6B7E');
-    assert.equal(hex(TOKENS.warn), '#A24F0A');
+    assert.equal(hex(TOKENS['ink-faint']), '#566173');
+    assert.equal(hex(TOKENS.warn), '#A8470A');
     assert.equal(hex(TOKENS.danger), '#B42318');
   });
 });

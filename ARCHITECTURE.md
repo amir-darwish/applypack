@@ -508,8 +508,9 @@ src/
                                   /static files, every route, the error handler
     layout.tsx                  ← HTML shell, the :root token block, grouped sidebar nav, the committed Tailwind build
     tailwind.css                ← the Tailwind source; npm run css builds public/tailwind.css from it
-    tokens.ts                   ← the design tokens' values + contrast arithmetic (pure); tokens.test.ts holds every text colour to AA
-    ui.tsx                      ← the shared primitives: <PageHeader>, <Card>, <Empty> (title · why · one action), <Disclosure>, <More>, <Tabs>, <FilterChip>, <MetricStrip>, <StatusBadge>, <FitBadge>, <Tag>, the form controls
+    tokens.ts                   ← the design tokens' values + contrast arithmetic (pure); tokens.test.ts holds body and helper text to 5:1, a status tone to AA
+    ui.tsx                      ← the shared primitives: <PageHeader>, <Card>, <Empty> (title · why · one action), <Disclosure>, <More>, <Tabs>, <FilterChip>, <StatCard>, <CardHeader>, <IconTile>, <Avatar>, <StatusBadge>, <FitBadge>, <Tag>, the form controls
+    icons.tsx                   ← <Icon>: the one icon family (Lucide's paths), inline SVG
     table-hide.ts               ← pure: the classes that hide a table column below a breakpoint
     format.ts                   ← formatSalary, formatDate / formatStamp (in the request's zone), formatRelative, statusTone, fitTone, fitWord
     display-zone.ts             ← the zone a request's dates are written in: the schedule's, set by app.ts (AsyncLocalStorage)
@@ -542,6 +543,12 @@ src/
     source-suggestions.ts       ← the token-driven feeds the running searches call for, with their state here
     welcome-steps.ts            ← pure first-run wizard rules (steps from data, score-run summary)
     next-things.ts              ← pure: the Overview's "Next: three things" until the first comparison (TASKS N11)
+    overview-stats.ts           ← loadOverviewStats: the Overview's statistics — funnel_day for the matches of every day, the jobs for anything by technology (30 days)
+    overview-numbers.ts         ← pure: the status cards' fortnight (kpiTrends), topTerms, the Overview's own link (overviewHref)
+    stats-series.ts             ← pure: counts per UTC day, a range as chart points, the trend against the range before, axis ticks
+    chart-svg.ts                ← pure: a series as SVG path data (a monotone line, the area under it), sparkline bar heights
+    place-line.ts               ← pure: a posting's place in a few words — "Remote · USA, Canada +3"
+    tech-label.ts               ← pure: a tech_match tag as people write it (TypeScript, Node.js, AWS)
     pack-offers.ts              ← the starter packs that fit the running searches, for the wizard and /companies (TASKS S26)
     cost-hint.ts                ← spendHint: the ledger's median for a feature, else what kind of money the first engine spends
     applications-export.ts      ← pure: the applications board as CSV and Markdown (TASKS N7)
@@ -583,6 +590,7 @@ src/
       chips.mjs                 ← the chip editor over a newline-joined textarea
       countries.mjs             ← country picker: search over /countries.json + the suggestion list (tested via import())
       select-commit.mjs         ← a self-saving select that saves once, not once per arrowed option
+      chart.mjs                 ← a chart's hover: the guide, the dot, the card; arrow keys walk the points
       settings-models.mjs       ← the per-engine model pickers save themselves
       progress.mjs              ← the navigation progress bar
       screen.mjs                ← the screening page: polls the run, ticks rows, saves a decision, uploads a folder
@@ -605,6 +613,7 @@ src/
       discovery.tsx             ← /discovery
       runs.tsx                  ← /runs (+ Fetch now button)
       funnel-card.tsx           ← the Search funnel section of /runs: stages over 7 / 30 days, the reasons, by source
+      matches-chart.tsx         ← the Overview's chart: matches per day as inline SVG, the range switch, the technology filter, the funnel row
       fetch-run.tsx             ← /runs/fetch-now/:id progress page + FetchNowButton
       run-steps.tsx             ← step list shared by the two progress pages
       welcome.tsx               ← /welcome first-run wizard (5 steps, one card at a time)

@@ -4,6 +4,8 @@ import type { JobStatus } from '@prisma/client';
 import { fitTone, fitWord, formatDate, formatRelative, statusLabel, statusTone, type Tone } from './format';
 import type { FlashKind, FlashMessage } from './flash';
 import { hideCellsClass, hideHeaderClass, type HideBelow } from './table-hide';
+import { barHeights } from './chart-svg';
+import { Icon, type IconName } from './icons';
 import { TOKENS, hex } from './tokens';
 import { hashShortId } from '../text-utils';
 
@@ -14,7 +16,7 @@ import { hashShortId } from '../text-utils';
  */
 
 /*
- * A pill paints its 10 % tint over white whatever it is laid on (the gradient
+ * A pill paints its 12 % tint over white whatever it is laid on (the gradient
  * is the tint, the colour under it the ground), so its text contrast is one
  * number held by tokens.test.ts — not one per surface. On the canvas alone the
  * bare tint read 4.44:1 for the Applied pill. The ground is a `pill-*` class
@@ -22,11 +24,11 @@ import { hashShortId } from '../text-utils';
  * bytes a pill, 8 KB on a resume page with a hundred skill tags.
  */
 const TONE_SOFT: Record<Tone, string> = {
-  ok: 'pill-ok text-ok ring-ok/20',
-  warn: 'pill-warn text-warn ring-warn/20',
-  danger: 'pill-danger text-danger ring-danger/20',
-  info: 'pill-info text-info ring-info/20',
-  violet: 'pill-violet text-violet ring-violet/20',
+  ok: 'pill-ok text-ok ring-ok/25',
+  warn: 'pill-warn text-warn ring-warn/25',
+  danger: 'pill-danger text-danger ring-danger/25',
+  info: 'pill-info text-info ring-info/25',
+  violet: 'pill-violet text-violet ring-violet/25',
   neutral: 'bg-surface-overlay text-ink-muted ring-line',
 };
 
@@ -63,37 +65,30 @@ export const PageHeader: FC<
     {back && (
       <a
         href={back.href}
-        class="mb-1.5 inline-flex items-center gap-1 text-note text-ink-faint transition-colors duration-150 hover:text-ink"
+        class="mb-2 inline-flex items-center gap-1 text-note font-medium text-ink-faint transition-colors duration-150 hover:text-ink"
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="h-3.5 w-3.5"
-          aria-hidden="true"
-        >
-          <path d="m15 18-6-6 6-6" />
-        </svg>
+        <Icon name="chevron-left" size={14} />
         {back.label}
       </a>
     )}
-    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-      <h1 class="min-w-0 truncate text-title text-ink" title={title}>
-        {title}
-      </h1>
+    {/* The title and its one sentence read as one block at the left; what the
+        page offers sits at the right, level with the title. */}
+    <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+      <div class="min-w-0 flex-1 basis-64">
+        <h1 class="truncate text-title text-ink" title={title}>
+          {title}
+        </h1>
+        {children && (
+          <div data-ui="hint" class="mt-1 text-sm leading-5 text-ink-muted">{children}</div>
+        )}
+      </div>
       {(meta || actions) && (
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-          {meta && <div data-ui="hint" class="text-meta text-ink-faint tabular-nums">{meta}</div>}
+        <div class="flex min-h-[36px] min-w-0 flex-wrap items-center gap-3">
+          {meta && <div data-ui="hint" class="text-note text-ink-faint tabular-nums">{meta}</div>}
           {actions}
         </div>
       )}
     </div>
-    {children && (
-      <div data-ui="hint" class="mt-1.5 text-sm leading-5 text-ink-muted">{children}</div>
-    )}
   </header>
 );
 
@@ -196,8 +191,8 @@ export const Flash: FC<PropsWithChildren<{ flash?: FlashMessage | null }>> = ({ 
   ) : null;
 
 const CARD_VARIANT = {
-  /** An object that stands alone: raised, outlined, a whisper of shadow. */
-  card: 'rounded-lg border border-line bg-surface-raised shadow-sm',
+  /** An object that stands alone: raised, outlined, a soft shadow under it. */
+  card: 'rounded-lg border border-line bg-surface-raised shadow-card',
   /** A part of a region that is already one surface: no border, shadow or fill of its own. */
   flat: '',
   /** A well or an inactive region: the subtle fill, no outline. */
@@ -220,6 +215,84 @@ export const SectionTitle: FC<PropsWithChildren<{ level?: 'card' | 'section' }>>
   <h2 class={`text-ink ${level === 'section' ? 'mb-4 text-section' : 'mb-3 text-entity'}`}>{children}</h2>
 );
 
+/**
+ * What a card holds, said at its top: the title at the left — with `info`, the
+ * sentence that explains it, one hover or focus away — and the card's one way
+ * onward (`action`: a link, a control) at the right. `children` ride beside
+ * the title: a badge, a quiet "(30 days)".
+ */
+export const CardHeader: FC<PropsWithChildren<{ title: string; info?: string; action?: Child; class?: string }>> = ({
+  title,
+  info,
+  action,
+  class: className = 'mb-4',
+  children,
+}) => (
+  <div class={`flex flex-wrap items-center justify-between gap-x-4 gap-y-2 ${className}`}>
+    <div class="flex min-w-0 items-center gap-2">
+      <h2 class="truncate text-section text-ink">{title}</h2>
+      {children}
+      {info && <InfoTip text={info} />}
+    </div>
+    {action}
+  </div>
+);
+
+/** A card's quiet way onward: "View all →". */
+export const CardLink: FC<PropsWithChildren<{ href: string }>> = ({ href, children }) => (
+  <a
+    href={href}
+    class="inline-flex shrink-0 items-center gap-1 text-note font-medium text-accent-strong transition-colors duration-150 hover:text-accent-deep"
+  >
+    {children}
+    <Icon name="arrow-right" size={14} />
+  </a>
+);
+
+/**
+ * One sentence behind an (i): shown on hover and on keyboard or touch focus,
+ * with no script. The button's name is the sentence, so a screen reader hears
+ * it where a mouse sees it.
+ */
+const InfoTip: FC<{ text: string }> = ({ text }) => (
+  <span class="group/tip relative inline-flex">
+    <button
+      type="button"
+      aria-label={text}
+      class="rounded-full text-ink-faint transition-colors duration-150 hover:text-ink-muted"
+    >
+      <Icon name="info" size={16} />
+    </button>
+    <span
+      role="tooltip"
+      class="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden w-64 -translate-x-1/2 rounded-md border border-line bg-surface-raised px-3 py-2 text-note text-ink-muted shadow-pop group-focus-within/tip:block group-hover/tip:block"
+    >
+      {text}
+    </span>
+  </span>
+);
+
+/** An icon on its tone's tint: what a card, a row or a number is about, at a glance. */
+export const IconTile: FC<{ icon: IconName; tone: Tone; class?: string }> = ({ icon, tone, class: className = 'h-10 w-10' }) => (
+  <span aria-hidden="true" class={`grid shrink-0 place-items-center rounded-md ring-1 ring-inset ${TONE_SOFT[tone]} ${className}`}>
+    <Icon name={icon} size={20} stroke={1.75} />
+  </span>
+);
+
+/**
+ * Who a row is about, as a letter: the first letter or digit of the name on a
+ * neutral tile. No logo is ever fetched — nothing on a page comes from a third
+ * party — and the tile takes no tone, because a tone here means a status.
+ */
+export const Avatar: FC<{ name: string }> = ({ name }) => (
+  <span
+    aria-hidden="true"
+    class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-surface-overlay text-entity text-ink-muted ring-1 ring-inset ring-line"
+  >
+    {[...name].find((ch) => /[\p{L}\p{N}]/u.test(ch))?.toUpperCase() ?? '?'}
+  </span>
+);
+
 export const Hint: FC<PropsWithChildren<{ class?: string }>> = ({
   children,
   class: className = '',
@@ -239,22 +312,12 @@ export const Empty: FC<PropsWithChildren<{ title: string; action?: Child; bare?:
 }) => (
   <div
     class={`flex flex-col items-center justify-center gap-2 text-center ${
-      bare ? 'px-4 py-8' : 'rounded-lg border border-line bg-surface-raised px-6 py-12'
+      bare ? 'px-4 py-8' : 'rounded-lg border border-line bg-surface-raised px-6 py-12 shadow-card'
     }`}
   >
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      class="h-7 w-7 text-line-strong"
-      aria-hidden="true"
-    >
-      <path d="M22 12h-6l-2 3h-4l-2-3H2" />
-      <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-    </svg>
+    <span class="mb-1 grid h-10 w-10 place-items-center rounded-md bg-surface-overlay text-ink-faint">
+      <Icon name="inbox" size={20} stroke={1.75} />
+    </span>
     <div class="text-entity text-ink">{title}</div>
     <div class="max-w-md text-sm text-ink-muted">{children}</div>
     {action && <div class="mt-1.5">{action}</div>}
@@ -312,7 +375,7 @@ const ChevronDown: FC = () => (
 
 const DISCLOSURE_SUMMARY = {
   button:
-    'inline-flex min-h-[32px] items-center gap-1.5 whitespace-nowrap rounded-md border border-line-strong bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink shadow-sm hover:bg-surface-overlay group-open:bg-surface-overlay',
+    'inline-flex min-h-[36px] items-center gap-2 whitespace-nowrap rounded-md border border-line-strong bg-surface-raised px-3.5 py-1.5 text-sm font-medium text-ink shadow-sm hover:bg-surface-overlay group-open:bg-surface-overlay',
   quiet: 'inline-flex items-center gap-1 text-note text-ink-muted hover:text-ink',
 } as const;
 
@@ -441,58 +504,84 @@ export const HistoryChip: FC<PropsWithChildren<{ href: string; current: boolean 
 /* ---------- data display ---------- */
 
 /**
- * A few numbers read as one line: a <dl> on one raised surface, the cells
- * divided by hairlines rather than boxed apart. Each cell is a dot and a
- * label, a 28 px tabular value and a delta line; with `href` the value is a
- * link stretched over its cell. Two columns on a narrow screen, one row of
- * four from xl.
+ * A fortnight as a row of bars, today last: the shape of a number's recent
+ * days beside the number. Decorative — the delta line under the value says
+ * the same thing in words — so it is hidden from a screen reader. A day with
+ * nothing keeps a faint stub; the days fade towards the oldest.
  */
-export const MetricStrip: FC<{
-  label: string;
-  cells: { label: string; value: number; tone: Tone; delta: Child; href?: string }[];
-  footer?: Child;
-}> = ({ label, cells, footer }) => (
-  <section aria-label={label} class="overflow-hidden rounded-lg border border-line bg-surface-raised shadow-sm">
-    <dl class="grid grid-cols-2 xl:grid-cols-4">
-      {cells.map((cell, i) => (
-        <div
-          class={`relative border-line px-5 py-4 transition-colors duration-150 ${cell.href ? 'hover:bg-surface-selected/50' : ''} ${
-            i % 2 === 1 ? 'border-l' : i > 0 ? 'xl:border-l' : ''
-          } ${i >= 2 ? 'border-t xl:border-t-0' : ''}`}
-        >
-          <dt class="flex items-center gap-1.5 text-label text-ink-muted">
-            <span class={`h-1.5 w-1.5 rounded-full ${TONE_FILL[cell.tone]}`} aria-hidden="true" />
-            {cell.label}
-          </dt>
-          <dd class="mt-1 text-[28px] font-semibold leading-8 tracking-tight tabular-nums text-ink">
-            {cell.href ? (
-              <a href={cell.href} class="after:absolute after:inset-0 hover:text-accent-strong">
-                {cell.value.toLocaleString()}
-                <span class="sr-only"> {cell.label} — open in Jobs</span>
-              </a>
-            ) : (
-              cell.value.toLocaleString()
-            )}
-          </dd>
-          <dd class="mt-0.5 text-meta text-ink-faint">{cell.delta}</dd>
-        </div>
+const SparkBars: FC<{ values: readonly number[]; tone: Tone; class?: string }> = ({ values, tone, class: className = '' }) => {
+  const heights = barHeights(values);
+  const last = Math.max(1, values.length - 1);
+  return (
+    <span aria-hidden="true" class={`flex h-10 shrink-0 items-end gap-[3px] ${className}`}>
+      {heights.map((h, i) => (
+        <span
+          class={`w-1 rounded-full ${TONE_FILL[tone]}`}
+          style={`height:${h}%;opacity:${(values[i] ?? 0) > 0 ? (0.45 + 0.55 * (i / last)).toFixed(2) : '0.18'}`}
+        />
       ))}
-    </dl>
-    {footer && (
-      <div data-ui="hint" class="border-t border-line px-5 py-2.5 text-meta tabular-nums text-ink-faint">
-        {footer}
+    </span>
+  );
+};
+
+/**
+ * One number that stands alone: its icon on the tone's tint, the label, the
+ * value at the KPI step and one line of what moved. With `href` the value is
+ * a link stretched over the card; `spark` draws the last fortnight beside it
+ * where there is room.
+ */
+export const StatCard: FC<{
+  label: string;
+  value: number;
+  tone: Tone;
+  icon: IconName;
+  delta: Child;
+  href?: string;
+  /** What the link opens, for a screen reader: "open in Jobs". */
+  hrefLabel?: string;
+  spark?: readonly number[];
+}> = ({ label, value, tone, icon, delta, href, hrefLabel, spark }) => (
+  <div
+    class={`relative flex gap-3.5 rounded-lg border border-line bg-surface-raised p-5 shadow-card transition-colors duration-150 ${
+      href ? 'hover:border-line-strong' : ''
+    }`}
+  >
+    <IconTile icon={icon} tone={tone} />
+    <div class="min-w-0 flex-1">
+      <div class="truncate text-label text-ink-muted">{label}</div>
+      {/* The bars share the number's row and give way first: a narrow card clips the oldest days, never the number. */}
+      <div class="mt-0.5 flex items-end justify-between gap-3">
+        <div class="text-kpi tabular-nums text-ink">
+          {href ? (
+            <a href={href} class="after:absolute after:inset-0 after:rounded-lg hover:text-accent-strong">
+              {value.toLocaleString('en-US')}
+              {hrefLabel && <span class="sr-only"> {label} — {hrefLabel}</span>}
+            </a>
+          ) : (
+            value.toLocaleString('en-US')
+          )}
+        </div>
+        {spark && <SparkBars values={spark} tone={tone} class="min-w-0 justify-end overflow-hidden" />}
       </div>
-    )}
-  </section>
+      <div class="mt-1 text-note text-ink-faint">{delta}</div>
+    </div>
+  </div>
 );
 
-export const Badge: FC<PropsWithChildren<{ tone?: Tone; class?: string }>> = ({
+/** `md` is the pill that stands in a page header beside the buttons; `sm` is every other one. */
+const BADGE_SIZE = {
+  sm: 'px-2.5 py-0.5 text-meta',
+  md: 'px-3 py-1.5 text-note',
+} as const;
+
+export const Badge: FC<PropsWithChildren<{ tone?: Tone; size?: keyof typeof BADGE_SIZE; class?: string }>> = ({
   children,
   tone = 'neutral',
+  size = 'sm',
   class: className = '',
 }) => (
   <span
-    class={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-meta font-medium ring-1 ring-inset ${TONE_SOFT[tone]} ${className}`}
+    class={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-medium ring-1 ring-inset ${BADGE_SIZE[size]} ${TONE_SOFT[tone]} ${className}`}
   >
     {children}
   </span>
@@ -503,22 +592,21 @@ export const Tag: FC<PropsWithChildren<{ tone?: Tone }>> = ({
   tone = 'neutral',
 }) => (
   <span
-    class={`inline-flex items-center rounded-md px-1.5 py-0.5 text-meta ring-1 ring-inset ${TONE_SOFT[tone]}`}
+    class={`inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-meta font-medium ring-1 ring-inset ${TONE_SOFT[tone]}`}
   >
     {children}
   </span>
 );
 
+/** The word in its tone is the status; a pill needs no dot to say it twice. */
 export const StatusBadge: FC<{ status: JobStatus }> = ({ status }) => (
-  <Badge tone={statusTone(status)}>
-    <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-    {statusLabel(status)}
-  </Badge>
+  <Badge tone={statusTone(status)}>{statusLabel(status)}</Badge>
 );
 
 /**
- * Fit score as number + meter, so the value reads without colour. `worded`
- * adds the floor's word ("72 Good") where there is room for it — a job page's
+ * Fit score as a number in a toned tile: the number is the value, the tone its
+ * floor (≥ 85 / ≥ 70 / ≥ 50 / under), so it reads without colour. `worded` adds
+ * the floor's word ("72 Good") where there is room for it — a job page's
  * header, not a table cell.
  */
 export const FitBadge: FC<{ score: number | null; label?: string; worded?: boolean }> = ({
@@ -527,22 +615,13 @@ export const FitBadge: FC<{ score: number | null; label?: string; worded?: boole
   worded = false,
 }) => {
   if (score == null) return <span class="text-ink-faint">—</span>;
-  const tone = fitTone(score);
   return (
     <span
-      class="inline-flex items-center gap-1.5 whitespace-nowrap"
+      class={`inline-flex min-w-[2.25rem] items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 py-0.5 text-entity tabular-nums ring-1 ring-inset ${TONE_SOFT[fitTone(score)]}`}
       title={`${label} ${score}/100`}
     >
-      <span class={`text-sm font-medium tabular-nums ${TONE_TEXT[tone]}`}>
-        {score}
-        {worded && <span class="ml-1.5">{fitWord(score)}</span>}
-      </span>
-      <span class="h-1.5 w-9 shrink-0 overflow-hidden rounded-full bg-line" aria-hidden="true">
-        <span
-          class={`block h-full rounded-full ${TONE_FILL[tone]}`}
-          style={`width:${Math.max(4, Math.min(100, score))}%`}
-        />
-      </span>
+      {score}
+      {worded && <span class="text-label">{fitWord(score)}</span>}
     </span>
   );
 };
@@ -575,7 +654,7 @@ export const Table: FC<
           {columns.map((c, i) => (
             <th
               scope="col"
-              class={`bg-surface-overlay px-2.5 py-2.5 font-[550] first:rounded-tl-none first:pl-3.5 last:pr-3.5 sm:px-4 sm:first:pl-5 sm:last:pr-5 ${
+              class={`bg-surface-overlay/70 px-2.5 py-2.5 font-[550] first:rounded-tl-none first:pl-3.5 last:pr-3.5 sm:px-4 sm:first:pl-5 sm:last:pr-5 ${
                 widths?.[i] ?? ''
               } ${hideHeaderClass(hideBelow, i)} ${thClasses?.[i] ?? ''} ${
                 stickyHeader
@@ -665,8 +744,9 @@ export const Field: FC<PropsWithChildren<{ label: string; hint?: string; more?: 
   </div>
 );
 
+/* 36px tall with its border — the same height as a Button beside it. */
 const CONTROL =
-  'w-full rounded-md border border-line-strong bg-surface-raised px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint shadow-sm transition-colors duration-150 hover:border-ink-faint focus:border-accent-strong focus:outline-none focus:ring-2 focus:ring-accent/25 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-danger/20';
+  'w-full rounded-md border border-line-strong bg-surface-raised px-3 py-[7px] text-sm text-ink placeholder:text-ink-faint shadow-sm transition-colors duration-150 hover:border-ink-faint focus:border-accent-strong focus:outline-none focus:ring-2 focus:ring-accent/25 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-danger/20';
 
 export const Input: FC<Record<string, unknown> & { mono?: boolean }> = ({
   mono,
@@ -744,20 +824,22 @@ export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'warn' | 'viole
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary: 'bg-accent-strong text-white shadow-sm hover:bg-accent-deep',
   secondary: 'border border-line-strong bg-surface-raised text-ink shadow-sm hover:bg-surface-overlay',
-  danger: 'border border-danger/30 bg-surface-raised text-danger shadow-sm hover:bg-danger/5',
+  // The word is red; the outline is any control's, so a column of Deletes does not shout.
+  danger: 'border border-line-strong bg-surface-raised text-danger shadow-sm hover:border-danger/40 hover:bg-danger/5',
   warn: 'bg-warn text-white shadow-sm hover:bg-warn/90',
   violet: 'border border-violet/30 bg-violet/5 text-violet hover:bg-violet/10',
   ghost: 'text-ink-muted hover:bg-surface-overlay hover:text-ink',
 };
 
+/* Three heights: 30px in a table row, 36px beside a field, 40px for a page's main act. */
 const BUTTON_SIZE = {
-  sm: 'px-2.5 py-1 text-meta',
-  md: 'px-3 py-1.5 text-sm',
-  lg: 'px-4 py-2 text-sm',
+  sm: 'min-h-[30px] gap-1.5 px-2.5 py-1 text-note',
+  md: 'min-h-[36px] gap-2 px-3.5 py-1.5 text-sm',
+  lg: 'min-h-[40px] gap-2 px-4 py-2 text-sm',
 } as const;
 
 function buttonClass(variant: ButtonVariant, size: keyof typeof BUTTON_SIZE, extra = ''): string {
-  return `inline-flex min-h-[32px] cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]} ${extra}`;
+  return `inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]} ${extra}`;
 }
 
 /**
@@ -801,7 +883,7 @@ export const ConfirmAction: FC<{
         popover="auto"
         role="dialog"
         aria-label={ariaLabel ?? label}
-        class="m-auto w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-surface-raised p-4 text-left text-note leading-5 text-ink shadow-lg backdrop:bg-[rgb(0_0_0/0.15)]"
+        class="m-auto w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-surface-raised p-4 text-left text-note leading-5 text-ink shadow-pop backdrop:bg-[rgb(13_20_33/0.25)]"
       >
         <p>{confirm}</p>
         <form method="post" action={action} class="mt-3 flex justify-end gap-2">

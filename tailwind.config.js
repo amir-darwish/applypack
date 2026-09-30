@@ -7,7 +7,8 @@
  * DOM access on the origin that renders resumes (audit 2026-09-10, PRIV-1).
  * The colours are the tokens in src/web/tokens.ts, by name; the named sizes
  * are the type ladder (DESIGN.md) — size, line, tracking and weight in one
- * class, so a page writes `text-title`, not four utilities.
+ * class, so a page writes `text-title`, not four utilities. The radii and
+ * the shadows are the design's own steps under Tailwind's names.
  */
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -55,12 +56,27 @@ module.exports = {
         violet: 'rgb(var(--violet) / <alpha-value>)',
       },
       fontSize: {
-        title: ['26px', { lineHeight: '32px', letterSpacing: '-0.02em', fontWeight: '650' }],
-        section: ['18px', { lineHeight: '24px', letterSpacing: '-0.01em', fontWeight: '600' }],
-        entity: ['15px', { lineHeight: '22px', fontWeight: '600' }],
+        title: ['30px', { lineHeight: '36px', letterSpacing: '-0.025em', fontWeight: '700' }],
+        kpi: ['32px', { lineHeight: '36px', letterSpacing: '-0.03em', fontWeight: '700' }],
+        section: ['18px', { lineHeight: '26px', letterSpacing: '-0.015em', fontWeight: '650' }],
+        entity: ['15px', { lineHeight: '22px', letterSpacing: '-0.005em', fontWeight: '600' }],
         label: ['13px', { lineHeight: '18px', fontWeight: '550' }],
         note: ['13px', { lineHeight: '20px', fontWeight: '400' }],
         meta: ['12px', { lineHeight: '16px', fontWeight: '400' }],
+      },
+      // The shape ladder (DESIGN.md → Shapes): 8px for a control, 12px for a
+      // card. The names stay Tailwind's, so every rounded-md / rounded-lg
+      // written before 2.40.0 took the new step without an edit.
+      borderRadius: {
+        md: '8px',
+        lg: '12px',
+      },
+      // Tinted with the ink, never black: sm sits under a control, card under
+      // a raised surface, pop under what floats (a menu, a tooltip, a popover).
+      boxShadow: {
+        sm: '0 1px 2px 0 rgb(13 20 33 / 0.06)',
+        card: '0 1px 2px 0 rgb(13 20 33 / 0.04), 0 2px 8px -2px rgb(13 20 33 / 0.06)',
+        pop: '0 4px 8px -2px rgb(13 20 33 / 0.08), 0 16px 32px -8px rgb(13 20 33 / 0.16)',
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],

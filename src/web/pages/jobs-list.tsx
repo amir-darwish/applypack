@@ -25,7 +25,9 @@ import {
 } from '../ui';
 import { formatDateShort, formatSalary } from '../format';
 import { formatUsdPerYear } from '../../currency';
-import { flagOf } from '../../countries';
+import type { WorkplaceCode } from '../../location';
+import { placeLine } from '../place-line';
+import { techLabel } from '../tech-label';
 import {
   activeFilters,
   clearFiltersHref,
@@ -45,8 +47,10 @@ interface JobRow {
   title: string;
   url: string;
   location: string;
-  /** ADR 0031: the structured reading of `location`; flags decorate the row. */
+  /** ADR 0031: the structured reading of `location` — what the row's place line is written from. */
   countries: string[];
+  regions: string[];
+  workplace: WorkplaceCode;
   fitScore: number | null;
   salaryMin: number | null;
   salaryMax: number | null;
@@ -81,6 +85,8 @@ export interface JobsListProps {
   facets: FacetChips;
   /** Every running search — one chip each (ADR 0028). */
   profiles: { id: number; name: string }[];
+  /** The places the running searches hunt in — a row names them before the rest. */
+  searchPlaces: string[];
   /** True when the primary profile is blank — classification is idling (issue #50). */
   blankProfileBanner?: boolean;
   /** Stored postings of muted companies the list leaves out (ADR 0056); 0 when shown or none. */
@@ -115,6 +121,7 @@ export const JobsListPage: FC<JobsListProps> = ({
   statusCounts,
   blankProfileBanner,
   mutedHidden,
+  searchPlaces,
 }) => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -132,11 +139,13 @@ export const JobsListPage: FC<JobsListProps> = ({
         title="Jobs"
         meta={`${total.toLocaleString()} jobs`}
         actions={
-          <Button href="/jobs/new" variant="secondary" size="sm">
+          <Button href="/jobs/new" variant="secondary">
             + Paste a job
           </Button>
         }
-      />
+      >
+        Every posting the search found, with its fit and its status.
+      </PageHeader>
 
       {blankProfileBanner && (
         <Notice tone="warn" class="mb-4 shrink-0">
@@ -344,9 +353,9 @@ export const JobsListPage: FC<JobsListProps> = ({
                     stickyHeader
                     hideBelow={['', 'sm', 'md', '', 'lg', 'sm', 'md']}
                     widths={[
-                      'w-[31%]',
+                      'w-[29%]',
                       'w-[15%]',
-                      'w-[15%]',
+                      'w-[17%]',
                       'w-[8%]',
                       'w-[12%]',
                       'w-[11%]',
@@ -362,7 +371,9 @@ export const JobsListPage: FC<JobsListProps> = ({
                       <span class="block text-right">Fetched</span>,
                     ]}
                   >
-                    {jobs.map((j) => (
+                    {jobs.map((j) => {
+                      const place = placeLine(j, searchPlaces);
+                      return (
                       <Tr>
                         <Td>
                           <a
@@ -379,7 +390,7 @@ export const JobsListPage: FC<JobsListProps> = ({
                           )}
                           {j.techMatch.length > 0 && (
                             <div class="mt-0.5 truncate text-meta text-ink-faint">
-                              {j.techMatch.join(' · ')}
+                              {j.techMatch.map(techLabel).join(' · ')}
                             </div>
                           )}
                         </Td>
@@ -397,13 +408,9 @@ export const JobsListPage: FC<JobsListProps> = ({
                           {j.company.atsType === 'FRANCETRAVAIL' && <FranceTravailLine updatedAt={j.sourceUpdatedAt} class="mt-0.5" />}
                         </Td>
                         <Td class="text-ink-muted">
-                          <div class="truncate" title={j.location || 'Remote'}>
-                            {j.countries.length > 0 && (
-                              <span class="mr-1" aria-hidden="true">
-                                {j.countries.map(flagOf).join('')}
-                              </span>
-                            )}
-                            {j.location || 'Remote'}
+                          {/* The place in a few words — "Remote · USA, Canada +3" — never a row of flags; the tooltip has every country. */}
+                          <div class="truncate" title={place.title}>
+                            {place.text}
                           </div>
                         </Td>
                         <Td class="whitespace-nowrap">
@@ -438,7 +445,8 @@ export const JobsListPage: FC<JobsListProps> = ({
                           <When at={j.fetchedAt} />
                         </Td>
                       </Tr>
-                    ))}
+                      );
+                    })}
                   </Table>
                 </div>
               </div>

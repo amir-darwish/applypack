@@ -8,7 +8,7 @@
 | Page | URL | What it's for |
 | --- | --- | --- |
 | First run | `/welcome` | The five setup steps; `/` redirects here until you finish or skip |
-| Overview | `/` | Four counters by status (each opens its jobs), recent alerts, pipeline health, pause/resume, Fetch now |
+| Overview | `/` | Four status cards with their last fortnight (each opens its jobs), the matches chart (7–180 days, by technology) with the search funnel under it, recent alerts, pipeline health, recent activity, jobs by stack, pause/resume, Fetch now |
 | Jobs | `/jobs` | Filterable, sortable list of everything fetched |
 | Paste a job | `/jobs/new` | Save a posting by hand (LinkedIn, email, referral); it gets classified like any other |
 | Job detail | `/jobs/:id` | Four tabs — the posting with the AI verdict, resume match, cover letter, "is it real?" — beside status actions, details and tracking |

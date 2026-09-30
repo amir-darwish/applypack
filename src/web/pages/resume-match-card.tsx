@@ -370,7 +370,7 @@ const FactRow: FC<{ k: MatchKeyword; matchId: number; back: string }> = ({ k, ma
           class="!w-44 !px-2 !py-1 !text-meta"
         />
         {/* Saved as a fact and re-scored in code — no AI call, so not violet. */}
-        <Button size="sm" variant="secondary">
+        <Button variant="secondary">
           I have it
         </Button>
       </form>
@@ -1222,7 +1222,7 @@ const AddKeywordForm: FC<{ edit: KeywordEditTarget }> = ({ edit }) => (
         </option>
       ))}
     </Select>
-    <Button size="sm" variant="secondary">
+    <Button variant="secondary">
       Add
     </Button>
     <Hint class="basis-full">

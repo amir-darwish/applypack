@@ -1,40 +1,42 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-17T12:00:00Z",
+  "generatedAt": "2026-09-30T12:00:00Z",
   "title": "Design System: ApplyPack",
   "extensions": {
     "colorMeta": {
-      "surface": { "role": "neutral", "displayName": "Canvas", "canonical": "rgb(245 247 246)", "tonalRamp": ["#101828", "#344054", "#475467", "#5F6B7E", "#98A2B3", "#C8D1CC", "#DDE3E0", "#F5F7F6"] },
-      "surface-raised": { "role": "neutral", "displayName": "Raised White", "canonical": "rgb(255 255 255)", "tonalRamp": ["#101828", "#344054", "#475467", "#5F6B7E", "#98A2B3", "#C8D1CC", "#DDE3E0", "#FFFFFF"] },
-      "surface-overlay": { "role": "neutral", "displayName": "Subtle", "canonical": "rgb(238 242 240)", "tonalRamp": ["#101828", "#344054", "#475467", "#5F6B7E", "#98A2B3", "#C8D1CC", "#DDE3E0", "#EEF2F0"] },
-      "surface-selected": { "role": "neutral", "displayName": "Selected", "canonical": "rgb(228 241 234)", "tonalRamp": ["#065F46", "#047857", "#059669", "#34D399", "#A7E0C6", "#CBE8D8", "#E4F1EA", "#F2F8F5"] },
-      "line": { "role": "neutral", "displayName": "Divider", "canonical": "rgb(221 227 224)", "tonalRamp": ["#101828", "#344054", "#475467", "#5F6B7E", "#98A2B3", "#C8D1CC", "#DDE3E0", "#F5F7F6"] },
-      "line-strong": { "role": "neutral", "displayName": "Control Border", "canonical": "rgb(200 209 204)", "tonalRamp": ["#101828", "#344054", "#475467", "#5F6B7E", "#98A2B3", "#C8D1CC", "#DDE3E0", "#F5F7F6"] },
-      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "rgb(16 24 40)", "tonalRamp": ["#101828", "#344054", "#475467", "#5F6B7E", "#98A2B3", "#C8D1CC", "#DDE3E0", "#F5F7F6"] },
-      "ink-muted": { "role": "neutral", "displayName": "Muted Ink", "canonical": "rgb(71 84 103)", "tonalRamp": ["#101828", "#344054", "#475467", "#5F6B7E", "#98A2B3", "#C8D1CC", "#DDE3E0", "#F5F7F6"] },
-      "ink-faint": { "role": "neutral", "displayName": "Faint Ink", "canonical": "rgb(95 107 126)", "tonalRamp": ["#101828", "#344054", "#475467", "#5F6B7E", "#98A2B3", "#C8D1CC", "#DDE3E0", "#F5F7F6"] },
-      "accent": { "role": "primary", "displayName": "Emerald", "canonical": "rgb(5 150 105)", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047857", "#059669", "#10B981", "#6EE7B7", "#D1FAE5"] },
-      "accent-strong": { "role": "primary", "displayName": "Emerald Strong", "canonical": "rgb(4 120 87)", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047857", "#059669", "#10B981", "#6EE7B7", "#D1FAE5"] },
-      "accent-deep": { "role": "primary", "displayName": "Emerald Deep", "canonical": "rgb(6 95 70)", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047857", "#059669", "#10B981", "#6EE7B7", "#D1FAE5"] },
-      "ok": { "role": "status", "displayName": "OK Green", "canonical": "rgb(4 120 87)", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047857", "#059669", "#10B981", "#6EE7B7", "#D1FAE5"] },
-      "warn": { "role": "status", "displayName": "Warn Amber", "canonical": "rgb(162 79 10)", "tonalRamp": ["#451A03", "#6F3407", "#8A430A", "#A24F0A", "#D97706", "#F59E0B", "#FCD34D", "#FEF3C7"] },
+      "surface": { "role": "neutral", "displayName": "Canvas", "canonical": "rgb(243 245 244)", "tonalRamp": ["#0D1421", "#344054", "#3D4859", "#566173", "#98A2B3", "#BCC6C0", "#D9DFDB", "#F3F5F4"] },
+      "surface-raised": { "role": "neutral", "displayName": "Raised White", "canonical": "rgb(255 255 255)", "tonalRamp": ["#0D1421", "#344054", "#3D4859", "#566173", "#98A2B3", "#BCC6C0", "#D9DFDB", "#FFFFFF"] },
+      "surface-overlay": { "role": "neutral", "displayName": "Subtle", "canonical": "rgb(235 239 237)", "tonalRamp": ["#0D1421", "#344054", "#3D4859", "#566173", "#98A2B3", "#BCC6C0", "#D9DFDB", "#EBEFED"] },
+      "surface-selected": { "role": "neutral", "displayName": "Selected", "canonical": "rgb(224 242 232)", "tonalRamp": ["#065F46", "#047455", "#059669", "#34D399", "#A7E0C6", "#CBE8D8", "#E0F2E8", "#F2F8F5"] },
+      "line": { "role": "neutral", "displayName": "Divider", "canonical": "rgb(217 223 219)", "tonalRamp": ["#0D1421", "#344054", "#3D4859", "#566173", "#98A2B3", "#BCC6C0", "#D9DFDB", "#F3F5F4"] },
+      "line-strong": { "role": "neutral", "displayName": "Control Border", "canonical": "rgb(188 198 192)", "tonalRamp": ["#0D1421", "#344054", "#3D4859", "#566173", "#98A2B3", "#BCC6C0", "#D9DFDB", "#F3F5F4"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "rgb(13 20 33)", "tonalRamp": ["#0D1421", "#344054", "#3D4859", "#566173", "#98A2B3", "#BCC6C0", "#D9DFDB", "#F3F5F4"] },
+      "ink-muted": { "role": "neutral", "displayName": "Muted Ink", "canonical": "rgb(61 72 89)", "tonalRamp": ["#0D1421", "#344054", "#3D4859", "#566173", "#98A2B3", "#BCC6C0", "#D9DFDB", "#F3F5F4"] },
+      "ink-faint": { "role": "neutral", "displayName": "Faint Ink", "canonical": "rgb(86 97 115)", "tonalRamp": ["#0D1421", "#344054", "#3D4859", "#566173", "#98A2B3", "#BCC6C0", "#D9DFDB", "#F3F5F4"] },
+      "accent": { "role": "primary", "displayName": "Emerald", "canonical": "rgb(5 150 105)", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047455", "#059669", "#10B981", "#6EE7B7", "#D1FAE5"] },
+      "accent-strong": { "role": "primary", "displayName": "Emerald Strong", "canonical": "rgb(4 116 85)", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047455", "#059669", "#10B981", "#6EE7B7", "#D1FAE5"] },
+      "accent-deep": { "role": "primary", "displayName": "Emerald Deep", "canonical": "rgb(6 95 70)", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047455", "#059669", "#10B981", "#6EE7B7", "#D1FAE5"] },
+      "ok": { "role": "status", "displayName": "OK Green", "canonical": "rgb(4 116 85)", "tonalRamp": ["#022C22", "#064E3B", "#065F46", "#047455", "#059669", "#10B981", "#6EE7B7", "#D1FAE5"] },
+      "warn": { "role": "status", "displayName": "Warn Orange", "canonical": "rgb(168 71 10)", "tonalRamp": ["#451A03", "#6F3407", "#8A430A", "#A8470A", "#D97706", "#F59E0B", "#FCD34D", "#FEF3C7"] },
       "danger": { "role": "status", "displayName": "Danger Red", "canonical": "rgb(180 35 24)", "tonalRamp": ["#450A0A", "#7A1A12", "#971D14", "#B42318", "#D92D20", "#F97066", "#FDA29B", "#FEE4E2"] },
       "info": { "role": "status", "displayName": "Info Blue", "canonical": "rgb(29 78 216)", "tonalRamp": ["#172554", "#1E3A8A", "#1E40AF", "#1D4ED8", "#2563EB", "#3B82F6", "#93C5FD", "#DBEAFE"] },
       "violet": { "role": "status", "displayName": "AI Violet", "canonical": "rgb(109 40 217)", "tonalRamp": ["#2E1065", "#4C1D95", "#5B21B6", "#6D28D9", "#7C3AED", "#8B5CF6", "#C4B5FD", "#EDE9FE"] }
     },
     "typographyMeta": {
-      "title": { "displayName": "Title", "purpose": "The page's one h1, in the header row next to meta and actions." },
-      "section": { "displayName": "Section", "purpose": "A page-level section outside a card; a settings section." },
-      "entity": { "displayName": "Entity", "purpose": "Card headings, a row's name, a resume, a job, an engine." },
+      "title": { "displayName": "Title", "purpose": "The page's one h1, at the left of the header with the page's one sentence under it." },
+      "section": { "displayName": "Section", "purpose": "A card's title, a page-level section outside a card, a settings section, the wordmark." },
+      "entity": { "displayName": "Entity", "purpose": "A row's name — a job, a resume, an engine — a small card's heading, the number in a fit tile." },
       "body": { "displayName": "Body", "purpose": "Default UI text: tables, forms, buttons, nav. Weight 500 marks emphasis." },
       "label": { "displayName": "Label", "purpose": "Field labels, table headers, fieldset legends, sidebar group labels." },
       "meta": { "displayName": "Meta", "purpose": "Timestamps, counts, the header's meta line, helper prose under a control." },
-      "stat-value": { "displayName": "Stat Value", "purpose": "The metric strip's numbers on Overview; always tabular-nums." },
+      "kpi": { "displayName": "KPI", "purpose": "A number that leads: a status card's value, the chart's total, the score ring; always tabular-nums." },
       "mono-value": { "displayName": "Mono Value", "purpose": "Machine values only: ids, tokens, cron names, durations, code." }
     },
     "shadows": [
-      { "name": "whisper", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "The only ambient shadow; white surfaces (cards, controls, filled buttons) only." },
-      { "name": "drawer", "value": "0 8px 30px rgb(16 24 40 / 0.12)", "purpose": "Mobile nav drawer — the app's single true elevation, paired with a rgb(16 24 40 / 0.4) backdrop." },
+      { "name": "control", "value": "0 1px 2px 0 rgb(13 20 33 / 0.06)", "purpose": "shadow-sm: inputs, filled and outlined buttons, the chosen segment of a switch." },
+      { "name": "card", "value": "0 1px 2px 0 rgb(13 20 33 / 0.04), 0 2px 8px -2px rgb(13 20 33 / 0.06)", "purpose": "shadow-card: a raised surface at rest." },
+      { "name": "pop", "value": "0 4px 8px -2px rgb(13 20 33 / 0.08), 0 16px 32px -8px rgb(13 20 33 / 0.16)", "purpose": "shadow-pop: what floats — a confirm popover, an info tip, the chart's hover card." },
+      { "name": "drawer", "value": "0 8px 30px rgb(16 24 40 / 0.12)", "purpose": "Mobile nav drawer, paired with a rgb(16 24 40 / 0.4) backdrop." },
       { "name": "header-hairline", "value": "inset 0 -1px 0 rgb(var(--line))", "purpose": "Bottom edge of sticky table headers, replacing the border so the line survives scroll." }
     ],
     "motion": [
@@ -56,7 +58,7 @@
       "refersTo": "button-primary",
       "description": "The one affirmative act per view region — solid emerald, white text.",
       "html": "<button class=\"ds-btn-primary\">Mark applied</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 6px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap; color: #FFFFFF; background-color: rgb(var(--accent-strong)); border: none; border-radius: 6px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background-color: rgb(var(--accent-deep)); } .ds-btn-primary:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; } .ds-btn-primary:disabled { cursor: not-allowed; opacity: 0.4; }"
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 6px 14px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap; color: #FFFFFF; background-color: rgb(var(--accent-strong)); border: none; border-radius: 8px; box-shadow: 0 1px 2px 0 rgb(13 20 33 / 0.06); cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background-color: rgb(var(--accent-deep)); } .ds-btn-primary:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; } .ds-btn-primary:disabled { cursor: not-allowed; opacity: 0.4; }"
     },
     {
       "name": "Secondary Button",
@@ -64,7 +66,7 @@
       "refersTo": "button-secondary",
       "description": "The default non-primary action — white with a strong hairline border.",
       "html": "<button class=\"ds-btn-secondary\">Dismiss</button>",
-      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 6px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap; color: rgb(var(--ink)); background-color: rgb(var(--surface-raised)); border: 1px solid rgb(var(--line-strong)); border-radius: 6px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: pointer; transition: background-color 150ms; } .ds-btn-secondary:hover { background-color: rgb(var(--surface-overlay)); } .ds-btn-secondary:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; } .ds-btn-secondary:disabled { cursor: not-allowed; opacity: 0.4; }"
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 6px 14px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap; color: rgb(var(--ink)); background-color: rgb(var(--surface-raised)); border: 1px solid rgb(var(--line-strong)); border-radius: 8px; box-shadow: 0 1px 2px 0 rgb(13 20 33 / 0.06); cursor: pointer; transition: background-color 150ms; } .ds-btn-secondary:hover { background-color: rgb(var(--surface-overlay)); } .ds-btn-secondary:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; } .ds-btn-secondary:disabled { cursor: not-allowed; opacity: 0.4; }"
     },
     {
       "name": "AI Button",
@@ -72,7 +74,7 @@
       "refersTo": "button-violet",
       "description": "Violet-tinted button reserved for AI/model-spend actions and Save (the Violet-Means-AI Rule).",
       "html": "<button class=\"ds-btn-ai\">Re-analyze with AI</button>",
-      "css": ".ds-btn-ai { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 6px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap; color: rgb(var(--violet)); background-color: rgb(var(--violet) / 0.05); border: 1px solid rgb(var(--violet) / 0.3); border-radius: 6px; cursor: pointer; transition: background-color 150ms; } .ds-btn-ai:hover { background-color: rgb(var(--violet) / 0.1); } .ds-btn-ai:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; } .ds-btn-ai:disabled { cursor: not-allowed; opacity: 0.4; }"
+      "css": ".ds-btn-ai { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 6px 14px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap; color: rgb(var(--violet)); background-color: rgb(var(--violet) / 0.05); border: 1px solid rgb(var(--violet) / 0.3); border-radius: 8px; cursor: pointer; transition: background-color 150ms; } .ds-btn-ai:hover { background-color: rgb(var(--violet) / 0.1); } .ds-btn-ai:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; } .ds-btn-ai:disabled { cursor: not-allowed; opacity: 0.4; }"
     },
     {
       "name": "Text Input",
@@ -80,95 +82,99 @@
       "refersTo": "input",
       "description": "The standard control: white, strong hairline, calm emerald focus ring.",
       "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search title or description…\" />",
-      "css": ".ds-input { width: 100%; max-width: 280px; padding: 6px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px; color: rgb(var(--ink)); background-color: rgb(var(--surface-raised)); border: 1px solid rgb(var(--line-strong)); border-radius: 6px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: border-color 150ms; } .ds-input::placeholder { color: rgb(var(--ink-faint)); } .ds-input:hover { border-color: rgb(var(--ink-faint)); } .ds-input:focus { border-color: rgb(var(--accent)); outline: none; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 0 0 2px rgb(var(--accent) / 0.15); }"
+      "css": ".ds-input { width: 100%; max-width: 280px; padding: 7px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px; color: rgb(var(--ink)); background-color: rgb(var(--surface-raised)); border: 1px solid rgb(var(--line-strong)); border-radius: 8px; box-shadow: 0 1px 2px 0 rgb(13 20 33 / 0.06); transition: border-color 150ms; } .ds-input::placeholder { color: rgb(var(--ink-faint)); } .ds-input:hover { border-color: rgb(var(--ink-faint)); } .ds-input:focus { border-color: rgb(var(--accent)); outline: none; box-shadow: 0 1px 2px 0 rgb(13 20 33 / 0.06), 0 0 0 2px rgb(var(--accent) / 0.15); }"
     },
     {
       "name": "Select",
       "kind": "input",
       "description": "Input styling with a drawn 14px chevron replacing browser chrome.",
       "html": "<select class=\"ds-select\"><option>Recently fetched</option><option>Highest fit</option><option>Title A-Z</option></select>",
-      "css": ".ds-select { width: 100%; max-width: 200px; appearance: none; padding: 6px 32px 6px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px; color: rgb(var(--ink)); background-color: rgb(var(--surface-raised)); border: 1px solid rgb(var(--line-strong)); border-radius: 6px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\"); background-position: right 0.6rem center; background-size: 14px 14px; background-repeat: no-repeat; transition: border-color 150ms; cursor: pointer; } .ds-select:hover { border-color: rgb(var(--ink-faint)); } .ds-select:focus { border-color: rgb(var(--accent)); outline: none; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 0 0 2px rgb(var(--accent) / 0.15); }"
+      "css": ".ds-select { width: 100%; max-width: 200px; appearance: none; padding: 7px 32px 7px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px; color: rgb(var(--ink)); background-color: rgb(var(--surface-raised)); border: 1px solid rgb(var(--line-strong)); border-radius: 8px; box-shadow: 0 1px 2px 0 rgb(13 20 33 / 0.06); background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23566173' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\"); background-position: right 0.6rem center; background-size: 14px 14px; background-repeat: no-repeat; transition: border-color 150ms; cursor: pointer; } .ds-select:hover { border-color: rgb(var(--ink-faint)); } .ds-select:focus { border-color: rgb(var(--accent)); outline: none; box-shadow: 0 1px 2px 0 rgb(13 20 33 / 0.06), 0 0 0 2px rgb(var(--accent) / 0.15); }"
     },
     {
       "name": "Status Pills",
       "kind": "chip",
       "refersTo": "badge-neutral",
-      "description": "The quiet status vocabulary: 10% tint, tone text, 20% inset ring, currentColor dot.",
-      "html": "<span class=\"ds-pill ds-pill-info\"><span class=\"ds-pill-dot\"></span>New</span> <span class=\"ds-pill ds-pill-warn\"><span class=\"ds-pill-dot\"></span>Alerted</span> <span class=\"ds-pill ds-pill-ok\"><span class=\"ds-pill-dot\"></span>Applied</span> <span class=\"ds-pill ds-pill-violet\"><span class=\"ds-pill-dot\"></span>Saved</span> <span class=\"ds-pill ds-pill-neutral\"><span class=\"ds-pill-dot\"></span>Dismissed</span>",
-      "css": ".ds-pill { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 2px 8px; border-radius: 9999px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 500; line-height: 16px; } .ds-pill-dot { width: 6px; height: 6px; border-radius: 9999px; background-color: currentColor; } .ds-pill-info { color: rgb(var(--info)); background-color: rgb(var(--info) / 0.1); box-shadow: inset 0 0 0 1px rgb(var(--info) / 0.2); } .ds-pill-warn { color: rgb(var(--warn)); background-color: rgb(var(--warn) / 0.1); box-shadow: inset 0 0 0 1px rgb(var(--warn) / 0.2); } .ds-pill-ok { color: rgb(var(--ok)); background-color: rgb(var(--ok) / 0.1); box-shadow: inset 0 0 0 1px rgb(var(--ok) / 0.2); } .ds-pill-violet { color: rgb(var(--violet)); background-color: rgb(var(--violet) / 0.1); box-shadow: inset 0 0 0 1px rgb(var(--violet) / 0.2); } .ds-pill-neutral { color: rgb(var(--ink-muted)); background-color: rgb(var(--surface-overlay)); box-shadow: inset 0 0 0 1px rgb(var(--line)); }"
+      "description": "The status vocabulary: 12% tint over white, tone text, 25% inset ring. The word in its tone is the status; only a state pill (Running, Enabled) leads with a dot.",
+      "html": "<span class=\"ds-pill ds-pill-info\">New</span> <span class=\"ds-pill ds-pill-warn\">Alerted</span> <span class=\"ds-pill ds-pill-ok\">Applied</span> <span class=\"ds-pill ds-pill-violet\">Saved</span> <span class=\"ds-pill ds-pill-neutral\">Dismissed</span>",
+      "css": ".ds-pill { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 2px 10px; border-radius: 9999px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 500; line-height: 16px; } .ds-pill-info { color: rgb(var(--info)); background-color: rgb(var(--info) / 0.12); box-shadow: inset 0 0 0 1px rgb(var(--info) / 0.25); } .ds-pill-warn { color: rgb(var(--warn)); background-color: rgb(var(--warn) / 0.12); box-shadow: inset 0 0 0 1px rgb(var(--warn) / 0.25); } .ds-pill-ok { color: rgb(var(--ok)); background-color: rgb(var(--ok) / 0.12); box-shadow: inset 0 0 0 1px rgb(var(--ok) / 0.25); } .ds-pill-violet { color: rgb(var(--violet)); background-color: rgb(var(--violet) / 0.12); box-shadow: inset 0 0 0 1px rgb(var(--violet) / 0.25); } .ds-pill-neutral { color: rgb(var(--ink-muted)); background-color: rgb(var(--surface-overlay)); box-shadow: inset 0 0 0 1px rgb(var(--line)); }"
     },
     {
-      "name": "Fit Badge",
+      "name": "Fit Tile",
       "kind": "custom",
-      "description": "Signature score readout: toned tabular number plus a 36x6px meter, legible without color.",
-      "html": "<span class=\"ds-fit\" title=\"fit 88/100\"><span class=\"ds-fit-num\">88</span><span class=\"ds-fit-meter\"><span class=\"ds-fit-fill\" style=\"width: 88%\"></span></span></span>",
-      "css": ".ds-fit { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; } .ds-fit-num { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; color: rgb(var(--ok)); } .ds-fit-meter { display: block; width: 36px; height: 6px; overflow: hidden; border-radius: 9999px; background-color: rgb(var(--line)); } .ds-fit-fill { display: block; height: 100%; border-radius: 9999px; background-color: rgb(var(--ok)); }"
+      "description": "Signature score readout: the fit as a tabular number in a toned tile — the number is the value, the tone its floor.",
+      "html": "<span class=\"ds-fit\" title=\"fit 88/100\">88</span>",
+      "css": ".ds-fit { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; padding: 2px 8px; border-radius: 8px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; line-height: 22px; font-variant-numeric: tabular-nums; color: rgb(var(--ok)); background-color: rgb(var(--ok) / 0.12); box-shadow: inset 0 0 0 1px rgb(var(--ok) / 0.25); }"
     },
     {
       "name": "Card",
       "kind": "card",
       "refersTo": "card",
-      "description": "The white work surface: hairline border, 8px radius, whisper shadow, 20px padding.",
-      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Details</h2><p class=\"ds-card-body\">Salary, dates and source facts sit in a quiet white panel on the paper-gray ground.</p></section>",
-      "css": ".ds-card { background-color: rgb(var(--surface-raised)); border: 1px solid rgb(var(--line)); border-radius: 8px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); padding: 20px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-card-title { margin: 0 0 12px; font-size: 14px; font-weight: 600; line-height: 20px; color: rgb(var(--ink)); } .ds-card-body { margin: 0; font-size: 14px; line-height: 20px; color: rgb(var(--ink-muted)); }"
+      "description": "The white work surface: hairline border, 12px radius, a soft card shadow, 20px padding.",
+      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Details</h2><p class=\"ds-card-body\">Salary, dates and source facts sit in a white card on the canvas.</p></section>",
+      "css": ".ds-card { background-color: rgb(var(--surface-raised)); border: 1px solid rgb(var(--line)); border-radius: 12px; box-shadow: 0 1px 2px 0 rgb(13 20 33 / 0.04), 0 2px 8px -2px rgb(13 20 33 / 0.06); padding: 20px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-card-title { margin: 0 0 16px; font-size: 18px; font-weight: 650; line-height: 26px; letter-spacing: -0.015em; color: rgb(var(--ink)); } .ds-card-body { margin: 0; font-size: 14px; line-height: 20px; color: rgb(var(--ink-muted)); }"
     },
     {
       "name": "Sidebar Nav",
       "kind": "nav",
-      "description": "Paper-gray rail links: overlay fill and 500 weight mark the active page.",
+      "description": "The white menu: the active page takes the selected tint, emerald-strong text at 600 and a bar at the menu's left edge.",
       "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-link ds-nav-active\" href=\"#\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/><rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"/></svg>Jobs</a><a class=\"ds-nav-link\" href=\"#\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2\"/></svg>Runs</a></nav>",
-      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 216px; padding: 8px 12px; background-color: rgb(var(--surface)); border-right: 1px solid rgb(var(--line)); font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-nav-link { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; font-size: 14px; line-height: 20px; color: rgb(var(--ink-muted)); text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-nav-link svg { width: 18px; height: 18px; flex-shrink: 0; } .ds-nav-link:hover { background-color: rgb(var(--surface-overlay) / 0.7); color: rgb(var(--ink)); } .ds-nav-link:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; border-radius: 4px; } .ds-nav-active { background-color: rgb(var(--surface-overlay)); font-weight: 500; color: rgb(var(--ink)); }"
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 216px; padding: 8px 12px; background-color: rgb(var(--surface-raised)); border-right: 1px solid rgb(var(--line)); font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-nav-link { position: relative; display: flex; align-items: center; gap: 12px; padding: 8px 12px; font-weight: 500; border-radius: 8px; font-size: 14px; line-height: 20px; color: rgb(var(--ink-muted)); text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-nav-link svg { width: 18px; height: 18px; flex-shrink: 0; } .ds-nav-link:hover { background-color: rgb(var(--surface-overlay)); color: rgb(var(--ink)); } .ds-nav-link:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; border-radius: 4px; } .ds-nav-active, .ds-nav-active:hover { background-color: rgb(var(--surface-selected)); font-weight: 600; color: rgb(var(--accent-strong)); } .ds-nav-active::before { content: \"\"; position: absolute; left: -12px; top: 6px; bottom: 6px; width: 4px; border-radius: 0 9999px 9999px 0; background-color: rgb(var(--accent-strong)); }"
     },
     {
       "name": "Data Table",
       "kind": "custom",
-      "description": "GitHub-style table: overlay header, hairline row dividers, 50% overlay row hover.",
+      "description": "The data table: a subtle header at the label step, hairline row dividers, a 50% selected-tint row hover.",
       "html": "<table class=\"ds-table\"><thead><tr><th>Title</th><th>Company</th><th>Location</th></tr></thead><tbody><tr><td>Senior TypeScript Engineer</td><td>Acme</td><td>Remote (US)</td></tr><tr><td>Staff Platform Engineer</td><td>Sumble</td><td>Remote</td></tr></tbody></table>",
-      "css": ".ds-table { width: 100%; border-collapse: collapse; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px; color: rgb(var(--ink)); } .ds-table th { background-color: rgb(var(--surface-overlay)); padding: 10px 16px; text-align: left; font-size: 12px; font-weight: 500; line-height: 16px; color: rgb(var(--ink-muted)); border-bottom: 1px solid rgb(var(--line)); } .ds-table td { padding: 12px 16px; border-bottom: 1px solid rgb(var(--line)); } .ds-table th:first-child, .ds-table td:first-child { padding-left: 20px; } .ds-table th:last-child, .ds-table td:last-child { padding-right: 20px; } .ds-table tbody tr { transition: background-color 150ms; } .ds-table tbody tr:hover { background-color: rgb(var(--surface-overlay) / 0.5); }"
+      "css": ".ds-table { width: 100%; border-collapse: collapse; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 20px; color: rgb(var(--ink)); } .ds-table th { background-color: rgb(var(--surface-overlay) / 0.7); padding: 10px 16px; text-align: left; font-size: 13px; font-weight: 550; line-height: 18px; color: rgb(var(--ink-muted)); border-bottom: 1px solid rgb(var(--line)); } .ds-table td { padding: 12px 16px; border-bottom: 1px solid rgb(var(--line)); } .ds-table th:first-child, .ds-table td:first-child { padding-left: 20px; } .ds-table th:last-child, .ds-table td:last-child { padding-right: 20px; } .ds-table tbody tr { transition: background-color 150ms; } .ds-table tbody tr:hover { background-color: rgb(var(--surface-selected) / 0.5); }"
     }
   ],
   "narrative": {
-    "northStar": "The Hunting Console",
-    "overview": "A calm, light operations desk for a daily job hunt. The dashboard is read twice a day, briefly, in indoor daylight: it must be dense, quiet, and instantly legible. The composition is a Linear-density work surface — a fixed 240px sidebar on the subtle surface, a canvas ground, white surfaces carrying the data. Structure comes from three surfaces and a type ladder the eye reads before the words: title, section, entity, body, label, meta. Nothing on screen persuades or decorates; every pixel serves reading four numbers, scanning new jobs, and acting on one.\n\nThe personality is professional, calm, modern, information-first — compact but not cramped. Brand lives in details rather than surfaces: an emerald focus ring, emerald text selection, the emerald \"AP\" mark, an emerald primary button. Status speaks in a quiet five-color vocabulary of tinted pills (blue / amber / emerald / violet / gray) that never rises to a saturated fill. Controls follow a \"quiet precision\" philosophy: they disappear into the task, borrowing their forms from Stripe's settings forms and GitHub's data tables.\n\nTwo worlds are explicitly refused, per the owner's brief: the dark hacker dashboard (glowing terminals, neon-on-black) and the AI-slop marketing admin (gradients, glassmorphism, giant cards, 20–30px radii, decorative noise, heavy shadows). Only a light theme is implemented today; every color flows through semantic CSS-variable tokens so a dark theme later is a second set of values, not a component rewrite.",
+    "northStar": "The Job-Search Console",
+    "overview": "A clear, light console for a daily job search. The dashboard is opened twice a day, briefly: it has to say what the search did and whether it is working before anyone reads a sentence. So the numbers lead — four status cards with their last fortnight, one chart of the matches over time — and everything else is built to be scanned: white cards on a quiet canvas, a white menu, a type ladder the eye reads before the words, an icon on a tinted tile where a row needs a picture.\n\nThe personality is professional, crisp, modern, information-first. Contrast does the work that decoration would otherwise do: near-black ink, helper text held a step above WCAG AA, card edges that read on the canvas, one emerald accent that is never spent on ambience. Status speaks in a five-tone vocabulary of tinted pills and tiles (blue / amber / emerald / violet / gray) that never rises to a saturated fill. Controls are plain and one height, so a row of them lines up without thought.\n\nTwo looks are refused: the dark hacker dashboard (glowing terminals, neon-on-black) and the decorated admin template (glassmorphism, animated gradients, hover-lift, a chart for its own sake). Only a light theme is implemented; every colour flows through semantic CSS-variable tokens, so a dark theme later is a second set of values, not a component rewrite.",
     "keyCharacteristics": [
-      "Canvas ground (#F5F7F6), white work surfaces, a subtle third surface (#EEF2F0) for the sidebar, table headers and wells — surface first, never surface alone",
-      "A type ladder visible at a glance: 26 / 18 / 15 / 14 / 13 / 12 px",
-      "One brand accent (emerald); status as quiet tinted pills, never fills",
+      "Canvas ground (#F3F5F4), white cards and a white menu, a subtle third surface (#EBEFED) for table headers and wells",
+      "A type ladder visible at a glance: 30 / 18 / 15 / 14 / 13 / 12 px, and one 32 px step for a number that leads",
+      "One brand accent (emerald); status as tinted pills and icon tiles, never fills",
       "Inter for all UI text; monospace strictly for machine values",
-      "One surface per region; shadow is a whisper on white surfaces only",
-      "Dense 4px-grid spacing; 14px body type; tables and forms carry the work",
-      "Drawn stroke icons (Lucide-style), never emoji or Unicode glyphs"
+      "Cards with 12px corners, a hairline outline and a soft shadow; controls with 8px corners at one height (36px)",
+      "Charts drawn by the server as inline SVG: one series, a sentence, real data",
+      "Drawn stroke icons from one family (Lucide), never emoji or Unicode glyphs"
     ],
     "rules": [
-      { "name": "The One-Accent Rule", "section": "colors", "body": "Emerald is the only brand color. The status tones are vocabulary, not decoration: they appear exclusively where they carry state (pills, dots, meters, toned numbers) and never as ambient color." },
-      { "name": "The Quiet-Pill Rule", "section": "colors", "body": "Status renders as a tinted pill — 10% tone over white, full-strength tone text, 20% tone inset ring — never as a saturated fill. The pill carries its own white ground, so it reads the same on the canvas, in a table and on a subtle well. A status color at 100% opacity may only paint dots, meter fills, and text." },
+      { "name": "The One-Accent Rule", "section": "colors", "body": "Emerald is the only brand colour. The status tones are vocabulary, not decoration: they appear where they carry state or name a kind of thing (pills, tiles, dots, toned numbers, a status card's bars) and never as ambient colour." },
+      { "name": "The Tinted-Pill Rule", "section": "colors", "body": "Status renders as a tinted pill or tile — 12 % tone over white, full-strength tone text, 25 % tone inset ring — never as a saturated fill. The pill carries its own white ground, so it reads the same on the canvas, in a table and on a subtle well. A status colour at 100 % opacity may only paint dots, bars and text." },
       { "name": "The Violet-Means-AI Rule", "section": "colors", "body": "Violet (#6D28D9) is reserved for AI/model-spend actions — Compare, Re-analyze with AI, Re-scan, Re-classify, HN Run now — and for the Saved status. It signals \"this button costs AI credit or marks a save.\" It must never become a general secondary accent." },
       { "name": "The Machine-Mono Rule", "section": "typography", "body": "Monospace is strictly for machine values — ids, tokens, cron names, durations, code. Prose, labels, titles, and numbers-in-prose stay in Inter; numeric columns align with `tabular-nums`, not with mono." },
-      { "name": "The Surface-First Rule", "section": "elevation", "body": "A region is set apart by its surface AND one of: spacing, a heading, a divider, an indicator — never by a background alone (the steps are 1.03–1.13). State is never a background alone either: a selected option also gets emerald-strong text at weight 500 and a drawn check or a left bar; the active nav item gets all three." },
-      { "name": "The One-Surface-Per-Region Rule", "section": "elevation", "body": "A settings tab, a job page's main column, a filter panel: one raised surface with dividers inside it. A card is for an object that moves or stands alone — a board card, a mode box, a resume, the metric strip. `Card variant=\"flat\"` is a part of such a region, `\"subtle\"` a well inside it." },
-      { "name": "The Whisper-Shadow Rule", "section": "elevation", "body": "Surfaces are flat at rest. `shadow-sm` appears only on white surfaces, and nothing except the mobile drawer ever casts a real shadow. No glows, no heavy ambient shadows, no hover-lift." },
-      { "name": "The Drawn-Icon Rule", "section": "components", "body": "Every icon is a drawn SVG stroke on the 24px Lucide grid — including the select chevron and check/x marks. Emoji, Unicode glyphs, and icon fonts never stand in for icons." },
+      { "name": "The Surface-First Rule", "section": "elevation", "body": "A region is set apart by its surface AND one of: spacing, a heading, a divider, an indicator — never by a background alone. State is never a background alone either: a selected option also gets emerald-strong text at weight 500 and a drawn check or a left bar; the active nav item gets the tint, the emerald text at 600 and a bar at the menu's edge." },
+      { "name": "The One-Surface-Per-Region Rule", "section": "elevation", "body": "A settings tab, a job page's main column, a filter panel: one raised surface with dividers inside it. A card is for an object that stands alone — a board card, a mode box, a resume, a status card, a dashboard block. `Card variant=\"flat\"` is a part of such a region, `\"subtle\"` a well inside it." },
+      { "name": "The Soft-Shadow Rule", "section": "elevation", "body": "Shadows say \"raised\" and \"floating\", nothing more: no glows, no coloured shadows, no hover-lift. A card's border darkens on hover when the whole card is a link; it never moves." },
+      { "name": "The Drawn-Icon Rule", "section": "components", "body": "Every icon is a drawn SVG stroke on the 24px Lucide grid — `Icon` for the family in `src/web/icons.tsx`, plus the select chevron and the check/x marks drawn in place. Emoji, Unicode glyphs, and icon fonts never stand in for icons." },
       { "name": "The Composed-Primitive Rule", "section": "components", "body": "Pages compose `ui.tsx` primitives and never hand-roll Tailwind for shared patterns; new visual decisions land in the primitive or the token layer first." },
-      { "name": "The Disclosure Rule", "section": "components", "body": "Under a label, one sentence. What explains a cap, a cost, a gate, a privacy fact or a destructive act stays visible; everything else sits behind a quiet `Disclosure` (\"How this works\"), outside the label so it never becomes the control's accessible name. Filters, inactive input modes and raw machine output fold the same way — native `<details>`, no JavaScript." },
+      { "name": "The Disclosure Rule", "section": "components", "body": "Under a label, one sentence. What explains a cap, a cost, a gate, a privacy fact or a destructive act stays visible; everything else sits behind a quiet `Disclosure` (\"How this works\"), outside the label so it never becomes the control's accessible name. Filters, inactive input modes, a setting that belongs to an unchosen mode and raw machine output fold the same way — native `<details>` or one `:has()` rule, no JavaScript." },
+      { "name": "The One-Question Rule", "section": "components", "body": "A chart, a number or a bar is on a page because it answers a question someone asks of the search — is it finding anything, more or fewer than before, what do the matches ask for. It carries its unit, its period and a way to the rows behind it. A figure nobody can act on is not drawn." },
       { "name": "The Measured-Change Rule", "section": "components", "body": "A UI pull request names a number from `docs/ui-redesign/measure.js` — tab stops before the table, visible hint words, boxes, primaries, height — and reports it before and after (`node docs/ui-redesign/shoot.js`). If the number does not move, the change is not done." }
     ],
     "dos": [
-      "**Do** route every color through the semantic tokens (`surface` / `line` / `ink` / `accent` / status tones) as `rgb(var(--token) / alpha)`; a future dark theme must be a token swap, not a component edit.",
-      "**Do** keep the 4px spacing grid and the observed density: 20px card padding, 12×16px table cells, 6px control padding, 16px card gaps.",
+      "**Do** route every colour through the semantic tokens (`surface` / `line` / `ink` / `accent` / status tones) as `rgb(var(--token) / alpha)`; a future dark theme must be a token swap, not a component edit. A chart's strokes and fills use the same variables.",
+      "**Do** keep the 4px spacing grid: 20px card padding, 12×16px table cells, 16px card gaps, one control height.",
       "**Do** set `tabular-nums` on every numeric readout (stats, counts, scores, dates in columns) and render absent values as an em dash (—), never blank.",
       "**Do** give every interactive element the global focus ring (2px emerald, 2px offset) and a 150ms color-only transition.",
-      "**Do** pair color with a redundant channel — dot + label on status, number + meter on fit, a check or a bar on a selection — so state reads without color.",
-      "**Do** put a new value in `src/web/tokens.ts` and let `tokens.test.ts` say whether its text passes AA on every surface, the pill and the flash.",
-      "**Do** mark helper prose written outside `Hint` with `data-ui=\"hint\"`, so the number a UI change reports counts it."
+      "**Do** pair colour with a redundant channel — the word on a status, the number on a fit tile, a check or a bar on a selection, a word for a screen reader beside a health dot — so state reads without colour.",
+      "**Do** put a new value in `src/web/tokens.ts` and let `tokens.test.ts` say whether its text passes on every surface, the pill and the flash.",
+      "**Do** mark helper prose written outside `Hint` with `data-ui=\"hint\"`, so the number a UI change reports counts it.",
+      "**Do** say what a number is over and against what: \"52 jobs in the last 30 days\", \"+58% vs previous 7 days\"."
     ],
     "donts": [
-      "**Don't** introduce gradients, glassmorphism, decorative noise, heavy or colored shadows, hover-lift, or radii above 8px — the confirmed anti-world. The same goes for the stock looks: a Bootstrap or Material admin, a component-library demo page, giant colorful KPI cards, pills everywhere.",
+      "**Don't** introduce glassmorphism, animated or decorative gradients, heavy or coloured shadows, hover-lift, entrance animations or decorative noise. The one gradient in the app is the fade under the chart's line.",
       "**Don't** nest cards in cards, wrap a wrapper in a border, or set a region apart by a background alone.",
       "**Don't** let helper paragraphs pile up under a control, show raw JSON as a page's primary content, leave a page with a giant unused area, or hide an important action behind an unlabelled icon.",
-      "**Don't** colour an icon arbitrarily, draw a chart that answers no question, or vary the focus state between controls.",
+      "**Don't** colour an icon or a letter tile arbitrarily, draw a chart that answers no question, smooth a line into values the data never had, or vary the focus state between controls.",
       "**Don't** set anything in uppercase with tracking; a group label is sentence case at the label step.",
       "**Don't** use violet for anything but AI-spend actions and the Saved status, and don't promote any status tone into a second brand accent.",
-      "**Don't** fill a status with saturated color; status stays a quiet tinted pill (10% background, 20% ring).",
+      "**Don't** fill a status with saturated colour; status stays a tinted pill (12% background, 25% ring).",
+      "**Don't** show a rate without the number under it, a percentage of a handful, or a row of country flags where three words would do.",
+      "**Don't** fetch a logo, a font, an icon or a script from a third party: the dashboard draws everything it shows.",
       "**Don't** set prose, labels, or headings in monospace — mono is machine values only.",
       "**Don't** go dark ad hoc: no dark-styled components or pages until the token layer itself grows a dark value set."
     ]

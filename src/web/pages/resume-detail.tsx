@@ -127,7 +127,7 @@ export const ResumeDetailPage: FC<ResumeDetailProps> = ({
               aria-label="Resume name"
               class="!w-56 !px-2 !py-1 !text-meta"
             />
-            <Button size="sm" variant="ghost">
+            <Button variant="ghost">
               Rename
             </Button>
           </form>
