@@ -181,6 +181,7 @@ Five backends, and you can attach every subscription and key you own:
 | --- | --- | --- |
 | Claude Code CLI | headless `claude -p` | your Claude.ai Pro/Max subscription |
 | Gemini CLI | headless `gemini -p` | your Google account (generous free tier) or an AI Studio key |
+| Antigravity CLI | headless `agy -p` | your Google Antigravity account |
 | Codex CLI | headless `codex exec` | your ChatGPT Plus/Pro subscription |
 | Anthropic API | Messages API | per token |
 | OpenAI-compatible API | `POST /chat/completions` to any base URL | OpenAI, OpenRouter, Groq, DeepSeek, or a free local model |
