@@ -18,7 +18,9 @@ export type TextLayout = Pick<PdfLayout, 'columns' | 'pairs'>;
  *
  * Both heading dialects the corpus produces are recognised: `## KEY SKILLS`
  * (docx-text.ts renders Word heading styles that way) and a bare `KEY SKILLS`
- * (what a PDF's text layer gives). Measured on the three stored resumes.
+ * (what a PDF's text layer gives). Measured on the three stored resumes. A third
+ * is read by its words alone: "Experience" in ordinary case, a whole line that is
+ * one of HEADING_PHRASES (a plain-text resume, a PDF with no capitals).
  */
 
 /** A bare line is a heading only if it is short — a shouted sentence is not a section. */
@@ -52,6 +54,24 @@ const SECTION_WORDS: Array<[SectionKind, RegExp]> = [
   ['certificates', /\b(certificat|licens|course)\b/i],
   ['projects', /\bprojects?\b/i],
 ];
+
+/**
+ * The section headings a resume writes in ordinary case, whole-line and lower-cased
+ * ("&" read as "and"). A bare "Experience" is no shout, so `headingOf` needs the
+ * phrase itself; the kind still comes from SECTION_WORDS.
+ */
+const HEADING_PHRASES = new Set([
+  'summary', 'professional summary', 'career summary', 'executive summary', 'profile', 'professional profile',
+  'personal profile', 'profile summary', 'about', 'about me', 'objective', 'career objective',
+  'experience', 'work experience', 'professional experience', 'relevant experience', 'employment',
+  'employment history', 'work history', 'career history', 'career',
+  'education', 'education and training', 'academic background',
+  'skills', 'technical skills', 'key skills', 'core skills', 'skills and tools', 'core competencies',
+  'competencies', 'technologies', 'tech stack', 'expertise', 'areas of expertise',
+  'languages', 'certifications', 'certificates', 'licenses and certifications', 'courses',
+  'projects', 'personal projects', 'selected projects', 'side projects',
+  'awards', 'honors', 'achievements', 'publications', 'volunteering', 'interests', 'references',
+]);
 
 /** Where a section's heading is kept: the render's section key. `other` sections carry their own. */
 const HEADING_KEY: Record<SectionKind, string | null> = {
@@ -145,6 +165,12 @@ function headingOf(line: string): string | null {
   if (BULLET.test(line) || EMAIL.test(t) || URL.test(t)) return null;
   // "AWS, S3, EC2, SQS, RDS, OWASP" is shouting too, and it is a list, not a section.
   if (LIST_LIKE.test(t)) return null;
+  // "Experience" or "Work experience:" as the whole line: the heading a plain-text
+  // or PDF resume writes in ordinary case. Only the whole phrase counts, so a
+  // wrapped line of prose that opens with "Experience in …" stays content.
+  if (HEADING_PHRASES.has(t.toLowerCase().replace(/\s*:$/, '').replace(/\s*&\s*/g, ' and ').replace(/\s+/g, ' '))) {
+    return t.replace(/\s*:$/, '');
+  }
   // All-caps with no lower-case letter, and at least one letter to shout with.
   if (!/\p{Lu}/u.test(t) || /\p{Ll}/u.test(t)) return null;
   if (/[.:;]$/.test(t)) return null;
@@ -174,8 +200,12 @@ function basicsFrom(header: string[]): JsonResume['basics'] {
     // printed the title twice (reported 2026-09-30).
     if (i === labelAt) continue;
     const unread: string[] = [];
-    for (const part of line.split(SEPARATORS).map((p) => p.trim()).filter(Boolean)) {
-      if (!readContactPart(basics, part)) unread.push(part);
+    for (const [j, part] of line.split(SEPARATORS).map((p) => p.trim()).filter(Boolean).entries()) {
+      if (readContactPart(basics, part)) continue;
+      // "Senior Developer | dana@example.com | Lisbon": with no line of its own,
+      // the title is what opens the contact line.
+      if (j === 0 && basics.label === null) basics.label = part;
+      else unread.push(part);
     }
     if (unread.length === 0) continue;
     // What no field reads — "Fully Work Authorized ∙ No Visa Sponsorship
@@ -372,7 +402,10 @@ function splitTail(line: string): [string, string] {
 function withDates(line: string): { text: string; start: string | null; end: string | null } {
   const m = DATE_RANGE.exec(line);
   if (!m) return { text: line.trim(), start: null, end: null };
-  const text = (line.slice(0, m.index) + line.slice(m.index + m[0].length)).replace(SEPARATORS, ' ').trim();
+  // What held the dates to the rest goes with them: "Harborline (remote), 2022-present" is not a company ending in a comma.
+  const text = (line.slice(0, m.index) + line.slice(m.index + m[0].length))
+    .replace(SEPARATORS, ' ')
+    .replace(/^[\s,;–—-]+|[\s,;–—-]+$/g, '');
   return { text, start: m[1]?.trim() ?? null, end: m[2]?.trim() ?? null };
 }
 
