@@ -4,6 +4,44 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.40.0] — 2026-09-30
+
+### Added
+- **The Overview is a dashboard.** Four status cards — New, Alerted, Applied,
+  Saved — each with what moved in the last 24 hours and the last fortnight as
+  bars. Under them, **Jobs matching your searches**: matches per day over 7,
+  30, 90 or 180 days, the total, and the change against the range before;
+  point at the chart for a day's number. **All stack** narrows it to one
+  technology (7 and 30 days), and so does a bar of **Jobs by stack** — what
+  the last 30 days' matches ask for. The search funnel for the same range
+  stands under the chart; beside it, pipeline health and what the search did
+  in the last 24 hours. None of it spends an AI call.
+- **Recent alerts read like an inbox:** who hires, where ("Remote · USA,
+  Canada +3"), the technologies, the fit and how long ago.
+
+### Changed
+- **A crisper look on every page.** Darker text and clearer card edges
+  (helper text now holds 5:1 contrast on every surface), a larger page title
+  with one sentence under it, rounder cards, a white menu with a clearer "you
+  are here", and one height for a field and the button beside it.
+- **Fit is a number in a coloured tile** instead of a number beside a small
+  meter, and a status pill no longer repeats itself with a dot.
+- **Places read as words, technologies by their names.** Jobs shows "Remote ·
+  USA, UK +1" instead of a row of flags — the places your searches name come
+  first, every country is in the tooltip — and TypeScript, Node.js, AWS
+  instead of lowercase tags.
+- **Settings → Schedule says which hours belong to what.** The alert window
+  (its hours and days) shows only under "Only during these hours".
+  **Scheduled messages** is its own block: the hours of the daily recap and,
+  once a day at the first of them, the stale-application reminder.
+- **"+1 in the last 24h" counts what happened today.** On Applied it is an
+  application sent in the last 24 hours, on Alerted an alert sent — before,
+  both counted jobs that happened to be found today.
+- A Delete button is quiet until you point at it: the word is red, the
+  outline is any button's.
+- DESIGN.md describes the new system: the colours and their tested contrast,
+  the type ladder, the cards, and the rules a chart follows.
+
 ## [2.39.0] — 2026-09-28
 
 ### Changed
@@ -4498,6 +4536,25 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.40.0]: https://github.com/applypack/applypack/compare/v2.39.0...v2.40.0
+[2.39.0]: https://github.com/applypack/applypack/compare/v2.38.0...v2.39.0
+[2.38.0]: https://github.com/applypack/applypack/compare/v2.37.0...v2.38.0
+[2.37.0]: https://github.com/applypack/applypack/compare/v2.36.0...v2.37.0
+[2.36.0]: https://github.com/applypack/applypack/compare/v2.35.0...v2.36.0
+[2.35.0]: https://github.com/applypack/applypack/compare/v2.34.0...v2.35.0
+[2.34.0]: https://github.com/applypack/applypack/compare/v2.33.0...v2.34.0
+[2.33.0]: https://github.com/applypack/applypack/compare/v2.32.0...v2.33.0
+[2.32.0]: https://github.com/applypack/applypack/compare/v2.31.0...v2.32.0
+[2.31.0]: https://github.com/applypack/applypack/compare/v2.30.0...v2.31.0
+[2.30.0]: https://github.com/applypack/applypack/compare/v2.29.0...v2.30.0
+[2.29.0]: https://github.com/applypack/applypack/compare/v2.28.1...v2.29.0
+[2.28.1]: https://github.com/applypack/applypack/compare/v2.28.0...v2.28.1
+[2.28.0]: https://github.com/applypack/applypack/compare/v2.27.0...v2.28.0
+[2.27.0]: https://github.com/applypack/applypack/compare/v2.26.0...v2.27.0
+[2.26.0]: https://github.com/applypack/applypack/compare/v2.25.0...v2.26.0
+[2.25.0]: https://github.com/applypack/applypack/compare/v2.24.0...v2.25.0
+[2.24.0]: https://github.com/applypack/applypack/compare/v2.23.0...v2.24.0
+[2.23.0]: https://github.com/applypack/applypack/compare/v2.22.0...v2.23.0
 [2.22.0]: https://github.com/applypack/applypack/compare/v2.21.0...v2.22.0
 [2.21.0]: https://github.com/applypack/applypack/compare/v2.20.0...v2.21.0
 [2.20.0]: https://github.com/applypack/applypack/compare/v2.19.1...v2.20.0
