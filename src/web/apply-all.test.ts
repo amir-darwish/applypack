@@ -155,6 +155,15 @@ test('a keyword never lands on a job’s stack line or its dates line', async ()
   assert.equal(r.text.split('\n').find((l) => l.includes('Kafka')), 'Frameworks: Laravel, Vue.js, Kafka');
 });
 
+test('a role dated any of the usual ways closes the skills section', async () => {
+  const { addKeywords } = await mod;
+  for (const dates of ['Jan 2020 – Mar 2022', '03/2020 - 05/2022', '2019-Present']) {
+    const text = ['Jane Doe', '', 'SKILLS', 'Languages: PHP, Go', 'Where I worked', `Acme Corp, ${dates}`, 'Stack: MySQL, Redis'].join('\n');
+    const line = addKeywords(text, [{ term: 'Kafka' }]).text.split('\n').find((l) => l.includes('Kafka'));
+    assert.equal(line, 'Languages: PHP, Go, Kafka', dates);
+  }
+});
+
 test('with no skills section the keywords get one of their own, never a line inside a role', async () => {
   const { addKeywords } = await mod;
   const text = 'Jane Doe\n\nEXPERIENCE\nAcme Corp — Senior Engineer, 2020 – Present\n- Built full-stack checkout features\n- Led migration to AWS';

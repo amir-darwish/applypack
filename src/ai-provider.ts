@@ -18,6 +18,7 @@ import {
   buildCliEnv,
   buildCodexCliArgs,
   buildGeminiCliArgs,
+  CLAUDE_CODE_ISOLATION_ENV,
   CLI_PROVIDER_ENV_KEYS,
   cliRetryable,
   cliThinkingCap,
@@ -440,6 +441,8 @@ interface CliSpec {
   cwd?: string;
   /** This CLI reads MAX_THINKING_TOKENS: tool-free calls get it capped (#168). */
   thinkingCap?: boolean;
+  /** Set on every call, whatever the request. */
+  fixedEnv?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -574,9 +577,10 @@ class CliProvider implements AiProvider {
    * variable in the child env, still filtered by the buildCliEnv allowlist.
    */
   private envSource(req: AiRequest): NodeJS.ProcessEnv {
-    const { keyEnv, thinkingCap } = this.spec;
+    const { keyEnv, thinkingCap, fixedEnv } = this.spec;
     return {
       ...process.env,
+      ...fixedEnv,
       ...(keyEnv && req.apiKey ? { [keyEnv]: req.apiKey } : {}),
       ...(thinkingCap ? cliThinkingCap(req.webTools) : {}),
     };
@@ -606,9 +610,8 @@ export function getAiProviderById(id: AiProviderId): AiProvider {
         envKeys: CLI_PROVIDER_ENV_KEYS.claude_code ?? [],
         keyEnv: AI_KEY_ENV_VARS.claude_code,
         thinkingCap: true,
-        // Started in the checkout (npm start), the CLI read its CLAUDE.md and the
-        // project's memory into every call: +53 000 tokens each, measured
-        // 2026-09-30, and a scan that reported the instructions as an injection.
+        // Never the checkout's CLAUDE.md or memory (CLAUDE_CODE_ISOLATION_ENV).
+        fixedEnv: CLAUDE_CODE_ISOLATION_ENV,
         cwd: tmpdir(),
       });
       break;

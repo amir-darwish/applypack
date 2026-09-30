@@ -318,8 +318,20 @@ export function cliThinkingCap(webTools: boolean | undefined): Record<string, st
   return webTools ? {} : { [CLI_THINKING_CAP_ENV]: '0', [CLI_EFFORT_ENV]: CAPPED_EFFORT };
 }
 
+/**
+ * Every claude_code call reads no CLAUDE.md and no auto-memory. Started in the
+ * checkout (npm start), the CLI read the repo's CLAUDE.md and the project's
+ * memory into every call: +53 000 tokens each, measured 2026-09-30, and a
+ * resume scan that reported those instructions as an injection. The provider
+ * also runs it in the temp folder; these close the folders above that one too.
+ */
+export const CLAUDE_CODE_ISOLATION_ENV: Readonly<Record<string, string>> = {
+  CLAUDE_CODE_DISABLE_CLAUDE_MDS: '1',
+  CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
+};
+
 export const CLI_PROVIDER_ENV_KEYS: Partial<Record<AiProviderId, readonly string[]>> = {
-  claude_code: ['CLAUDE_CODE_OAUTH_TOKEN', 'CLAUDE_CONFIG_DIR', CLI_THINKING_CAP_ENV, CLI_EFFORT_ENV],
+  claude_code: ['CLAUDE_CODE_OAUTH_TOKEN', 'CLAUDE_CONFIG_DIR', CLI_THINKING_CAP_ENV, CLI_EFFORT_ENV, ...Object.keys(CLAUDE_CODE_ISOLATION_ENV)],
   gemini_cli: [
     'GEMINI_API_KEY',
     'GOOGLE_GENAI_USE_VERTEXAI',

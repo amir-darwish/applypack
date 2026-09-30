@@ -161,7 +161,7 @@ const HEADING_MAX = 60;
 const HEADING_WORDS =
   /^(?:(?:key|core|technical|professional|relevant|work|career|employment)\s+)?(?:skills?(?:\s+(?:and|&)\s+tools)?|technologies|tech(?:nology)?\s+stack|competencies|expertise|summary|profile|experience|employment|history|education|projects|certifications?|languages|interests|awards|publications|references)$/i;
 /** A role's dates ("2020 – Present"): a line carrying them is work history, never a skills line. */
-const DATE_RANGE = /\b(?:19|20)\d{2}\s*[–—-]\s*(?:(?:19|20)\d{2}|present|current|now)\b/i;
+const DATE_RANGE = /\b(?:19|20)\d{2}\s*[–—-]\s*(?:(?:[a-z]{3,9}\.?\s+|\d{1,2}[/.])?(?:19|20)\d{2}|present|current|now)\b/i;
 
 /**
  * A line that opens a section: `## Skills`, a shouted line, or the whole line one

@@ -9,6 +9,7 @@ import {
   buildCodexCliArgs,
   buildGeminiCliArgs,
   buildOllamaChatBody,
+  CLAUDE_CODE_ISOLATION_ENV,
   CLI_EFFORT_ENV,
   CLI_PROVIDER_ENV_KEYS,
   CLI_THINKING_CAP_ENV,
@@ -396,6 +397,12 @@ test('tool-free CLI calls get the thinking cap and an effort it allows; the veri
   const env = buildCliEnv(CLI_PROVIDER_ENV_KEYS.claude_code ?? [], { PATH: '/bin', ...cliThinkingCap(false) });
   assert.equal(env.MAX_THINKING_TOKENS, '0');
   assert.equal(env.CLAUDE_CODE_EFFORT_LEVEL, 'high');
+});
+
+test('every claude_code call reads no CLAUDE.md and no memory, and the allowlist lets that through', () => {
+  const env = buildCliEnv(CLI_PROVIDER_ENV_KEYS.claude_code ?? [], { PATH: '/bin', ...CLAUDE_CODE_ISOLATION_ENV });
+  assert.equal(env.CLAUDE_CODE_DISABLE_CLAUDE_MDS, '1');
+  assert.equal(env.CLAUDE_CODE_DISABLE_AUTO_MEMORY, '1');
 });
 
 test('the web tools filter through code execution only where the model can call tools programmatically (#161)', () => {

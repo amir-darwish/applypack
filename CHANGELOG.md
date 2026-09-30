@@ -12,8 +12,8 @@ All notable changes to this project are documented here. The format follows
   `CLAUDE.md` and memory: about 53 000 extra tokens on every classification,
   scan and comparison, taken from your plan, and a resume scan that reported
   those instructions as an injection in the resume. It now runs in the
-  temporary folder, as the Gemini and Codex CLIs already did. Docker was not
-  affected.
+  temporary folder, as the Gemini and Codex CLIs already did, with its
+  CLAUDE.md and memory reading switched off. Docker was not affected.
 - **No cover letter could be written** when your own Claude Code settings
   ask for `xhigh` or `max` effort: with thinking off, Opus 5 refuses an
   effort above `high`, and every letter failed. Calls without thinking now
