@@ -139,6 +139,14 @@ test('a skills line in capitals is a list, not a section heading', () => {
   assert.deepEqual(r.skills.at(-1)?.keywords, ['AWS', 'S3', 'EC2', 'SQS', 'RDS', 'OWASP']);
 });
 
+test('a title with its own separators is the label once, not a header line too', () => {
+  const r = structureFromText(
+    'Nazar Boyko\nProduct Lead - PHP/Laravel Engineer | Roadmap Ownership & Architecture\nAustin, Texas ∙ nb@example.com\nFully Work Authorized ∙ No Visa Sponsorship Required\n\nSKILLS\nPHP, Go',
+  );
+  assert.equal(r.basics.label, 'Product Lead - PHP/Laravel Engineer | Roadmap Ownership & Architecture');
+  assert.deepEqual(r.basics.lines, ['Fully Work Authorized ∙ No Visa Sponsorship Required']);
+});
+
 test('a long line marked as a heading is content, not a heading', () => {
   const r = structureFromText('Alex\n\n## SKILLS PHP 8, Laravel, Docker MySQL, Redis ## EDUCATION BSc Computer Science, State University, 2012 | ## EXPERIENCE Marketplace Co\n');
   assert.equal(Object.keys(r.headings).length, 0);

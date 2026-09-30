@@ -166,9 +166,13 @@ function basicsFrom(header: string[]): JsonResume['basics'] {
   const rest = lines.slice(1);
   // The label is the line after the name, unless that line is already contact
   // details — a resume that opens straight into an email has no label.
-  const labelLine = rest.find((l) => !EMAIL.test(l) && !PHONE.test(l) && !URL.test(l));
-  if (labelLine) basics.label = labelLine.trim();
-  for (const line of rest) {
+  const labelAt = rest.findIndex((l) => !EMAIL.test(l) && !PHONE.test(l) && !URL.test(l));
+  if (labelAt >= 0) basics.label = rest[labelAt]!.trim();
+  for (const [i, line] of rest.entries()) {
+    // The label is read whole. Split on its own "|" ("Engineer | Roadmap
+    // Ownership") it came back as a header line too, and the clean version
+    // printed the title twice (reported 2026-09-30).
+    if (i === labelAt) continue;
     const unread: string[] = [];
     for (const part of line.split(SEPARATORS).map((p) => p.trim()).filter(Boolean)) {
       if (!readContactPart(basics, part)) unread.push(part);

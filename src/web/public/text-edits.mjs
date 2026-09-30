@@ -57,6 +57,11 @@ function affectedLines(text, start, end) {
 // A bullet marker the edit must not eat when it replaces the words after it.
 const BULLET = /^(\s*(?:[-•*·–—]|\d+[.)])\s+)/;
 
+/** Wording without a bullet marker of its own. */
+function unmarked(wording) {
+  return String(wording).trim().replace(BULLET, '').trim();
+}
+
 /**
  * Replace the quoted span with `replacement`. The span is found the same way
  * the editor highlights it, so what gets replaced is what was outlined.
@@ -70,7 +75,10 @@ export function applyReplacement(text, quote, replacement) {
   const marker = BULLET.exec(text.slice(start, loc.end));
   // Only when the quote swallowed the marker: otherwise it is already outside the span.
   const keep = marker && loc.start <= start + marker[1].length ? marker[1] : '';
-  const body = keep + replacement.trim();
+  // The resume's own marker wins: a wording that brings a "- " of its own
+  // came out as "• - Owned the backend" (measured on the live data).
+  const onBullet = keep !== '' || (marker !== null && loc.start >= start + marker[1].length);
+  const body = keep + (onBullet ? unmarked(replacement) : replacement.trim());
   const from = keep ? start : loc.start;
   return {
     text: text.slice(0, from) + body + text.slice(loc.end),
@@ -207,9 +215,9 @@ export function insertAfterLine(text, anchor, wording) {
   if (typeof wording !== 'string' || wording.trim() === '') return { error: 'no-replacement' };
   const end = lineEnd(text, loc.end);
   const anchorLine = text.slice(lineStart(text, loc.start), lineEnd(text, loc.start));
-  const body = wording.trim();
   const marker = BULLET.exec(anchorLine)?.[1] ?? '';
-  const line = (marker && !BULLET.test(body) ? marker : '') + body;
+  // Under a bullet the new line takes the resume's marker, whatever the wording brought.
+  const line = marker ? marker + unmarked(wording) : wording.trim();
   return {
     text: text.slice(0, end) + '\n' + line + text.slice(end),
     span: { start: end + 1, end: end + 1 + line.length },
