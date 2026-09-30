@@ -64,6 +64,11 @@ export function formatDateShort(d: Date | null | undefined): string {
   });
 }
 
+/** The time of day alone, 24-hour, in the display zone: "13:54" — for a moment the reader knows was today. */
+export function formatTime(d: Date): string {
+  return d.toLocaleTimeString('en-US', { timeZone: displayZone(), hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+}
+
 export function formatRelative(d: Date | null | undefined): string {
   if (!d) return '—';
   const ms = Date.now() - d.getTime();

@@ -4,6 +4,7 @@ import { newerRelease } from './update-notice';
 import { APP_VERSION } from '../app-version';
 import type { FC, PropsWithChildren } from 'hono/jsx';
 import { raw } from 'hono/html';
+import { Icon, type IconName } from './icons';
 import { TOKENS, hex, rootBlock } from './tokens';
 
 export type NavKey =
@@ -99,6 +100,9 @@ const TOKENS_CSS = `
      stays open, as before 2.13. */
   @supports selector(:has(*)) {
     [data-ui="mode-card"]:not(:has(> label input[type="radio"]:checked)) > [data-ui="mode-body"] { display: none; }
+    /* Settings, Schedule: the alert window's hours and days belong to one delivery mode,
+       so they show while that mode is the chosen one and fold away otherwise. */
+    [data-ui="alert-modes"]:not(:has(input[name="alertMode"][value="window"]:checked)) [data-ui="alert-window"] { display: none; }
   }
   /* A "contents" disclosure hands its summary and its body to the flex row it sits in
      (a toolbar's Filters, the Add sources buttons, a run's Details). Where the browser
@@ -147,10 +151,10 @@ const TOKENS_CSS = `
 
 /** Direction contract — audited at the finish review; keep in sync with DESIGN.md. */
 const DIRECTION_CONTRACT = `<!--
-THESIS: A hunting console read twice a day: dense, calm, light. Refuses both the dark hacker-dashboard and the roomy marketing-admin.
-OWN-WORLD: Canvas ground (${hex(TOKENS.surface)}), white work surfaces, a subtle third surface (${hex(TOKENS['surface-overlay'])}) for the sidebar, table headers and wells, ${hex(TOKENS.line)} dividers; a type ladder of title / section / entity / body / label / meta; Inter for UI, mono reserved for machine values; emerald is the one brand accent; status speaks in quiet tinted pills (blue/amber/emerald/violet/gray).
-STORY: The user opens Overview, reads four numbers and the newest alerts, drills into a job, acts - apply, save, verify, compare - without ceremony.
-FIRST VIEWPORT: 240px sidebar left; content fills the rest: title row, one metric strip of four numbers with 24h deltas, recent alerts beside pipeline health.
+THESIS: A job-search console read twice a day: clear, crisp, light. The numbers lead, the chrome stays out of the way.
+OWN-WORLD: Canvas ground (${hex(TOKENS.surface)}), white cards and a white menu, a subtle third surface (${hex(TOKENS['surface-overlay'])}) for table headers and wells, ${hex(TOKENS.line)} outlines; a type ladder of title / kpi / section / entity / body / label / meta; Inter for UI, mono reserved for machine values; emerald is the one brand accent; status speaks in tinted pills and icon tiles (blue/amber/emerald/violet/gray).
+STORY: The user opens Overview, reads four numbers and the trend, scans the newest alerts, drills into a job, acts - apply, save, verify, compare - without ceremony.
+FIRST VIEWPORT: 240px menu left; content fills the rest: title row, four KPI cards with their sparklines, the matches chart beside pipeline health and recent activity.
 FORM: Brief-pinned light ops console (Linear density, Stripe forms, GitHub tables); the brief pins the world, no seed roll.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
 -->`;
@@ -222,7 +226,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({
           <MobileBar />
           <main id="main" class="min-w-0 flex-1 overflow-y-auto">
             <div
-              class={`flex w-full flex-col px-4 py-5 sm:px-6 lg:px-8 ${
+              class={`flex w-full flex-col px-4 py-5 sm:px-6 lg:px-8 lg:py-7 ${
                 fill ? 'h-full' : 'min-h-full'
               }`}
             >
@@ -239,44 +243,26 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({
   </>
 );
 
-/* Lucide icon paths (MIT), 24px grid, stroke-based. */
-const ICON_PATHS: Record<NavKey, string> = {
-  overview:
-    '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
-  jobs: '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>',
-  applications:
-    '<path d="M5 3a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5Z"/><path d="M15 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2Z"/>',
-  resumes:
-    '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
-  target:
-    '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
-  letter:
-    '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
-  companies:
-    '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
-  discovery:
-    '<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62a10 10 0 1 0 19.02-1.27"/><path d="M16.24 7.76a6 6 0 1 0-8.01 8.91"/><path d="M12 18h.01"/><path d="M17.99 11.66a6 6 0 0 1-2.22 4.75"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>',
-  runs: '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
-  screen:
-    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-  settings:
-    '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+/** The menu's icons, by the family's own names (icons.tsx). */
+const NAV_ICON: Record<NavKey, IconName> = {
+  overview: 'layout-dashboard',
+  jobs: 'briefcase',
+  applications: 'kanban',
+  resumes: 'file-text',
+  target: 'target',
+  letter: 'mail',
+  companies: 'building',
+  discovery: 'radar',
+  runs: 'activity',
+  screen: 'users',
+  settings: 'settings',
 };
 
-const NavIcon: FC<{ name: NavKey }> = ({ name }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    class="h-[18px] w-[18px] shrink-0"
-    aria-hidden="true"
-  >
-    {/* hono/jsx special-cases <svg> and rejects dangerouslySetInnerHTML on it; <g> is fine. */}
-    <g dangerouslySetInnerHTML={{ __html: ICON_PATHS[name] }} />
-  </svg>
+/** The AP mark: the one solid emerald square on a page. */
+const BrandMark: FC<{ class?: string }> = ({ class: className = 'h-8 w-8' }) => (
+  <span class={`grid shrink-0 place-items-center rounded-md bg-accent text-label font-bold tracking-tight text-white shadow-sm ${className}`}>
+    AP
+  </span>
 );
 
 const NavLink: FC<{ item: NavItem; active?: NavKey }> = ({ item, active }) => {
@@ -287,38 +273,36 @@ const NavLink: FC<{ item: NavItem; active?: NavKey }> = ({ item, active }) => {
       aria-current={current ? 'page' : undefined}
       aria-label={item.label}
       title={item.label}
-      class={`relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors duration-150 md:justify-center md:px-0 md:py-2 lg:justify-start lg:px-2.5 lg:py-1.5 ${
+      class={`relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors duration-150 md:justify-center md:px-0 lg:justify-start lg:px-3 ${
         current
-          ? // Never a fill alone: the bar, the emerald text and the weight say "you are here" too.
-            'bg-surface-selected font-medium text-accent-strong before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-accent-strong'
-          : 'text-ink-muted hover:bg-surface-raised/70 hover:text-ink'
+          ? // Never a fill alone: the bar at the menu's edge, the emerald text and the weight say "you are here" too.
+            'bg-surface-selected font-semibold text-accent-strong before:absolute before:inset-y-1.5 before:-left-3 before:w-1 before:rounded-r-full before:bg-accent-strong md:before:-left-2.5 lg:before:-left-3'
+          : 'font-medium text-ink-muted hover:bg-surface-overlay hover:text-ink'
       }`}
     >
-      <NavIcon name={item.key} />
+      <Icon name={NAV_ICON[item.key]} size={18} />
       <span class="truncate md:hidden lg:block">{item.label}</span>
     </a>
   );
 };
 
 const Sidebar: FC<{ active?: NavKey }> = ({ active }) => (
-  <aside class="app-sidebar flex h-full shrink-0 flex-col border-r border-line bg-surface-overlay md:w-16 lg:w-60">
-    <div class="flex h-14 shrink-0 items-center gap-2.5 px-4 md:justify-center md:px-0 lg:justify-start lg:px-4">
+  <aside class="app-sidebar flex h-full shrink-0 flex-col border-r border-line bg-surface-raised md:w-16 lg:w-60">
+    <div class="flex h-16 shrink-0 items-center px-5 md:justify-center md:px-0 lg:justify-start lg:px-5">
       <a href="/" class="flex items-center gap-2.5" title="ApplyPack">
-        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-accent text-meta font-semibold text-white">
-          AP
-        </span>
-        <span class="text-entity tracking-tight md:hidden lg:block">ApplyPack</span>
+        <BrandMark />
+        <span class="text-section text-ink md:hidden lg:block">ApplyPack</span>
       </a>
     </div>
-    <nav aria-label="Primary" class="flex-1 overflow-y-auto px-3 py-2 md:px-2.5 lg:px-3">
+    <nav aria-label="Primary" class="flex-1 overflow-y-auto px-3 pb-3 pt-1 md:px-2.5 lg:px-3">
       <NavLink item={OVERVIEW_ITEM} active={active} />
       {NAV_GROUPS.map((group) => {
         const id = `nav-${group.label.toLowerCase()}`;
         const items = group.label === 'System' && isEmployerMode() ? [...group.items, SCREEN_ITEM] : group.items;
         return (
-          <div role="group" aria-labelledby={id} class="mt-4 md:mt-3 lg:mt-4">
+          <div role="group" aria-labelledby={id} class="mt-5 md:mt-3 lg:mt-5">
             {/* The label where there is room for words; a hairline in its place on the icon rail. */}
-            <div id={id} class="px-2.5 pb-1 text-label text-ink-faint md:hidden lg:block">
+            <div id={id} class="px-3 pb-1.5 text-label text-ink-faint md:hidden lg:block">
               {group.label}
             </div>
             <div class="mx-auto mb-3 hidden h-px w-6 bg-line-strong md:block lg:hidden" aria-hidden="true" />
@@ -333,7 +317,7 @@ const Sidebar: FC<{ active?: NavKey }> = ({ active }) => (
     </nav>
     <div class="shrink-0 space-y-2 border-t border-line px-3 py-3 md:px-2.5 lg:px-3">
       <NavLink item={SETTINGS_ITEM} active={active} />
-      <p class="px-2.5 text-meta leading-4 text-ink-faint md:hidden lg:block">
+      <p class="px-3 text-meta leading-4 text-ink-faint md:hidden lg:block">
         Runs locally · data stays in your Postgres
       </p>
       <VersionLine />
@@ -345,7 +329,7 @@ const Sidebar: FC<{ active?: NavKey }> = ({ active }) => (
 const VersionLine: FC = () => {
   const newer = newerRelease();
   return (
-    <p class="px-2.5 text-meta leading-4 text-ink-faint md:hidden lg:block">
+    <p class="px-3 text-meta leading-4 text-ink-faint md:hidden lg:block">
       ApplyPack v{APP_VERSION}
       {newer && (
         <>
@@ -382,9 +366,7 @@ const MobileBar: FC = () => (
         <path d="M4 18h16" />
       </svg>
     </button>
-    <span class="grid h-7 w-7 place-items-center rounded-md bg-accent text-meta font-semibold text-white">
-      AP
-    </span>
-    <span class="text-entity tracking-tight">ApplyPack</span>
+    <BrandMark class="h-7 w-7" />
+    <span class="text-entity text-ink">ApplyPack</span>
   </header>
 );

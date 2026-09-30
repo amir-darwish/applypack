@@ -1,42 +1,49 @@
 ---
 name: ApplyPack
-description: A calm, light operations console for a one-person job hunt — dense tables, a visible type ladder, three surfaces, quiet status pills, one emerald accent.
+description: A clear, light console for a one-person job search — numbers that lead, white cards on a quiet canvas, a visible type ladder, tinted status pills and icon tiles, one emerald accent.
 colors:
-  surface: "#F5F7F6"
+  surface: "#F3F5F4"
   surface-raised: "#FFFFFF"
-  surface-overlay: "#EEF2F0"
-  surface-selected: "#E4F1EA"
-  line: "#DDE3E0"
-  line-strong: "#C8D1CC"
-  ink: "#101828"
-  ink-muted: "#475467"
-  ink-faint: "#5F6B7E"
+  surface-overlay: "#EBEFED"
+  surface-selected: "#E0F2E8"
+  line: "#D9DFDB"
+  line-strong: "#BCC6C0"
+  ink: "#0D1421"
+  ink-muted: "#3D4859"
+  ink-faint: "#566173"
   accent: "#059669"
-  accent-strong: "#047857"
+  accent-strong: "#047455"
   accent-deep: "#065F46"
-  ok: "#047857"
-  warn: "#A24F0A"
+  ok: "#047455"
+  warn: "#B54708"
   danger: "#B42318"
   info: "#1D4ED8"
   violet: "#6D28D9"
 typography:
   title:
     fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
-    fontSize: "26px"
-    fontWeight: 650
-    lineHeight: "32px"
-    letterSpacing: "-0.02em"
+    fontSize: "30px"
+    fontWeight: 700
+    lineHeight: "36px"
+    letterSpacing: "-0.025em"
+  kpi:
+    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontSize: "32px"
+    fontWeight: 700
+    lineHeight: "36px"
+    letterSpacing: "-0.03em"
   section:
     fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "18px"
-    fontWeight: 600
-    lineHeight: "24px"
-    letterSpacing: "-0.01em"
+    fontWeight: 650
+    lineHeight: "26px"
+    letterSpacing: "-0.015em"
   entity:
     fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "15px"
     fontWeight: 600
     lineHeight: "22px"
+    letterSpacing: "-0.005em"
   body:
     fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "14px"
@@ -47,17 +54,16 @@ typography:
     fontSize: "13px"
     fontWeight: 550
     lineHeight: "18px"
+  note:
+    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: "20px"
   meta:
     fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "12px"
     fontWeight: 400
     lineHeight: "16px"
-  stat-value:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
-    fontSize: "28px"
-    fontWeight: 600
-    lineHeight: "32px"
-    letterSpacing: "-0.025em"
   mono-value:
     fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
     fontSize: "12px"
@@ -65,8 +71,8 @@ typography:
     lineHeight: "16px"
 rounded:
   sm: "4px"
-  md: "6px"
-  lg: "8px"
+  md: "8px"
+  lg: "12px"
   full: "9999px"
 spacing:
   "1": "4px"
@@ -81,30 +87,30 @@ components:
     backgroundColor: "{colors.accent-strong}"
     textColor: "#FFFFFF"
     rounded: "{rounded.md}"
-    padding: "6px 12px"
+    padding: "6px 14px"
   button-primary-hover:
     backgroundColor: "{colors.accent-deep}"
   button-secondary:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.ink}"
     rounded: "{rounded.md}"
-    padding: "6px 12px"
+    padding: "6px 14px"
   button-secondary-hover:
     backgroundColor: "{colors.surface-overlay}"
   button-violet:
     backgroundColor: "rgb(109 40 217 / 0.05)"
     textColor: "{colors.violet}"
     rounded: "{rounded.md}"
-    padding: "6px 12px"
+    padding: "6px 14px"
   button-ghost:
     textColor: "{colors.ink-muted}"
     rounded: "{rounded.md}"
-    padding: "6px 12px"
+    padding: "6px 14px"
   badge-neutral:
     backgroundColor: "{colors.surface-overlay}"
     textColor: "{colors.ink-muted}"
     rounded: "{rounded.full}"
-    padding: "2px 8px"
+    padding: "2px 10px"
   card:
     backgroundColor: "{colors.surface-raised}"
     rounded: "{rounded.lg}"
@@ -113,49 +119,48 @@ components:
     backgroundColor: "{colors.surface-raised}"
     textColor: "{colors.ink}"
     rounded: "{rounded.md}"
-    padding: "6px 12px"
+    padding: "7px 12px"
 ---
 
 # Design System: ApplyPack
 
 ## Overview
 
-**Creative North Star: "The Hunting Console"**
+**Creative North Star: "The Job-Search Console"**
 
-A calm, light operations desk for a daily job hunt. The dashboard is read twice a
-day, briefly, in indoor daylight: it must be dense, quiet, and instantly legible.
-The composition is a Linear-density work surface — a fixed 240px sidebar on the
-subtle surface, a canvas ground, white surfaces carrying the data. Structure
-comes from three surfaces and a type ladder the eye reads before the words:
-title, section, entity, body, label, meta. Nothing on screen persuades or
-decorates; every pixel serves reading four numbers, scanning new jobs, and
-acting on one.
+A clear, light console for a daily job search. The dashboard is opened twice a
+day, briefly: it has to say what the search did and whether it is working
+before anyone reads a sentence. So the numbers lead — four status cards with
+their last fortnight, one chart of the matches over time — and everything else
+is built to be scanned: white cards on a quiet canvas, a white menu, a type
+ladder the eye reads before the words, an icon on a tinted tile where a row
+needs a picture.
 
-The personality is professional, calm, modern, information-first — compact but
-not cramped. Brand lives in details rather than surfaces: an emerald focus ring,
-emerald text selection, the emerald "AP" mark, an emerald primary button. Status
-speaks in a quiet five-color vocabulary of tinted pills (blue / amber / emerald /
-violet / gray) that never rises to a saturated fill. Controls follow a "quiet
-precision" philosophy: they disappear into the task, borrowing their forms from
-Stripe's settings forms and GitHub's data tables.
+The personality is professional, crisp, modern, information-first. Contrast
+does the work that decoration would otherwise do: near-black ink, helper text
+held a step above WCAG AA, card edges that read on the canvas, one emerald
+accent that is never spent on ambience. Status speaks in a five-tone
+vocabulary of tinted pills and tiles (blue / amber / emerald / violet / gray)
+that never rises to a saturated fill. Controls are plain and one height, so a
+row of them lines up without thought.
 
-Two worlds are explicitly refused, per the owner's brief: the dark hacker
-dashboard (glowing terminals, neon-on-black) and the AI-slop marketing admin
-(gradients, glassmorphism, giant cards, 20–30px radii, decorative noise, heavy
-shadows). Only a light theme is implemented today; every color flows through
-semantic CSS-variable tokens so a dark theme later is a second set of values,
-not a component rewrite.
+Two looks are refused: the dark hacker dashboard (glowing terminals,
+neon-on-black) and the decorated admin template (glassmorphism, animated
+gradients, hover-lift, a chart for its own sake). Only a light theme is
+implemented; every colour flows through semantic CSS-variable tokens, so a
+dark theme later is a second set of values, not a component rewrite.
 
 **Key Characteristics:**
-- Canvas ground (#F5F7F6), white work surfaces, a subtle third surface
-  (#EEF2F0) for the sidebar, table headers and wells — surface first, never
-  surface alone
-- A type ladder visible at a glance: 26 / 18 / 15 / 14 / 13 / 12 px
-- One brand accent (emerald); status as quiet tinted pills, never fills
+- Canvas ground (#F3F5F4), white cards and a white menu, a subtle third
+  surface (#EBEFED) for table headers and wells
+- A type ladder visible at a glance: 30 / 18 / 15 / 14 / 13 / 12 px, and one
+  32 px step for a number that leads
+- One brand accent (emerald); status as tinted pills and icon tiles, never fills
 - Inter for all UI text; monospace strictly for machine values
-- One surface per region; shadow is a whisper on white surfaces only
-- Dense 4px-grid spacing; 14px body type; tables and forms carry the work
-- Drawn stroke icons (Lucide-style), never emoji or Unicode glyphs
+- Cards with 12px corners, a hairline outline and a soft shadow; controls with
+  8px corners at one height (36px)
+- Charts drawn by the server as inline SVG: one series, a sentence, real data
+- Drawn stroke icons from one family (Lucide), never emoji or Unicode glyphs
 
 
 ## Words
@@ -180,64 +185,70 @@ second thing.
 
 A near-neutral field, faintly green, with a single emerald voice and a
 five-tone status vocabulary. Every value is declared once as an RGB triplet in
-`src/web/tokens.ts` (`surface: [245, 247, 246]`), reaches the page as
-`--surface: 245 247 246` on `:root` (`layout.tsx`) and is consumed as
+`src/web/tokens.ts` (`surface: [243, 245, 244]`), reaches the page as
+`--surface: 243 245 244` on `:root` (`layout.tsx`) and is consumed as
 `rgb(var(--token) / alpha)` through `tailwind.config.js` — components never
-hard-code hex. `tokens.test.ts` holds every text colour to WCAG AA (4.5:1) on
-every surface it can sit on; a value that fails does not ship.
+hard-code hex. `tokens.test.ts` holds every text colour to its floor on every
+surface it can sit on; a value that fails does not ship.
 
 ### Primary
 - **Emerald** (#059669): the one brand accent. Focus rings (2px outline, 2px
-  offset), text selection (18% tint), the "AP" mark, tints and rings.
-- **Emerald Strong** (#047857): links, primary buttons, the current tab's
+  offset), text selection (18% tint), the "AP" mark, tints and rings, the
+  chart's line and bars.
+- **Emerald Strong** (#047455): links, primary buttons, the current tab's
   underline, the active nav item, the focused control's border — the
-  AA-on-every-surface workhorse.
+  AA-on-every-surface workhorse. Deepened in 2.40.0 so an emerald chip still
+  reads 4.7:1 on the darker canvas.
 - **Emerald Deep** (#065F46): primary button hover; link hover.
 
 ### Status
-- **OK Green** (#047857): Applied status, enabled toggles, healthy runs, fit
-  scores ≥ 85.
+- **OK Green** (#047455): Applied status, enabled toggles, healthy runs, fit
+  scores ≥ 85, a rising trend.
 - **Info Blue** (#1D4ED8): New status, fit scores 70–84.
-- **Warn Amber** (#A24F0A): Alerted status, mid fit scores (50–69), warn
-  flashes. The solid `warn` button variant is defined in `ui.tsx` and no page
-  uses it. Darkened in 2.12.0: the old #B45309 read 4.39:1 on its own pill.
+- **Warn Orange** (#B54708): Alerted status, mid fit scores (50–69), warn
+  flashes. Warmer since 2.40.0 (it was the browner #A24F0A), and still 4.56:1
+  on its own pill. The solid `warn` button variant is defined in `ui.tsx` and
+  no page uses it.
 - **AI Violet** (#6D28D9): the Saved status and AI-spend actions only — see the
   named rule below.
-- **Danger Red** (#B42318): destructive actions and error flashes; always an
-  outline-tinted treatment on white, never a solid red button. Darkened in
-  2.12.0 (the old #D92D20 read 4.15:1 on its pill).
+- **Danger Red** (#B42318): destructive actions and error flashes; the word is
+  red on a plain control outline, never a solid red button.
 - Dismissed / absent / unknown renders neutral: subtle-surface pill, muted ink.
 
 ### Neutral
-- **Canvas** (#F5F7F6, `surface`): the app ground behind everything.
+- **Canvas** (#F3F5F4, `surface`): the app ground behind everything.
 - **Raised White** (#FFFFFF, `surface-raised`): cards, tables, panels,
-  controls — where work happens.
-- **Subtle** (#EEF2F0, `surface-overlay`): the sidebar, table headers,
-  toolbars, wells, inactive regions, inline code, option chips.
-- **Selected** (#E4F1EA, `surface-selected`): the active nav item, a chosen
+  controls, the menu — where work happens.
+- **Subtle** (#EBEFED, `surface-overlay`): table headers, toolbars, wells,
+  inactive regions, inline code, option chips, a neutral tile.
+- **Selected** (#E0F2E8, `surface-selected`): the active nav item, a chosen
   option, a filter in force, a checked pill; table rows hover at 50 % of it.
-- **Divider** (#DDE3E0, `line`): row dividers and the outline of an object.
-- **Control Border** (#C8D1CC, `line-strong`): inputs, selects, secondary
-  buttons, scrollbar thumbs.
-- **Ink** (#101828): primary text.
-- **Muted Ink** (#475467): secondary text, table headers, a page's intro.
-- **Faint Ink** (#5F6B7E): hints, meta, placeholders, timestamps, group
-  labels — 4.64:1 on the selected surface, its hardest ground.
+- **Divider** (#D9DFDB, `line`): row dividers and the outline of a card.
+- **Control Border** (#BCC6C0, `line-strong`): inputs, selects, secondary
+  buttons, scrollbar thumbs, a chart's baseline.
+- **Ink** (#0D1421): primary text.
+- **Muted Ink** (#3D4859): secondary text, table headers, a page's one
+  sentence.
+- **Faint Ink** (#566173): hints, meta, placeholders, timestamps, group
+  labels — 5.4:1 on the selected surface, its hardest ground.
 
-The surface steps are small on purpose (canvas → white 1.08, white → subtle
-1.13, subtle → selected 1.03): a background alone never carries structure or
-state — see the Surface-First Rule.
+Contrast is a tested number, not a judgement. Body and helper text (ink, muted
+ink, faint ink) holds **5:1** on all four surfaces and on the row hover — a
+step above AA, because it is small and everywhere; a status tone holds AA
+(4.5:1) on white, on its own pill, on its flash and on the canvas; white holds
+AA on every solid button.
 
 ### Named Rules
-**The One-Accent Rule.** Emerald is the only brand color. The status tones are
-vocabulary, not decoration: they appear exclusively where they carry state
-(pills, dots, meters, toned numbers) and never as ambient color.
+**The One-Accent Rule.** Emerald is the only brand colour. The status tones are
+vocabulary, not decoration: they appear where they carry state or name a kind
+of thing (pills, tiles, dots, toned numbers, a status card's bars) and never
+as ambient colour.
 
-**The Quiet-Pill Rule.** Status renders as a tinted pill — 10% tone over white,
-full-strength tone text, 20% tone inset ring — never as a saturated fill. The
-pill carries its own white ground, so it reads the same on the canvas, in a
-table and on a subtle well. A status color at 100% opacity may only paint dots,
-meter fills, and text.
+**The Tinted-Pill Rule.** Status renders as a tinted pill or tile — 12 % tone
+over white, full-strength tone text, 25 % tone inset ring — never as a
+saturated fill. The pill carries its own white ground, so it reads the same on
+the canvas, in a table and on a subtle well. A status colour at 100 % opacity
+may only paint dots, bars and text.
 
 **The Violet-Means-AI Rule.** Violet (#6D28D9) is reserved for AI/model-spend
 actions — Compare, Re-analyze with AI, Re-scan, Re-classify, HN Run now — and
@@ -252,37 +263,38 @@ fallback
 **Machine Font:** system mono stack (`ui-monospace, SFMono-Regular, "SF Mono",
 Menlo, Consolas, monospace`)
 
-**Character:** One quiet family doing everything, differentiated by size and
-weight rather than by face. The ladder must be visible at a glance on every
-page — title > section > entity > body > label > meta. Titles tighten; numbers
-align (`tabular-nums`); nothing is ever uppercase-tracked or display-sized.
+**Character:** One family doing everything, differentiated by size and weight
+rather than by face. The ladder must be visible at a glance on every page —
+title > section > entity > body > label > meta — and a page's title is its
+strongest element. Titles tighten; numbers align (`tabular-nums`); nothing is
+ever uppercase-tracked.
 
 ### Hierarchy
 Each step is one Tailwind class (`tailwind.config.js` carries size, line,
 tracking and weight together), so a page writes `text-title`, not four
 utilities. `src/web/type-ladder.test.ts` fails a raw size (`text-xs`,
 `text-[13px]`, `text-base` …) or a `text-sm font-semibold` heading anywhere
-in `src/web`; the stat value and the score ring are its two named exceptions.
-- **Title** (`text-title`, 650, 26px/32px, tracking -0.02em): the page's one
-  `h1`, in the header row next to meta and actions.
-- **Section** (`text-section`, 600, 18px/24px, tracking -0.01em): a page-level
-  section outside a card — `SectionTitle level="section"`, a settings section.
-- **Entity** (`text-entity`, 600, 15px/22px): card headings (`SectionTitle`),
-  a row's name, a resume, a job, an engine.
+in `src/web`, with no exception left.
+- **Title** (`text-title`, 700, 30px/36px, tracking -0.025em): the page's one
+  `h1`, at the left of the header with the page's one sentence under it.
+- **KPI** (`text-kpi`, 700, 32px/36px, tracking -0.03em, tabular-nums): a
+  number that leads — a status card's value, the chart's total, the score
+  ring.
+- **Section** (`text-section`, 650, 18px/26px, tracking -0.015em): a card's
+  title (`CardHeader`), a page-level section outside a card
+  (`SectionTitle level="section"`), a settings section, the wordmark.
+- **Entity** (`text-entity`, 600, 15px/22px): a row's name — a job, a resume,
+  an engine — a small card's heading (`SectionTitle`), the number in a fit
+  tile.
 - **Body** (400, 14px/20px): default for everything — table cells, forms,
   buttons, nav, a page's one-sentence intro (muted ink). Medium (500) marks
-  emphasis: row titles, button labels.
+  emphasis: row titles, button labels, nav links.
 - **Label** (`text-label`, 550, 13px/18px): field labels, table headers,
-  fieldset legends, sidebar group labels, filter-row labels, a disclosure's
-  summary inside a card.
+  fieldset legends, sidebar group labels, a status card's label.
 - **Note** (`text-note`, 400, 13px/20px): a standing notice, a quiet
-  disclosure, a tab's link, a table's secondary line, the small print of a
-  card — prose one step under the body that is not a helper line.
-- **Meta** (`text-meta`, 400, 12px/16px): timestamps, counts, the header's
-  meta line, helper prose under a control (`Hint`).
-- **Stat Value** (600, 28px/32px, tabular-nums): the metric strip's numbers.
-  One number is larger: the score ring on the targeted view, at 32px.
-- **Micro** (500, 12px/16px): badges and kanban counts.
+  disclosure, a tab's link, a row's secondary line, a small button's text.
+- **Meta** (`text-meta`, 400, 12px/16px): timestamps, counts, axis ticks,
+  badges (at 500), helper prose under a control (`Hint`).
 - **Mono Value** (400, 12px, mono stack): ids, tokens, cron expressions,
   durations, code — machine values only, usually one size below their context.
 
@@ -294,102 +306,116 @@ stay in Inter; numeric columns align with `tabular-nums`, not with mono.
 ## Layout
 
 A fixed app frame, not a scrolling document: `flex h-dvh overflow-hidden` with a
-240px sidebar (`lg:w-60`) on the subtle surface at desktop, a 64px icon rail at
-tablet (`md:w-16`), and an off-canvas drawer on mobile (16rem wide, 200ms slide,
+240px white menu (`lg:w-60`) at desktop, a 64px icon rail at tablet
+(`md:w-16`), and an off-canvas drawer on mobile (16rem wide, 200ms slide,
 dimmed backdrop). Content owns the scroll: the main region scrolls vertically,
 and pages that manage their own inner scrolling (the Jobs table, the
 Applications board) opt into `fill` mode to pin their scroller to the viewport.
 
-Content gutters are 16px, stepping to 24px ≥640px and 32px ≥1024px, with 20px
-vertical padding. The page header sits 24px above the content. Cards stack and
-grid at 16px gaps. Detail pages split into a fluid main column and a 340px
-facts-and-actions rail at ≥1280px (rail first in DOM so actions lead on small
-screens). Settings puts its six tabs in a sticky left column of links from
-1024px (a rule down its side, the current tab marked on it in emerald-strong)
-and keeps them as a segmented row below that — same `?tab=` URLs either way.
-A settings section stacks its title (the section step) and one sentence above
-its controls, each section separated by a hairline and 28px of padding. The
-launchers (Compare, Cover letter, New screening) show one input mode at a
-time: the body of a mode whose radio is not checked folds away in CSS
-(`:has()`), its fields still in the form. The Applications board scrolls
-horizontally through 288px fixed-width stage columns.
+Content gutters are 16px, stepping to 24px ≥640px and 32px ≥1024px. A page
+opens with `PageHeader`: the title and its one sentence at the left, what the
+page offers — a quiet meta line, a status pill, the buttons — at the right,
+level with the title. Cards stack and grid at 16px gaps. Detail pages split
+into a fluid main column and a 340px facts-and-actions rail at ≥1280px (rail
+first in DOM so actions lead on small screens). Settings puts its six tabs in
+a sticky left column of links from 1024px and keeps them as a segmented row
+below that — same `?tab=` URLs either way. The launchers (Compare, Cover
+letter, New screening) show one input mode at a time: the body of a mode whose
+radio is not checked folds away in CSS (`:has()`), its fields still in the
+form; the alert window on Settings → Schedule folds the same way. The
+Applications board scrolls horizontally through 288px fixed-width stage
+columns.
+
+**The Overview** is the dashboard and sets the language: four status cards in
+a row, then a main column (the matches chart with the search funnel at its
+foot, then the recent alerts) beside a narrower one (pipeline health, recent
+activity, jobs by stack). The fourth card and the side column share one grid
+track (`minmax(18rem, 27%)`), so their edges line up; under 1280px everything
+stacks, the cards two by two.
 
 All spacing sits on the 4px grid; the working steps are 4 / 8 / 12 / 16 / 20 /
-24 / 32px. Density is the point — 12px cell padding in tables, 20px card
-padding, 6px vertical padding in controls — compact but never cramped.
+24 / 32px. 20px card padding, 12px table cells, 16px between cards.
 
 ## Elevation & Depth
 
-Surface first. Depth is layered with the surfaces — subtle sidebar, canvas
-ground, white raised work, the selected tint — and a region of a page is ONE
-raised surface with dividers inside it, not a stack of bordered cards. Borders
-stay where a control or an object ends; wrappers around wrappers lose theirs.
-`shadow-sm` (`0 1px 2px 0 rgb(0 0 0 / 0.05)`) is a whisper applied only to
-white surfaces — cards, controls, primary/secondary buttons — and reads as
-material thickness, not lift. Sticky table headers replace their border with
-an inset hairline shadow so the line survives scrolling. Between major blocks
-of a page sit 24–32px; inside a block 12–16px.
+Depth is layered with the surfaces — canvas ground, white raised work, the
+subtle well, the selected tint — and finished with a hairline and a soft
+shadow, so a card reads as a card on the canvas without a heavy edge. A region
+of a page is ONE raised surface with dividers inside it, not a stack of
+bordered cards; a dashboard is the exception its name says — separate cards,
+each about one thing. Borders stay where a control or an object ends; wrappers
+around wrappers lose theirs. Sticky table headers replace their border with an
+inset hairline shadow so the line survives scrolling.
 
 ### Shadow Vocabulary
-- **Whisper** (`box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05)`): white surfaces
-  only — cards, controls, filled buttons.
+Tinted with the ink, never black (`tailwind.config.js`):
+- **Control** (`shadow-sm`, `0 1px 2px rgb(13 20 33 / 0.06)`): inputs, filled
+  and outlined buttons, the chosen segment of a switch.
+- **Card** (`shadow-card`, `0 1px 2px rgb(13 20 33 / 0.04), 0 2px 8px -2px
+  rgb(13 20 33 / 0.06)`): a raised surface at rest.
+- **Pop** (`shadow-pop`, `0 4px 8px -2px rgb(13 20 33 / 0.08), 0 16px 32px -8px
+  rgb(13 20 33 / 0.16)`): what floats — a confirm popover, an info tip, the
+  chart's hover card.
 - **Drawer** (`box-shadow: 0 8px 30px rgb(16 24 40 / 0.12)`): the mobile nav
-  drawer, the app's single true elevation, paired with a
-  `rgb(16 24 40 / 0.4)` backdrop.
+  drawer, paired with a `rgb(16 24 40 / 0.4)` backdrop.
 - **Header hairline** (`box-shadow: inset 0 -1px 0 rgb(var(--line))`): the
   bottom edge of sticky table headers.
 
 ### Named Rules
 **The Surface-First Rule.** A region is set apart by its surface AND one of:
-spacing, a heading, a divider, an indicator — never by a background alone (the
-steps are 1.03–1.13). State is never a background alone either: a selected
-option also gets emerald-strong text at weight 500 and a drawn check or a left
-bar; the active nav item gets all three.
+spacing, a heading, a divider, an indicator — never by a background alone.
+State is never a background alone either: a selected option also gets
+emerald-strong text at weight 500 and a drawn check or a left bar; the active
+nav item gets the tint, the emerald text at 600 and a bar at the menu's edge.
 
 **The One-Surface-Per-Region Rule.** A settings tab, a job page's main column,
 a filter panel: one raised surface with dividers inside it. A card is for an
-object that moves or stands alone — a board card, a mode box, a resume, the
-metric strip. `Card variant="flat"` is a part of such a region, `"subtle"` a
-well inside it.
+object that stands alone — a board card, a mode box, a resume, a status card,
+a dashboard block. `Card variant="flat"` is a part of such a region,
+`"subtle"` a well inside it.
 
-**The Whisper-Shadow Rule.** Surfaces are flat at rest. `shadow-sm` appears
-only on white surfaces, and nothing except the mobile drawer ever casts a real
-shadow. No glows, no heavy ambient shadows, no hover-lift.
+**The Soft-Shadow Rule.** Shadows say "raised" and "floating", nothing more:
+no glows, no coloured shadows, no hover-lift. A card's border darkens on hover
+when the whole card is a link; it never moves.
 
 ## Shapes
 
-A three-step radius ladder: 8px (`rounded-lg`) for cards, tables, panels, and
-empty states; 6px (`rounded-md`) for every control — buttons, inputs, selects,
-nav links, tags, option chips, filter chips; 4px for the smallest chrome
-(inline code, focus-ring corners, scrollbar thumbs). Badges and meters are full
-pills, and only they are. Nothing exceeds 8px; large radii are an explicit
-anti-reference.
+A three-step radius ladder under Tailwind's own names (`tailwind.config.js`
+sets them): 12px (`rounded-lg`) for cards, tables, panels, wells and empty
+states; 8px (`rounded-md`) for every control and chip — buttons, inputs,
+selects, nav links, tags, option chips, filter chips, tiles, the fit tile; 4px
+for the smallest chrome (inline code, focus-ring corners, scrollbar thumbs).
+Badges, dots and bars are full pills.
 
-Borders are 1px everywhere — the divider (#DDE3E0) on surfaces, the control
-border (#C8D1CC) on interactive controls, tone-tinted (30–50% alpha) on
-stateful elements; badges use a 1px inset ring at 20% tone. Icons are drawn on
-the Lucide 24px grid at 2px stroke, round caps and joins, rendered 14–18px —
-geometry consistent from nav icons down to the drawn select chevron and the
-check/x verdict marks.
+Borders are 1px everywhere — the divider (#D9DFDB) on surfaces, the control
+border (#BCC6C0) on interactive controls, tone-tinted (25–50% alpha) on
+stateful elements. Icons are one family — Lucide's paths in
+`src/web/icons.tsx`, drawn by `Icon` on the 24px grid with round caps and
+joins: 14px in a line of text, 16px in a button or a row, 18px in the menu,
+20px in a tile (at a 1.75 stroke). A new icon is a new row in that file, never
+a second family.
 
 ## Components
 
-Every page composes the primitives in `src/web/ui.tsx`; color and spacing
+Every page composes the primitives in `src/web/ui.tsx`; colour and spacing
 decisions live there and in the token layer, not in page files.
 
 ### Buttons
-- **Shape:** 6px radius, 500 weight, min-height 32px, 150ms color transition;
-  sizes sm (4×10px, 12px text), md (6×12px, 14px text), lg (8×16px). Disabled
-  is 40% opacity.
-- **Primary:** solid Emerald Strong (#047857), white text, whisper shadow;
-  hover deepens to #065F46. One per view region — the main affirmative act.
+- **Shape:** 8px radius, 500 weight, 150ms colour transition; three heights —
+  sm 30px (13px text) in a table row, md 36px (14px) beside a field, lg 40px
+  for a page's main act. A button beside a field is md: the two are one
+  height. An icon sits before the label at 16px. Disabled is 40% opacity.
+- **Primary:** solid Emerald Strong (#047455), white text, control shadow;
+  hover deepens to #065F46. One per view region — the main affirmative act
+  ("Fetch now" on the Overview).
 - **Secondary:** white with the control border, ink text; hover fills the
   subtle surface. The default for everything non-primary.
 - **Violet (AI):** violet text on 5% violet tint with 30% violet border; hover
   10% tint. Only for actions covered by the Violet-Means-AI Rule.
-- **Danger:** outline treatment — 30% danger border, danger text on white;
-  hover 5% danger tint. Never solid red.
-- **Warn:** solid amber (#A24F0A), white text. Defined, unused: the pause
+- **Danger:** the word in danger red on the secondary button's outline; hover
+  tints the fill 5% and the border 40% danger. Never solid red, and never a
+  red outline at rest — a column of Deletes must not shout.
+- **Warn:** solid orange (#B54708), white text. Defined, unused: the pause
   acts use the secondary button.
 - **Ghost:** borderless muted-ink text; hover subtle fill + ink text. For
   tertiary row actions.
@@ -401,25 +427,39 @@ decisions live there and in the token layer, not in page files.
   clips it; Escape or a click outside closes it. Never `confirm()`: without a
   script it asked nothing and the delete went through.
 
-### Badges & Tags
-- **Status pill (`Badge` / `StatusBadge`):** full pill, 2×8px padding, 12px/500
-  text; 10% tone over its own white ground, tone text, 20% tone inset ring;
-  status pills lead with a 6px `currentColor` dot. Status mapping: New=info, Alerted=warn,
-  Applied=ok, Saved=violet, Dismissed=neutral.
-- **Tag:** same tinting at 6px radius for tech-match and rule chips.
+### Badges, Tags & Tiles
+- **Status pill (`Badge` / `StatusBadge`):** full pill, 12px/500 text; 12% tone
+  over its own white ground, tone text, 25% tone inset ring. The word in its
+  tone is the status, so `StatusBadge` carries no dot; a state pill (Running,
+  Enabled) leads with a 6px `currentColor` dot. `size="md"` (13px, 6×12px) is
+  the pill that stands in a page header beside the buttons. Status mapping:
+  New=info, Alerted=warn, Applied=ok, Saved=violet, Dismissed=neutral.
+- **Tag:** the same tinting at 8px radius, 12px/500 — technologies, rule
+  chips. A technology is written the way people write it
+  (`src/web/tech-label.ts`: TypeScript, Node.js, AWS), never as the
+  classifier's lowercase tag.
+- **Icon tile (`IconTile`):** an icon on its tone's pill ground, 40px at 8px
+  radius — what a status card or an activity row is about, at a glance.
+- **Avatar:** who a row is about, as the first letter of the name on a neutral
+  tile. No logo is ever fetched, and the tile takes no tone — a tone means a
+  status.
 
-### Fit Badge (signature)
-A number plus meter so the value reads without color: 14px/500 tabular-nums
-toned number beside a 36×6px pill track (hairline gray) with a tone-filled bar
-(min 4% width). Tone thresholds: ≥85 ok, ≥70 info, ≥50 warn, below neutral;
-null renders an em dash.
+### Fit tile (signature)
+`FitBadge`: the fit score as a number in a toned tile — 15px/600 tabular-nums
+on the tone's pill ground at 8px radius. The number is the value and the tone
+its floor, so it reads without colour. Tone thresholds: ≥85 ok, ≥70 info, ≥50
+warn, below neutral; null renders an em dash; `worded` adds the floor's word
+("72 Good") on a job page's header.
 
 ### Tables
-- **Header:** subtle-surface row, the label step (13px/550) in muted ink,
-  10×16px padding, hairline bottom edge; optional sticky mode swaps the border for an inset
-  shadow; 20px outer-column padding.
+- **Header:** the subtle surface at 70%, the label step (13px/550) in muted
+  ink, hairline bottom edge; optional sticky mode swaps the border for an
+  inset shadow; 20px outer-column padding.
 - **Body:** white; rows divided by hairlines, 12×16px cell padding, hover tints
   the selected surface at 50%, 150ms. Nothing a row offers depends on hover.
+- **A place in a row** is a few words — "Remote · USA, Canada +3"
+  (`src/web/place-line.ts`), the places the running searches hunt in named
+  first, every country in the tooltip — never a row of flags.
 - **Fixed layout:** wide list tables set proportional column widths and a
   min-width wrapper that scrolls horizontally inside the card.
 - **On a phone:** a wide list keeps the two or three columns that name a row
@@ -427,8 +467,8 @@ null renders an em dash.
   min-width wrapper starts at `md` or `lg`.
 
 ### Inputs / Fields
-- **Style:** white, control-border 1px, 6px radius, 6×12px padding,
-  14px text, faint-ink placeholder, whisper shadow.
+- **Style:** white, control-border 1px, 8px radius, 7×12px padding (36px tall),
+  14px text, faint-ink placeholder, control shadow.
 - **Hover / Focus:** border darkens to faint ink on hover; focus turns the
   border emerald-strong — the 3:1 indicator — and adds a 2px ring at 25%
   emerald for softness. Calm, no glow.
@@ -445,21 +485,29 @@ null renders an em dash.
   PillCheckbox and Radio wrap them in bordered white containers whose checked
   state takes the selected surface and a 40–50% emerald border — the native
   mark is the second channel.
+- **A segmented switch** (the chart's 7D / 30D / 90D / 180D): links on a
+  subtle track, the current one on white with the control shadow and
+  emerald-strong text, `aria-current`. Links, not buttons: the choice rides in
+  the URL.
 
 ### Cards / Containers
-- **`Card`:** 8px corners, white, divider outline, whisper shadow, 20px
-  padding (`flush` removes the padding and clips children for tables). Card
-  headings use `SectionTitle` (the entity step) with 12px below.
+- **`Card`:** 12px corners, white, divider outline, card shadow, 20px padding
+  (`flush` removes the padding and clips children for tables and lists).
+- **`CardHeader`:** what a card holds, said at its top — the title at the
+  section step, an optional (i) whose one sentence shows on hover and on focus
+  with no script, and the card's one way onward at the right (`CardLink`:
+  "View all →", or a control). A small card inside a region still uses
+  `SectionTitle` (the entity step).
 - **`Card variant="flat"`:** no border, shadow, fill or padding — a part of a
   region that is already one surface. **`variant="subtle"`:** the subtle fill,
-  8px corners, no outline — a well or an inactive region.
-- **Metric strip (`MetricStrip`):** a few numbers read as one line — a `<dl>`
-  on ONE raised surface, its cells divided by hairlines, never four boxed
-  cards. A cell is a tone dot and a label (the label step), a 28px/600
-  tabular-nums value and a delta line at the meta step; with `href` the value
-  is a link stretched over its cell, and the cell hovers in the selected
-  tint. An optional footer line sits under a hairline. Two columns below
-  1280px, one row of four from there.
+  12px corners, no outline — a well or an inactive region.
+- **Status card (`StatCard`):** one number that stands alone — its icon tile,
+  the label, the value at the KPI step, one line of what moved ("+14 in the
+  last 24h", the count in OK green), and the last fortnight as a row of bars
+  in the status tone on the number's row. With `href` the value is a link
+  stretched over the card and the card's border darkens on hover. The bars
+  are decoration for the eye (the line under the number says it in words);
+  in a narrow card they give way before the number does.
 - **A run as a sentence (`/runs`):** `runs-summary.ts` turns a run's stats into
   facts in a fixed order ("594 fetched · 3 new · 55 duplicates · 3 classified
   · 0 alerted"), the dot between them drawn; a reason reads as a sentence
@@ -468,18 +516,46 @@ null renders an em dash.
   primary content — and runs past the latest fifty fold behind a button that
   names any failure among them.
 
+### Charts
+A chart answers one question and says its answer in a sentence. The server
+draws it as inline SVG (`src/web/chart-svg.ts`, pure), so it is in the page
+before any script and without one; no chart library, no canvas, nothing
+fetched.
+- **The matches chart (`pages/matches-chart.tsx`):** one emerald line over a
+  fading emerald fill, smoothed without overshoot (it never dips under zero
+  between two days), on hairline grid lines at whole-number ticks. The plot is
+  stretched to its card; the ticks and the dates are HTML beside it, so no
+  label ever scales. Above it: the total at the KPI step, the change against
+  the equal range before (a percentage only when that range holds ten or
+  more — "+3" says more than "+300%"), and nothing at all when there is no
+  earlier range to compare.
+- **Range and filter ride in the URL** (`?range=7d|30d|90d|180d`, `?stack=`):
+  links and a plain form, so the page's refresh keeps what was picked. A long
+  range reads in wider steps — thirty points at most.
+- **Hover (`public/chart.mjs`):** a dashed guide, a dot and a small card — the
+  day, the count, the move from the point before; arrow keys walk the points
+  once the plot has focus. Without the script the chart is unchanged.
+- **For a screen reader** the plot is one image named by the sentence, and the
+  same numbers follow as a table.
+- **Sparkline bars** (on a status card) and **share bars** (Jobs by stack) are
+  plain elements sized inline — a fortnight fading towards its oldest day, a
+  flat emerald bar on a subtle track.
+- **Honest numbers:** days are UTC, the key the daily rollup is stored under;
+  a day nothing happened on is a zero; anything by technology looks back
+  thirty days, because that is how long a dismissed job is kept.
+
 ### Navigation
-- **Sidebar:** the subtle surface, one step off the canvas, hairline right
-  edge; 56px brand row (emerald 28px "AP" mark + 15px/600 wordmark). Overview
-  stands alone, then four groups with sentence-case labels at the label step
-  in faint ink — *Work* (Jobs, Applications), *Tools* (Resumes, Tailor resume, Cover
+- **Sidebar:** white, a hairline right edge; a 64px brand row (the emerald
+  32px "AP" mark + the wordmark at the section step). Overview stands alone,
+  then four groups with sentence-case labels at the label step in faint ink —
+  *Work* (Jobs, Applications), *Tools* (Resumes, Tailor resume, Cover
   letter), *Research* (Companies, Discovery), *System* (Runs, and Screening
-  while employer mode is on). Links are 14px, 6px radius, 6×10px padding, 18px
-  icon + label; active = selected surface, emerald-strong text and icon at
-  500, a 2px emerald-strong bar on the left; inactive = muted ink, hover 70%
-  white. Settings and a privacy footnote pin to the bottom. Tablet collapses
-  to a 64px icon rail where a short hairline stands in for each group label;
-  mobile is a drawer behind a hamburger bar.
+  while employer mode is on). Links are 14px/500, 8px radius, 8×12px padding,
+  18px icon + label; active = selected surface, emerald-strong text and icon
+  at 600, a 4px emerald-strong bar at the menu's left edge; inactive = muted
+  ink, hover the subtle surface. Settings and a privacy footnote pin to the
+  bottom. Tablet collapses to a 64px icon rail where a short hairline stands
+  in for each group label; mobile is a drawer behind a hamburger bar.
 - **Tabs (`Tabs`):** views of one list — or the parts of one object, as on the
   job page (`?tab=`, server-rendered, no client state) — as a row of 13px links
   on a hairline;
@@ -490,26 +566,27 @@ null renders an em dash.
   is a secondary button with a count on the selected surface and a chevron
   that turns when open (a toolbar's "Filters"); `quiet` is a 13px muted line
   under a control.
-- **Filter options (the Jobs panel):** 6px-radius links on the subtle surface
+- **Filter options (the Jobs panel):** 8px-radius links on the subtle surface
   with a faint count; a chosen one takes the selected surface, emerald-strong
   500 text and a drawn check — never colour alone.
-- **Filter chip (`FilterChip`):** a criterion in force, above the table: 6px
+- **Filter chip (`FilterChip`):** a criterion in force, above the table: 8px
   radius, the selected surface, 30% emerald border, a drawn ✕. The whole chip is
   the link that lifts it (`aria-label="Remove filter: …"`).
 
 ### System Feedback
-- **Flash:** rounded 6px banner, 25% tone border, 5% tone fill, tone text, with
+- **Flash:** rounded 8px banner, 25% tone border, 5% tone fill, tone text, with
   a drawn 16px icon; ok, warn and danger kinds. An error says three things:
   what failed, what is safe, the way forward. "Invalid form values" says none.
   When a schema refused one field, the field says so too: a danger border and
   ring (`aria-invalid`), described by the message, and focused.
-- **Empty state (`Empty`):** a 28px 1.5px-stroke drawn icon in control-border
-  gray, then three parts, centered: the title (what is missing, entity type),
-  one muted sentence (why it matters) and at most one action (a small
-  secondary button, or the sentence names the control already on the page).
-  A hairline 8px card on the canvas; `bare` inside a card, which stays the one
-  surface.
-- **Board column:** the subtle surface, 8px corners, no outline; an empty
+- **Notice:** the same shape for what a page says on every render — the
+  pipeline is paused, matches are waiting for the alert window.
+- **Empty state (`Empty`):** a drawn 20px icon on a 40px neutral tile, then
+  three parts, centered: the title (what is missing, entity type), one muted
+  sentence (why it matters) and at most one action (a small secondary button,
+  or the sentence names the control already on the page). A card on the
+  canvas; `bare` inside a card, which stays the one surface.
+- **Board column:** the subtle surface, 12px corners, no outline; an empty
   column says "No applications" in one faint meta line. No dashed wells: the
   surface already reads as a place to drop.
 - **ToggleRow:** label + ok/neutral dot-pill beside an Enable/Disable button —
@@ -545,8 +622,9 @@ vocabulary, not chrome.
 
 ### Named Rules
 **The Drawn-Icon Rule.** Every icon is a drawn SVG stroke on the 24px Lucide
-grid — including the select chevron and check/x marks. Emoji, Unicode glyphs,
-and icon fonts never stand in for icons.
+grid — `Icon` for the family in `src/web/icons.tsx`, plus the select chevron
+and the check/x marks drawn in place. Emoji, Unicode glyphs, and icon fonts
+never stand in for icons.
 
 **The Composed-Primitive Rule.** Pages compose `ui.tsx` primitives and never
 hand-roll Tailwind for shared patterns; new visual decisions land in the
@@ -555,8 +633,15 @@ primitive or the token layer first.
 **The Disclosure Rule.** Under a label, one sentence. What explains a cap, a
 cost, a gate, a privacy fact or a destructive act stays visible; everything
 else sits behind a quiet `Disclosure` ("How this works"), outside the label so
-it never becomes the control's accessible name. Filters, inactive input modes
-and raw machine output fold the same way — native `<details>`, no JavaScript.
+it never becomes the control's accessible name. Filters, inactive input modes,
+a setting that belongs to an unchosen mode and raw machine output fold the
+same way — native `<details>` or one `:has()` rule, no JavaScript.
+
+**The One-Question Rule.** A chart, a number or a bar is on a page because it
+answers a question someone asks of the search — is it finding anything, more
+or fewer than before, what do the matches ask for. It carries its unit, its
+period and a way to the rows behind it. A figure nobody can act on is not
+drawn.
 
 **The Measured-Change Rule.** A UI pull request names a number from
 `docs/ui-redesign/measure.js` — tab stops before the table, visible hint
@@ -567,40 +652,48 @@ not done.
 ## Do's and Don'ts
 
 ### Do:
-- **Do** route every color through the semantic tokens (`surface` / `line` /
+- **Do** route every colour through the semantic tokens (`surface` / `line` /
   `ink` / `accent` / status tones) as `rgb(var(--token) / alpha)`; a future dark
-  theme must be a token swap, not a component edit.
-- **Do** keep the 4px spacing grid and the observed density: 20px card padding,
-  12×16px table cells, 6px control padding, 16px card gaps.
+  theme must be a token swap, not a component edit. A chart's strokes and
+  fills use the same variables.
+- **Do** keep the 4px spacing grid: 20px card padding, 12×16px table cells,
+  16px card gaps, one control height.
 - **Do** set `tabular-nums` on every numeric readout (stats, counts, scores,
   dates in columns) and render absent values as an em dash (—), never blank.
 - **Do** give every interactive element the global focus ring (2px emerald,
-  2px offset) and a 150ms color-only transition.
-- **Do** pair color with a redundant channel — dot + label on status, number +
-  meter on fit, a check or a bar on a selection — so state reads without color.
+  2px offset) and a 150ms colour-only transition.
+- **Do** pair colour with a redundant channel — the word on a status, the
+  number on a fit tile, a check or a bar on a selection, a word for a screen
+  reader beside a health dot — so state reads without colour.
 - **Do** put a new value in `src/web/tokens.ts` and let `tokens.test.ts` say
-  whether its text passes AA on every surface, the pill and the flash.
+  whether its text passes on every surface, the pill and the flash.
 - **Do** mark helper prose written outside `Hint` with `data-ui="hint"`, so the
   number a UI change reports counts it.
+- **Do** say what a number is over and against what: "52 jobs in the last 30
+  days", "+58% vs previous 7 days".
 
 ### Don't:
-- **Don't** introduce gradients, glassmorphism, decorative noise, heavy or
-  colored shadows, hover-lift, or radii above 8px — the confirmed anti-world.
-  The same goes for the stock looks: a Bootstrap or Material admin, a
-  component-library demo page, giant colorful KPI cards, pills everywhere.
+- **Don't** introduce glassmorphism, animated or decorative gradients, heavy
+  or coloured shadows, hover-lift, entrance animations or decorative noise.
+  The one gradient in the app is the fade under the chart's line.
 - **Don't** nest cards in cards, wrap a wrapper in a border, or set a region
   apart by a background alone.
 - **Don't** let helper paragraphs pile up under a control, show raw JSON as a
   page's primary content, leave a page with a giant unused area, or hide an
   important action behind an unlabelled icon.
-- **Don't** colour an icon arbitrarily, draw a chart that answers no question,
-  or vary the focus state between controls.
+- **Don't** colour an icon or a letter tile arbitrarily, draw a chart that
+  answers no question, smooth a line into values the data never had, or vary
+  the focus state between controls.
 - **Don't** set anything in uppercase with tracking; a group label is sentence
   case at the label step.
 - **Don't** use violet for anything but AI-spend actions and the Saved status,
   and don't promote any status tone into a second brand accent.
-- **Don't** fill a status with saturated color; status stays a quiet tinted
-  pill (10% background, 20% ring).
+- **Don't** fill a status with saturated colour; status stays a tinted pill
+  (12% background, 25% ring).
+- **Don't** show a rate without the number under it, a percentage of a
+  handful, or a row of country flags where three words would do.
+- **Don't** fetch a logo, a font, an icon or a script from a third party: the
+  dashboard draws everything it shows.
 - **Don't** set prose, labels, or headings in monospace — mono is machine
   values only.
 - **Don't** go dark ad hoc: no dark-styled components or pages until the token

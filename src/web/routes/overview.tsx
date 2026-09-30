@@ -7,11 +7,14 @@ import { activeFetchRun } from '../fetch-runs';
 import { loadWelcomeContext } from '../welcome-facts';
 import { currentStep, needsWelcome } from '../welcome-steps';
 import { OverviewPage } from '../pages/overview';
-import { loadFunnel } from '../../jobs/funnel-store';
 import { loadHeldLine, loadNextCheck } from '../schedule-view';
 import { withoutMuted } from '../../employer';
 import { mutedKeys } from '../../jobs/employer-store';
-import { getActiveProfile } from '../../profiles';
+import { getActiveProfile, listActiveProfiles } from '../../profiles';
+import { readStackParam } from '../overview-numbers';
+import { loadOverviewStats } from '../overview-stats';
+import { preferredPlaces } from '../place-line';
+import { DEFAULT_RANGE, isRangeKey } from '../stats-series';
 import { nextThings, type NextThing } from '../next-things';
 import { spendHint } from '../cost-hint';
 
@@ -41,19 +44,16 @@ overviewRoute.get('/', async (c) => {
   const { facts, settings } = await loadWelcomeContext();
   if (needsWelcome(settings)) return c.redirect('/welcome', 303);
 
-  const since24h = new Date(Date.now() - DAY_MS);
+  // The chart's range and technology ride in the URL; anything else reads as the default.
+  const rangeParam = c.req.query('range');
+  const range = isRangeKey(rangeParam) ? rangeParam : DEFAULT_RANGE;
   // The numbers link to /jobs, which hides a muted company's rows (ADR 0056): they count what it shows.
   const unmuted = withoutMuted(await mutedKeys()) ?? {};
-  const [countsRows, last24hRows, recentAlerts, latestRunRows] = await Promise.all([
+  const [countsRows, recentAlerts, latestRunRows, stats, searches] = await Promise.all([
     prisma.job.groupBy({
       by: ['status'],
       _count: { _all: true },
       where: unmuted,
-    }),
-    prisma.job.groupBy({
-      by: ['status'],
-      _count: { _all: true },
-      where: { fetchedAt: { gte: since24h }, ...unmuted },
     }),
     prisma.job.findMany({
       where: { status: { in: [JobStatus.ALERTED, JobStatus.NEW] }, ...unmuted },
@@ -69,13 +69,11 @@ overviewRoute.get('/', async (c) => {
         }),
       ),
     ),
+    loadOverviewStats({ range, stack: readStackParam(c.req.query('stack')), unmuted }),
+    listActiveProfiles(),
   ]);
 
   const counts = countsRows.map((r) => ({
-    status: r.status,
-    count: r._count._all,
-  }));
-  const last24h = last24hRows.map((r) => ({
     status: r.status,
     count: r._count._all,
   }));
@@ -92,14 +90,14 @@ overviewRoute.get('/', async (c) => {
   return c.html(
     <OverviewPage
       counts={counts}
-      last24h={last24h}
       recentAlerts={recentAlerts}
       latestRuns={latestRuns}
       fetchingEnabled={settings.fetchingEnabled}
       sleepingUntil={sleepingUntil}
       held={await loadHeldLine(check.schedule)}
       watched={await watchedSummary()}
-      funnelWeek={(await loadFunnel()).week}
+      stats={stats}
+      places={preferredPlaces(searches)}
       fetchRun={activeFetchRun()}
       finishSetup={currentStep(facts) !== null}
       next={await loadNextThings(unmuted)}

@@ -272,7 +272,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                   it does not need to sit inside the dial as well. */}
               <span
                 id="score-number"
-                class="absolute inset-0 flex items-center justify-center text-[32px] font-semibold leading-none tabular-nums tracking-tight text-ink"
+                class="absolute inset-0 flex items-center justify-center text-kpi leading-none tabular-nums text-ink"
                 aria-hidden="true"
               >
                 {match.matchScore}

@@ -9,20 +9,20 @@
 export type Rgb = readonly [number, number, number];
 
 export const TOKENS = {
-  surface: [245, 247, 246], // canvas: page ground, sidebar base
+  surface: [243, 245, 244], // canvas: page ground, sidebar base
   'surface-raised': [255, 255, 255], // where work happens: cards, tables, controls
-  'surface-overlay': [238, 242, 240], // subtle: table header, toolbars, wells, inactive regions
-  'surface-selected': [228, 241, 234], // active nav item, selected option, row hover (at 50 %)
-  line: [221, 227, 224], // dividers and card outlines
-  'line-strong': [200, 209, 204], // control borders
-  ink: [16, 24, 40],
-  'ink-muted': [71, 84, 103],
-  'ink-faint': [95, 107, 126], // passes AA on all four surfaces
-  accent: [5, 150, 105], // ring, mark, tints
-  'accent-strong': [4, 120, 87], // text, links, primary button
+  'surface-overlay': [235, 239, 237], // subtle: table header, toolbars, wells, inactive regions
+  'surface-selected': [224, 242, 232], // active nav item, selected option, row hover (at 50 %)
+  line: [217, 223, 219], // dividers and card outlines
+  'line-strong': [188, 198, 192], // control borders
+  ink: [13, 20, 33],
+  'ink-muted': [61, 72, 89],
+  'ink-faint': [86, 97, 115], // 5.4:1 on the selected surface, its hardest ground
+  accent: [5, 150, 105], // ring, mark, tints, the chart's line
+  'accent-strong': [4, 116, 85], // text, links, primary button
   'accent-deep': [6, 95, 70], // hover
-  ok: [4, 120, 87],
-  warn: [162, 79, 10],
+  ok: [4, 116, 85],
+  warn: [181, 71, 8],
   danger: [180, 35, 24],
   info: [29, 78, 216],
   violet: [109, 40, 217],
