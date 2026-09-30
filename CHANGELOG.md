@@ -4,6 +4,43 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.41.0] — 2026-09-30
+
+### Added
+- **Apply all suggestions in one press.** On Tailor resume, **Apply all
+  suggestions (N)** under the score writes every wording the check let
+  through, the removals and the missing keywords a skills line can take into
+  your resume at once, and says what landed. **Undo all** takes them back;
+  every card keeps its own Undo. No AI call, nothing saved.
+- **Your resume as the document it is, beside the suggestions.** The resume
+  card opens on **Document**: your own `.docx` with the edits written into it,
+  or — for a PDF — the same text re-set in the look read off its page. Changed
+  paragraphs are marked, and a dashed line shows where a page would end.
+  **Plain text** is the editor as before.
+- **Edit a paragraph in the document.** Click it, change the words, Enter
+  keeps it, Escape puts it back; emptying it removes the line. The score and
+  the suggestions follow, as they do for typing.
+- **Download .docx / .pdf** of the document as it stands, without saving a
+  version. The PDF of your own `.docx` opens the print dialog at the file's
+  own page size — choose Save as PDF.
+
+### Changed
+- **A PDF's clean version looks like the PDF.** Its skills table stays a
+  table, places and links keep their colour, titles and dates their grey and
+  weight, the header its rule and the body its justified edge — read off the
+  page itself, with no AI. The clean-version page (`/resumes/:id/render`)
+  prefills the accent colour from a PDF too.
+- **A save is always a document.** When your `.docx` cannot take an edit, or
+  the resume is a PDF, Save keeps the clean `.docx` the Document view showed —
+  no more Markdown versions; the next save edits that file in place.
+- The clean version never drops a line: it keeps your own section headings,
+  a second contact line and the "Technology Stack" line after the bullets, and
+  a skills line in capitals is no longer mistaken for a heading.
+- Save writes into a skills table cell by cell, so adding a keyword to a
+  table row no longer turns the save into another file.
+- Removing a bullet's words takes the whole bullet, and a cut from a list
+  takes one separator with it.
+
 ## [2.40.0] — 2026-09-30
 
 ### Added
@@ -4536,6 +4573,7 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.41.0]: https://github.com/applypack/applypack/compare/v2.40.0...v2.41.0
 [2.40.0]: https://github.com/applypack/applypack/compare/v2.39.0...v2.40.0
 [2.39.0]: https://github.com/applypack/applypack/compare/v2.38.0...v2.39.0
 [2.38.0]: https://github.com/applypack/applypack/compare/v2.37.0...v2.38.0

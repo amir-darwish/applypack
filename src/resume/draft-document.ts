@@ -121,7 +121,7 @@ export async function cleanDocx(
 export function noticeFor(basis: Exclude<DocumentBasis, 'own'>, reason?: string): string {
   switch (basis) {
     case 'pdf':
-      return 'Your resume is a PDF, which has no paragraphs to edit, so this is a clean version in your typeface, set from the text. Your PDF is untouched.';
+      return 'Your resume is a PDF, which has no paragraphs to edit: this is the same text re-set in the look read off its page — the typeface, colours, skills table and rules. Your PDF is untouched; Save keeps this as a .docx.';
     case 'text':
       return 'Your resume was uploaded as plain text, so this is a clean version set from it.';
     case 'unsupported':
