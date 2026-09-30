@@ -25,7 +25,7 @@ import { applyReplacement, insertAfterLine, removeSpan, insertIntoSkills, withCo
  */
 
 /** Run one operation on `text`: the text-edits result, `{ text, span }` or `{ error }`. */
-export function runOperation(text, op) {
+function runOperation(text, op) {
   switch (op.kind) {
     case 'change':
       return applyReplacement(text, op.quote, op.wording);

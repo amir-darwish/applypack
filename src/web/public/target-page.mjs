@@ -21,6 +21,7 @@ import { formatEditSheet } from './change-sheet.mjs';
 import { wireCopy, copyFrom, announce } from './copy.mjs';
 import { applyReplacement, insertAfterLine, removeSpan, insertIntoSkills, inverseEdit, undoEdit, withContext } from './text-edits.mjs';
 import { applyAll, applyAllSummary } from './apply-all.mjs';
+import { mountDocPane, fileNameFrom } from './doc-pane.mjs';
 
 // Full literal class names — the Tailwind CDN JIT only generates what it can
 // see verbatim in the document, composed strings would come out unstyled.
@@ -266,6 +267,7 @@ export function init(data) {
     paintCards();
     paintBatch();
     store(text);
+    if (resumeView === 'doc') docPane?.schedule();
   }
 
   /** Open the "no evidence" tier of the confirm card and bring it into view. */
@@ -555,7 +557,7 @@ export function init(data) {
     const summary = applyAllSummary(result);
     setBatchStatus(summary);
     announce(summary);
-    document.dispatchEvent(new CustomEvent('resume:batch'));
+    if (resumeView === 'doc') docPane?.refresh();
   }
 
   /** Every applied edit undone, newest first; one the text has since moved past stays. */
@@ -585,6 +587,80 @@ export function init(data) {
   undoAll?.addEventListener('click', undoEverything);
   removalsBox?.addEventListener('change', paintBatch);
 
+  /* ---------- the document view ---------- */
+
+  const docView = document.getElementById('doc-view');
+  const textView = document.getElementById('text-view');
+  const views = document.getElementById('resume-views');
+  const docStatus = document.getElementById('doc-status');
+  const viewKey = 'target-view';
+  let resumeView = 'text';
+  // Without ResizeObserver or fetch there is no pane, and the plain text is the whole page, as before.
+  const docPane =
+    docView && typeof ResizeObserver === 'function' && typeof fetch === 'function'
+      ? mountDocPane({
+          pane: document.getElementById('doc-pane'),
+          notice: document.getElementById('doc-notice'),
+          resumeId: data.resumeId,
+          name: data.documentName,
+          baseText: data.resumeText,
+          getText: () => editor.value,
+          setText: (text) => {
+            editor.value = text;
+            located = null;
+            render();
+          },
+          say: (message) => {
+            if (docStatus) docStatus.textContent = message;
+          },
+        })
+      : null;
+
+  function showView(view) {
+    resumeView = docPane ? view : 'text';
+    if (docView) docView.hidden = resumeView !== 'doc';
+    if (textView) textView.hidden = resumeView !== 'text';
+    for (const b of document.querySelectorAll('[data-resume-view]')) b.setAttribute('aria-pressed', String(b.dataset.resumeView === resumeView));
+    for (const el of document.querySelectorAll('[data-text-only]')) el.hidden = resumeView !== 'text';
+    for (const el of document.querySelectorAll('[data-doc-only]')) el.hidden = resumeView !== 'doc';
+    try { localStorage.setItem(viewKey, resumeView); } catch {}
+    if (resumeView === 'doc') docPane.refresh();
+  }
+  if (docPane && views) {
+    views.hidden = false;
+    for (const b of views.querySelectorAll('[data-resume-view]')) b.addEventListener('click', () => showView(b.dataset.resumeView));
+  }
+
+  /** A download of the document as drawn: the file the route answers, saved under the name it gives. */
+  async function download(format, button) {
+    if (!docPane) return;
+    if (format === 'pdf' && docPane.last?.pdf === 'print') { docPane.print(data.documentName); return; }
+    button.disabled = true;
+    try {
+      const res = await fetch(`/resumes/${data.resumeId}/document`, {
+        method: 'POST',
+        body: new URLSearchParams({ text: editor.value, baseText: data.resumeText, name: data.documentName, as: format }),
+      });
+      // The user's own .docx is printed as drawn: no renderer of ours re-sets it.
+      if (res.status === 409) { docPane.print(data.documentName); return; }
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `the server answered ${res.status}`);
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileNameFrom(res.headers.get('Content-Disposition')) ?? `resume.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      if (docStatus) docStatus.textContent = 'Downloaded ' + a.download + '.';
+    } catch (err) {
+      if (docStatus) docStatus.textContent = 'Could not make the file: ' + err.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+  for (const b of document.querySelectorAll('[data-download]')) b.addEventListener('click', () => download(b.dataset.download, b));
+
   // Copy works the same on every page; Locate only exists where this editor does.
   wireCopy(document);
 
@@ -593,6 +669,10 @@ export function init(data) {
   for (const button of document.querySelectorAll('[data-locate]')) {
     const card = button.closest('[data-card]');
     button.addEventListener('click', () => {
+      if (resumeView === 'doc' && docPane?.locate(button.dataset.locate)) {
+        if (card) say(card, 'Outlined in the document', true);
+        return;
+      }
       const loc = locateQuote(editor.value, button.dataset.locate);
       if (!loc) {
         located = null;
@@ -639,5 +719,8 @@ export function init(data) {
 
   editor.value = load() ?? data.resumeText;
   loadEdits();
+  let stored = null;
+  try { stored = localStorage.getItem(viewKey); } catch {}
+  showView(stored === 'text' ? 'text' : 'doc');
   render();
 }

@@ -418,6 +418,22 @@ async function main(): Promise<void> {
       init: form({ mode: 'pdf' }),
       expect: (res) => res.status === 200 && res.headers.get('content-type') === 'application/pdf',
     },
+    {
+      // The Tailor page's document pane: the draft drawn as a file, nothing stored.
+      name: 'POST /resumes/:id/document (the draft as a document)',
+      init: form({ text: `${RESUME}\n- Shipped a notification service.`, baseText: RESUME }),
+      expect: (res) => res.status === 200 && (res.headers.get('content-type') ?? '').startsWith('application/json'),
+    },
+    {
+      name: 'POST /resumes/:id/document as=docx (the download)',
+      init: form({ text: RESUME, baseText: RESUME, as: 'docx' }),
+      expect: (res) => res.status === 200 && /attachment; filename=/.test(res.headers.get('content-disposition') ?? ''),
+    },
+    {
+      name: 'POST /resumes/:id/document as=pdf (the clean PDF of the draft)',
+      init: form({ text: RESUME, baseText: RESUME, as: 'pdf' }),
+      expect: (res) => res.status === 200 && res.headers.get('content-type') === 'application/pdf',
+    },
   ];
   const postPaths = [
     '/jobs/new',
@@ -445,6 +461,9 @@ async function main(): Promise<void> {
     '/settings/ai/local',
     '/settings/ai/openai-base',
     `/resumes/${f.resumeId}/render`,
+    `/resumes/${f.resumeId}/document`,
+    `/resumes/${f.resumeId}/document`,
+    `/resumes/${f.resumeId}/document`,
   ];
   for (const [i, p] of posts.entries()) {
     const res = await app.request(postPaths[i]!, p.init);
