@@ -606,6 +606,10 @@ export function getAiProviderById(id: AiProviderId): AiProvider {
         envKeys: CLI_PROVIDER_ENV_KEYS.claude_code ?? [],
         keyEnv: AI_KEY_ENV_VARS.claude_code,
         thinkingCap: true,
+        // Started in the checkout (npm start), the CLI read its CLAUDE.md and the
+        // project's memory into every call: +53 000 tokens each, measured
+        // 2026-09-30, and a scan that reported the instructions as an injection.
+        cwd: tmpdir(),
       });
       break;
     case 'gemini_cli':
