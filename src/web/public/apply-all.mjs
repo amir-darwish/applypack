@@ -15,13 +15,14 @@
  * land, and no quote goes missing.
  */
 
-import { applyReplacement, insertAfterLine, removeSpan, insertIntoSkills, withContext } from './text-edits.mjs';
+import { applyReplacement, insertAfterLine, removeSpan, insertIntoSkills, appendSkills, withContext } from './text-edits.mjs';
 
 /**
  * @typedef {{ key: string, kind: 'change', quote: string, wording: string }
  *   | { key: string, kind: 'add', anchor: string, wording: string }
  *   | { key: string, kind: 'remove', quote: string }
- *   | { key: string, kind: 'keyword', term: string, where?: string }} Operation
+ *   | { key: string, kind: 'keyword', term: string, where?: string }
+ *   | { key: string, kind: 'skills-line', terms: string[] }} Operation
  */
 
 /** Run one operation on `text`: the text-edits result, `{ text, span }` or `{ error }`. */
@@ -35,6 +36,8 @@ function runOperation(text, op) {
       return removeSpan(text, op.quote);
     case 'keyword':
       return insertIntoSkills(text, op.term, op.where);
+    case 'skills-line':
+      return appendSkills(text, op.terms);
     default:
       return { error: 'unknown-operation' };
   }
@@ -66,11 +69,30 @@ export function applyAll(text, ops) {
   return { text: current, done, failed };
 }
 
+/**
+ * Every term a skills line can take, each on the line its hint names; the
+ * ones no list line can take go on one line of their own (appendSkills).
+ * What the page's "Add keywords" runs — one edit per term, so each can be
+ * undone on its own, and one for the leftover line.
+ */
+export function addKeywords(text, terms) {
+  const first = applyAll(text, terms.map((t) => ({ key: 'kw:' + t.term, kind: 'keyword', term: t.term, where: t.where })));
+  const leftover = first.failed.filter((f) => f.error === 'no-skills-list').map((f) => f.key.slice(3));
+  if (leftover.length === 0) return first;
+  const rest = applyAll(first.text, [{ key: 'kw-line:' + leftover.join(','), kind: 'skills-line', terms: leftover }]);
+  return {
+    text: rest.text,
+    done: [...first.done, ...rest.done],
+    failed: [...first.failed.filter((f) => f.error !== 'no-skills-list'), ...rest.failed],
+  };
+}
+
 const NOUNS = {
   change: ['change', 'changes'],
   add: ['addition', 'additions'],
   remove: ['removal', 'removals'],
   keyword: ['keyword', 'keywords'],
+  'skills-line': ['line of keywords', 'lines of keywords'],
 };
 
 function counted(n, [one, many]) {

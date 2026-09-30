@@ -74,8 +74,11 @@ const KEYWORDS_MAX = 80;
  * v14: CANDIDATE'S DOMAINS — the sectors the resume's roles were in (the scan's
  *     "industries"), and, when the posting's sector is not among them, the
  *     instruction to reframe transferable work rather than claim the sector.
+ * v15: KEYWORDS IN THE WORDING — every bullet or summary rewrite carries a
+ *     keyword the resume does not yet show in a sentence ("add" first, then
+ *     "listed"); asked for after rewrites came back with none (ADR 0059).
  */
-export const PROMPT_VERSION = 14;
+export const PROMPT_VERSION = 15;
 
 /**
  * The posting brief's own version (ADR 0044). Separate from PROMPT_VERSION so
@@ -644,6 +647,7 @@ const RULE_ACTIONS = `"actions" is the to-do list of ADDITIONS and CHANGES: conc
    - "recent_role" graded below strong → rewrite the most recent role's leading bullets, up to 4, one action each WITH a replacement, so each opens with an outcome this employer scans for, in this posting's vocabulary.
    - a must-level or primary keyword whose evidence is "listed" → one action putting it inside a bullet where the work is described. "listed" is measured, not guessed: the term is named on a line of terms and shown nowhere else, which proves nothing to a human reader. A term already "described" or "measured" needs no such action.
    - a must-level keyword marked "add" → one action writing it into the text whose facts already evidence it.
+   KEYWORDS IN THE WORDING: a rewritten bullet, summary or title is where the posting's missing words go. Every "replacement" for an experience bullet or the summary carries at least one keyword from the table that the resume does not yet show in a sentence — one marked "add" first, then a "listed" one — in the posting's own spelling, on a line whose facts support it, and "why" names the keyword. Spread them across the rewrites rather than stacking one term everywhere, and never write in a keyword marked "cannot_claim": that is a claim the candidate has not made.
    When all three grades are strong and no must-level keyword is buried, the short list IS the answer — say what already works in "strengths".
    THE ONE EXEMPTION is a different PROFESSION — a backend engineer against a paid-media role, a product manager against a principal engineer, a software engineer against clinical trial management. No wording bridges those: write NO actions and say plainly in "summary" and "cautions" what the resume is and what the posting wants.
    THE TEST FOR IT, so it is not a feeling: the exemption applies only when NOT ONE item of the posting's primary stack is "present" or "add" (and, for a posting with no primary stack, when fewer than two of its must-level keywords are). If even one is, this candidate already has part of the core of this job, and the actions above are owed however wide the rest of the gap looks.

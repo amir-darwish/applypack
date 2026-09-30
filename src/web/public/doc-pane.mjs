@@ -82,36 +82,113 @@ export function fitScale(available, pageWidth) {
   return Math.min(1, Math.max(MIN_SCALE, available / pageWidth));
 }
 
+/** Most text lines one paragraph is drawn from: a bullet or a summary a PDF's text broke over several. */
+const MAX_WINDOW = 4;
+/** A paragraph this short is not looked for inside a longer line — "Go" is in half of them. */
+const MIN_PART_KEY = 4;
+
 /**
  * Where a paragraph of the document stands in the text: the span to replace
- * when it is edited. A paragraph is found by its words — the line whose words
- * are the paragraph's, or one cell of a table row ("label | values") — and the
- * n-th identical paragraph maps to the n-th identical line. Null when no line
- * reads so: a paragraph the clean version composed from several lines, which
- * is edited in the plain text instead.
+ * when it is edited. A paragraph is found by its words, in this order:
+ *
+ * 1. a whole line (a bullet behind its marker, a heading behind "## ");
+ * 2. a cell of a table row ("label | values");
+ * 3. up to four lines in a row — a paragraph the text broke over lines;
+ * 4. a part of one line — the label or the values of a skills row the clean
+ *    version draws as a table ("Programming: PHP, Go" in the text).
+ *
+ * The n-th identical paragraph maps to the n-th identical match. Null when
+ * none reads so, and the paragraph is edited in the plain text instead.
  */
 export function locateParagraph(text, paragraphText, occurrence = 0) {
   const want = wordsKey(paragraphText);
   if (want.length === 0) return null;
   const lines = String(text).split('\n');
-  let offset = 0;
-  let seen = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const marker = MARKER.exec(line)?.[0] ?? '';
-    const body = line.slice(marker.length);
-    if (wordsKey(body) === want) {
-      if (seen++ === occurrence) return { line: i, start: offset + marker.length, end: offset + line.length, cell: false, marker };
-    } else if (body.includes(' | ')) {
-      let at = offset + marker.length;
-      for (const part of body.split(' | ')) {
-        if (wordsKey(part) === want && seen++ === occurrence) return { line: i, start: at, end: at + part.length, cell: true, marker: '' };
-        at += part.length + 3;
+  const starts = [];
+  for (let i = 0, at = 0; i < lines.length; i++) { starts.push(at); at += lines[i].length + 1; }
+  const bodyAt = (i) => {
+    const marker = MARKER.exec(lines[i])?.[0] ?? '';
+    return { marker, start: starts[i] + marker.length, body: lines[i].slice(marker.length) };
+  };
+
+  const strategies = [
+    function* wholeLines() {
+      for (let i = 0; i < lines.length; i++) {
+        const { marker, start, body } = bodyAt(i);
+        if (wordsKey(body) === want) yield { line: i, start, end: starts[i] + lines[i].length, cell: false, marker };
       }
-    }
-    offset += line.length + 1;
+    },
+    function* cells() {
+      for (let i = 0; i < lines.length; i++) {
+        const { start, body } = bodyAt(i);
+        if (!body.includes(' | ')) continue;
+        let at = start;
+        for (const part of body.split(' | ')) {
+          if (wordsKey(part) === want) yield { line: i, start: at, end: at + part.length, cell: true, marker: '' };
+          at += part.length + 3;
+        }
+      }
+    },
+    function* windows() {
+      for (let i = 0; i < lines.length; i++) {
+        let words = '';
+        for (let j = i; j < Math.min(lines.length, i + MAX_WINDOW); j++) {
+          if (lines[j].trim() === '') break;
+          words += wordsKey(j === i ? bodyAt(i).body : lines[j]);
+          if (!want.startsWith(words)) break;
+          if (j > i && words === want) {
+            const { marker, start } = bodyAt(i);
+            yield { line: i, start, end: starts[j] + lines[j].length, cell: false, marker, lines: j - i + 1 };
+          }
+        }
+      }
+    },
+    function* partsOfLines() {
+      if (want.length < MIN_PART_KEY) return;
+      for (let i = 0; i < lines.length; i++) {
+        const span = keySpan(lines[i], want, paragraphText);
+        if (span) yield { line: i, start: starts[i] + span[0], end: starts[i] + span[1], cell: true, marker: '' };
+      }
+    },
+  ];
+  for (const strategy of strategies) {
+    const found = [...strategy()];
+    if (found.length > occurrence) return found[occurrence];
+    if (found.length > 0) return null;
   }
   return null;
+}
+
+/**
+ * The characters of `line` whose words are `want`, as [start, end), or null.
+ * Built character by character so a folded letter (a formula's 𝑂) still
+ * points at its own place in the line; the span runs from the first word
+ * character to the last, punctuation around it left where it was.
+ */
+function keySpan(line, want, paragraphText) {
+  let key = '';
+  const from = [];
+  let i = 0;
+  for (const ch of line) {
+    for (const k of wordsKey(ch)) { key += k; from.push([i, i + ch.length]); }
+    i += ch.length;
+  }
+  // The paragraph's own edge punctuation ("Programming:") belongs to the span,
+  // or rewriting the label would leave its colon behind twice.
+  const trimmed = String(paragraphText).trim();
+  const head = /^[^\p{L}\p{N}]*/u.exec(trimmed)[0];
+  const tail = /[^\p{L}\p{N}]*$/u.exec(trimmed)[0];
+  const spans = [];
+  for (let at = key.indexOf(want); at !== -1; at = key.indexOf(want, at + 1)) {
+    let start = from[at][0];
+    let end = from[at + want.length - 1][1];
+    // Whole words only: "Others" is not the end of "brothers".
+    if (/[\p{L}\p{N}]/u.test(line[start - 1] ?? '') || /[\p{L}\p{N}]/u.test(line[end] ?? '')) continue;
+    if (head && line.slice(start - head.length, start) === head) start -= head.length;
+    if (tail && line.slice(end, end + tail.length) === tail) end += tail.length;
+    spans.push([start, end]);
+  }
+  return spans.length === 1 ? spans[0] : null;
 }
 
 /**
@@ -330,6 +407,25 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
 
   /* ---------- editing a paragraph in place ---------- */
 
+  /**
+   * A paragraph's words as the text writes them: a tab stop — a company and
+   * its place, a title and its dates — becomes " | ", the separator the text
+   * reader and the patcher both split on, so an edit keeps the two columns.
+   */
+  function wordsOf(p) {
+    let out = '';
+    for (const node of p.childNodes) out += textWithTabs(node);
+    return out.replace(/[ \t]+/g, ' ').trim();
+  }
+  function textWithTabs(node) {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    if (node.classList.contains('docx-tab-stop')) return ' | ' + node.textContent.replace(/\u2003/g, '').trim() + ' ';
+    let out = '';
+    for (const child of node.childNodes) out += textWithTabs(child);
+    return out;
+  }
+
   function occurrenceOf(p) {
     const key = wordsKey(p.textContent);
     return paragraphs().filter((q) => wordsKey(q.textContent) === key).indexOf(p);
@@ -338,16 +434,17 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
   function begin(p, event) {
     if (editing?.p === p) return;
     if (editing) commit();
-    if (p.querySelector('.docx-tab-stop, math')) {
-      say('This line is set in columns or holds a formula — edit it in Plain text, where each part is its own words.');
+    if (p.querySelector('math')) {
+      say('This line holds a formula — edit it in Plain text, where the formula is its own characters.');
       return;
     }
-    const at = locateParagraph(getText(), p.textContent, occurrenceOf(p));
-    if (!at) {
+    const occurrence = occurrenceOf(p);
+    if (!locateParagraph(getText(), p.textContent, occurrence)) {
       say('This line is drawn from more than one line of your text — edit it in Plain text.');
       return;
     }
-    editing = { p, at, before: p.textContent };
+    // Escape puts back these very nodes: no round trip through the HTML parser.
+    editing = { p, occurrence, words: p.textContent, before: wordsOf(p), saved: p.cloneNode(true) };
     p.contentEditable = 'plaintext-only';
     if (p.contentEditable !== 'plaintext-only') p.contentEditable = 'true';
     p.classList.add('doc-editing');
@@ -372,11 +469,19 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
 
   function commit() {
     if (!editing) return;
-    const { p, at, before } = editing;
-    const after = p.textContent;
+    const { p, occurrence, words, before, saved } = editing;
+    const after = wordsOf(p);
     end();
-    const same = (s) => s.replace(/[\s\u2003]+/g, ' ').trim();
+    const same = (s) => s.replace(/\s+/g, ' ').trim();
     if (same(after) === same(before)) return;
+    // Found again now: the text may have moved since the click, and a span
+    // from before the move would rewrite someone else's words.
+    const at = locateParagraph(getText(), words, occurrence);
+    if (!at) {
+      p.replaceChildren(...saved.childNodes);
+      say('Your text changed while you were editing, so this paragraph could not be found again — nothing was changed.');
+      return;
+    }
     setText(rewriteSpan(getText(), at, after));
     say(after.trim() ? 'Changed. Undo with reset edits, or edit it again.' : 'Removed that line.');
     draw();
@@ -384,7 +489,7 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
 
   function cancel() {
     if (!editing) return;
-    editing.p.textContent = editing.before;
+    editing.p.replaceChildren(...editing.saved.childNodes);
     end();
     say('Put back as it was.');
   }

@@ -18,7 +18,7 @@ import { briefForPosting, type BriefResult } from './brief';
 import { annotateElsewhere, applyFacts } from './facts';
 import { countableFlags } from './red-flags';
 import { gateActions, gateRemovals } from './replacement-gate';
-import { floorDemand, floorGaps } from './suggestion-floor';
+import { floorDemand, floorGaps, unwrittenMusts } from './suggestion-floor';
 import { suggestForMatch } from './suggestions';
 import { withTableAliases } from './keyword-aliases';
 import { carryOverrides, effectiveKeywords } from './keyword-overrides';
@@ -231,7 +231,7 @@ export async function matchResumeToJob(
     const gaps = floorGaps({ keywords, alignment: reply.alignment, actions: gate.actions, breakdown });
     if (gaps.length > 0) {
       logger.info({ matchId: row.id, jobId: job.id, gaps }, 'resume: suggestions missed the floor, asking again');
-      filled = (await suggestForMatch(row, job, undefined, floorDemand(gaps))) ?? row;
+      filled = (await suggestForMatch(row, job, undefined, floorDemand(gaps, unwrittenMusts({ keywords, actions: gate.actions })))) ?? row;
     }
   }
 

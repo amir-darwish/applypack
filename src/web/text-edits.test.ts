@@ -80,6 +80,19 @@ test('applyReplacement refuses a quote it cannot find or an empty wording', asyn
   assert.equal(err(applyReplacement(RESUME, 'Senior Full-Stack Engineer', '   ')), 'no-replacement');
 });
 
+test('a wording that brings its own "- " takes the resume’s bullet instead of doubling it', async () => {
+  const { applyReplacement, insertAfterLine } = await edits;
+  const changed = ok(applyReplacement(RESUME, '• Led backend architecture for PHP services processing payments.', '- Owned the payments backend.'));
+  assert.match(changed.text, /^• Owned the payments backend\.$/m);
+  assert.equal(changed.text.includes('• -'), false);
+  const inner = ok(applyReplacement(RESUME, 'Led backend architecture for PHP services processing payments.', '- Owned the payments backend.'));
+  assert.match(inner.text, /^• Owned the payments backend\.$/m, 'a quote that starts after the marker too');
+  const added = ok(insertAfterLine(RESUME, 'Built a multi-gateway payment platform from scratch in Laravel.', '- Cut checkout failures 18%.'));
+  assert.match(added.text, /^• Cut checkout failures 18%\.$/m);
+  // Off a bullet, the wording is left as written.
+  assert.match(ok(applyReplacement(RESUME, 'Senior Full-Stack Engineer', 'Senior PHP Engineer')).text, /^Senior PHP Engineer$/m);
+});
+
 test('removeSpan takes the whole line and its newline when the quote is the line', async () => {
   const { removeSpan } = await edits;
   const r = ok(removeSpan(RESUME, '• Improved SEO rankings for marketing pages.'));
@@ -289,7 +302,7 @@ test('insertAfterLine adds the wording as the next line and inherits the bullet 
 test('insertAfterLine does not double a marker the wording already carries, nor add one under a paragraph', async () => {
   const { insertAfterLine } = await edits;
   const withMarker = ok(insertAfterLine(RESUME, 'Improved SEO rankings', '- Already a bullet.'));
-  assert.match(withMarker.text, /^- Already a bullet\.$/m);
+  assert.match(withMarker.text, /^• Already a bullet\.$/m, 'the resume’s own marker, not the wording’s');
   assert.equal(withMarker.text.includes('• - '), false);
   const underProse = ok(insertAfterLine(RESUME, 'Senior engineer (10+ years)', 'Remote full-time since 2015.'));
   assert.match(underProse.text, /^Remote full-time since 2015\.$/m);

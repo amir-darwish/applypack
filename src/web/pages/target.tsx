@@ -359,7 +359,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                   data-apply-all
                   data-goto-tab="changes"
                   hidden
-                  title="Writes every suggestion the gate let through, the removals and the missing keywords into the text — nothing is saved until you download or save"
+                  title="Writes every suggestion the gate let through, the removals and the missing keywords your resume backs into the text — nothing is saved until you download or save"
                 >
                   {/* One span: the button is a flex row, and its gap would stand between the words and the count. */}
                   <span>Apply all suggestions (<span data-apply-all-count>0</span>)</span>
@@ -636,6 +636,26 @@ export const TargetPage: FC<TargetPageProps> = ({
             </div>
           </div>
           <div id="missing-chips" class="mb-3 flex flex-wrap gap-1.5"></div>
+          {/* Every keyword the text does not spell, in one list, ticked where the
+              resume already backs it — one press instead of one chip at a time.
+              Filled by target-page.mjs, which hides it while nothing is missing. */}
+          <details id="kw-bulk" hidden class="mb-3 rounded-md border border-line bg-surface-overlay/60 px-3 py-2">
+            <summary class="cursor-pointer text-note font-medium text-ink">
+              Add missing keywords to your skills (<span data-kw-bulk-count>0</span>)
+            </summary>
+            <Hint class="mt-1">
+              Ticked are the ones your resume already backs. An unticked one has nothing behind it in your resume yet —
+              tick it only if it is true. Each goes on the skills line it belongs to; what no line can take gets a line of
+              its own.
+            </Hint>
+            <ul id="kw-bulk-list" class="mt-2 grid gap-1 sm:grid-cols-2"></ul>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <Button type="button" variant="primary" size="sm" id="kw-bulk-add">
+                Add keywords
+              </Button>
+              <span id="kw-bulk-status" class="text-meta text-ink-muted" role="status"></span>
+            </div>
+          </details>
           {/* The draft as the file it would be: the user's own .docx with the
               edits written in, or the clean version of a PDF — drawn from the
               same text the plain view edits (public/doc-pane.mjs). */}
@@ -657,9 +677,8 @@ export const TargetPage: FC<TargetPageProps> = ({
               <span id="doc-status" class="text-meta text-ink-faint" role="status"></span>
             </div>
             <Hint class="mt-1">
-              Click a paragraph to change its words; Enter keeps the change, Escape puts it back. A line set in columns
-              is changed in Plain text. The downloads are this document as it stands — nothing is saved until you save a
-              version.
+              Click a paragraph to change its words; Enter keeps the change, Escape puts it back. A formula is changed in
+              Plain text. The downloads are this document as it stands — nothing is saved until you save a version.
             </Hint>
           </div>
           <div id="text-view">
@@ -831,8 +850,8 @@ const ApplyAllBar: FC<{ removals: number }> = ({ removals }) => (
       <span id="apply-all-status" class="text-note text-ink-muted" role="status"></span>
     </div>
     <Hint class="mt-1.5">
-      Every wording the check let through, the removals and the missing keywords a skills line can take, written
-      into your resume below in one press. Nothing is saved until you download it or save a version; each card keeps
+      Every wording the check let through, the removals and the missing keywords your resume backs, written into
+      your resume below in one press. Nothing is saved until you download it or save a version; each card keeps
       its own Undo.
     </Hint>
   </div>

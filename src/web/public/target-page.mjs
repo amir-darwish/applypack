@@ -20,7 +20,7 @@ import { computeScore, entriesFromLive } from './score.mjs';
 import { formatEditSheet } from './change-sheet.mjs';
 import { wireCopy, copyFrom, announce } from './copy.mjs';
 import { applyReplacement, insertAfterLine, removeSpan, insertIntoSkills, inverseEdit, undoEdit, withContext } from './text-edits.mjs';
-import { applyAll, applyAllSummary } from './apply-all.mjs';
+import { applyAll, applyAllSummary, addKeywords } from './apply-all.mjs';
 import { mountDocPane, fileNameFrom } from './doc-pane.mjs';
 
 // Full literal class names — the Tailwind CDN JIT only generates what it can
@@ -103,7 +103,7 @@ export function init(data) {
   // order is the sequence they were made in, which Undo all walks backwards.
   // A keyword added to the skills line is kept under keywordKey(term).
   let edits = { applied: {}, skipped: [], order: [] };
-  // The missing keywords a skills line can take right now, refreshed by render().
+  // The missing keywords the resume backs — Apply all adds them — refreshed by render().
   let addable = [];
 
   function loadEdits() {
@@ -190,9 +190,13 @@ export function init(data) {
     jd.innerHTML = highlightHtml(data.jobText, jobSpans(data.keywords, data.jobText, scored));
 
     chips.innerHTML = '';
-    addable = [];
+    const gaps = orderKeywords(keywordGaps(scored.rows), data.jobText);
+    // Every term the resume backs, whether or not a skills line can take it:
+    // what no line takes gets a line of its own (apply-all.mjs:addKeywords).
+    addable = gaps.filter((r) => r.status === 'add').map((r) => ({ term: r.term, where: r.where }));
+    paintBulk(gaps.filter((r) => r.note !== data.deniedNote && r.note !== data.unsureNote));
     // Hardest requirement first, then the words the posting keeps repeating.
-    for (const r of orderKeywords(keywordGaps(scored.rows), data.jobText)) {
+    for (const r of gaps) {
       const unproven = r.status === 'cannot_claim';
       // The user's own "I don't" or "Not sure" is a cannot_claim too, carrying
       // the note the answer left. Still a gap, so still a chip — but not an
@@ -227,7 +231,6 @@ export function init(data) {
       if (r.status !== 'add') continue;
       const probe = insertIntoSkills(editor.value, r.term, r.where);
       if (probe.error) continue;
-      addable.push({ term: r.term, where: r.where });
       const add = document.createElement('button');
       add.type = 'button';
       add.className = CHIP_BASE + ' ' + CHIP_ADD;
@@ -524,13 +527,12 @@ export function init(data) {
       const remove = card.querySelector('[data-remove]');
       if (remove && withRemovals) ops.push({ key, kind: 'remove', quote: remove.dataset.remove });
     }
-    for (const k of addable) ops.push({ key: keywordKey(k.term), kind: 'keyword', term: k.term, where: k.where });
     return ops;
   }
 
   /** The count on the buttons, and Undo all only while something is applied. */
   function paintBatch() {
-    const open = collectOperations().length;
+    const open = collectOperations().length + addable.length;
     for (const b of document.querySelectorAll('[data-apply-all]')) {
       b.hidden = false;
       b.disabled = open === 0;
@@ -543,14 +545,13 @@ export function init(data) {
   function applyEverything() {
     const before = editor.value;
     const ops = collectOperations();
-    if (ops.length === 0) return;
-    const result = applyAll(before, ops);
+    if (ops.length === 0 && addable.length === 0) return;
+    const cards = applyAll(before, ops);
+    // The keywords last, onto the text the cards left: a rewritten bullet may already carry one.
+    const words = addKeywords(cards.text, addable);
+    const result = { text: words.text, done: [...cards.done, ...words.done], failed: [...cards.failed, ...words.failed] };
     editor.value = result.text;
-    for (const d of result.done) {
-      edits.applied[d.key] = d.edit;
-      edits.order = [...edits.order.filter((k) => k !== d.key), d.key];
-    }
-    storeEdits();
+    keep(result.done);
     located = null;
     render();
     // A card that could not be placed says why on itself, as its own Apply would.
@@ -563,6 +564,93 @@ export function init(data) {
     announce(summary);
     if (resumeView === 'doc') docPane?.refresh();
   }
+
+  /** Remember a batch's edits, each under its own key, in the order they were made. */
+  function keep(done) {
+    for (const d of done) {
+      edits.applied[d.key] = d.edit;
+      edits.order = [...edits.order.filter((k) => k !== d.key), d.key];
+    }
+    storeEdits();
+  }
+
+  /* ---------- every missing keyword at once ---------- */
+
+  const bulkBox = document.getElementById('kw-bulk');
+  const bulkList = document.getElementById('kw-bulk-list');
+  const bulkAdd = document.getElementById('kw-bulk-add');
+  const bulkStatus = document.getElementById('kw-bulk-status');
+  // Ticks the user changed survive a redraw; a term's first tick is whether the resume backs it.
+  const bulkTicked = new Map();
+  let bulkKey = null;
+
+  /**
+   * The list of every keyword the resume does not spell, rebuilt only when the
+   * set changes — render() runs on every keystroke, and a rebuild would close
+   * the list and lose its ticks. A term the user said they do not have is not
+   * offered at all.
+   */
+  function paintBulk(rows) {
+    if (!bulkBox) return;
+    bulkBox.hidden = rows.length === 0;
+    const key = rows.map((r) => r.term).join('\u0001');
+    if (key !== bulkKey) {
+      bulkKey = key;
+      bulkList.replaceChildren(...rows.map(bulkRow));
+    }
+    const ticked = bulkList.querySelectorAll('input:checked').length;
+    for (const el of document.querySelectorAll('[data-kw-bulk-count]')) el.textContent = String(rows.length);
+    bulkAdd.disabled = ticked === 0;
+    bulkAdd.textContent = ticked === 1 ? 'Add 1 keyword' : `Add ${ticked} keywords`;
+  }
+
+  function bulkRow(r) {
+    const backed = r.status === 'add' || r.status === 'present';
+    if (!bulkTicked.has(r.term)) bulkTicked.set(r.term, backed);
+    const li = document.createElement('li');
+    const label = document.createElement('label');
+    label.className = 'flex cursor-pointer items-start gap-2 text-note leading-5';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.className = 'mt-0.5 h-3.5 w-3.5 shrink-0 accent-accent';
+    box.checked = bulkTicked.get(r.term);
+    box.dataset.term = r.term;
+    box.dataset.where = r.where ?? '';
+    box.addEventListener('change', () => {
+      bulkTicked.set(r.term, box.checked);
+      paintBulk(currentBulkRows());
+    });
+    const term = document.createElement('span');
+    term.className = 'font-medium text-ink';
+    term.textContent = r.term;
+    const note = document.createElement('span');
+    note.className = backed ? 'text-ink-faint' : 'text-warn';
+    note.textContent = ' · ' + wantsLabel(r) + (backed ? ' · backed' : ' · not backed yet');
+    const words = document.createElement('span');
+    words.append(term, note);
+    label.append(box, words);
+    li.append(label);
+    return li;
+  }
+
+  function currentBulkRows() {
+    const scored = scoreKeywords(data.keywords, editor.value);
+    return orderKeywords(keywordGaps(scored.rows), data.jobText).filter((r) => r.note !== data.deniedNote && r.note !== data.unsureNote);
+  }
+
+  bulkAdd?.addEventListener('click', () => {
+    const terms = [...bulkList.querySelectorAll('input:checked')].map((b) => ({ term: b.dataset.term, where: b.dataset.where }));
+    if (terms.length === 0) return;
+    const result = addKeywords(editor.value, terms);
+    editor.value = result.text;
+    keep(result.done);
+    located = null;
+    render();
+    const summary = applyAllSummary(result).replace(/^Applied /, 'Added ');
+    if (bulkStatus) bulkStatus.textContent = summary;
+    announce(summary);
+    if (resumeView === 'doc') docPane?.refresh();
+  });
 
   /** Every applied edit undone, newest first; one the text has since moved past stays. */
   function undoEverything() {
