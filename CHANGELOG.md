@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.41.1] — 2026-09-30
+
+### Added
+- **Add every missing keyword in one press.** On Tailor resume, **Add missing
+  keywords to your skills** lists every keyword the text does not spell,
+  ticked where your resume already backs it; an unticked one has nothing
+  behind it yet — tick it only if it is true. Each goes on the skills line it
+  belongs to, and what no line can take gets a line of its own. **Apply all**
+  now adds every keyword your resume backs, not only the ones a skills line
+  could take.
+
+### Changed
+- **Suggestions carry the posting's missing keywords.** Every bullet or
+  summary rewrite names a keyword the resume does not yet show in a sentence
+  (prompt v15), and a must-have one that no rewrite carries is asked for
+  again. The next comparison of each posting reads its keywords afresh.
+- A keyword with no hint of its own goes on the last skills line (usually
+  "Others"), not among the programming languages of the first.
+
+### Fixed
+- **A title printed twice.** A headline with its own "|" was also read as an
+  extra header line, so the Document view — and a file downloaded from it —
+  showed it twice after Apply all.
+- A suggestion whose wording brought its own "- " left "• -" in the resume.
+- **Every paragraph of the Document view can be edited:** a company and its
+  place, a title and its dates (the two columns stay), a skills-table cell,
+  and a paragraph the text broke over lines. Only a formula still goes to
+  Plain text.
+
 ## [2.41.0] — 2026-09-30
 
 ### Added
@@ -4573,6 +4602,7 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.41.1]: https://github.com/applypack/applypack/compare/v2.41.0...v2.41.1
 [2.41.0]: https://github.com/applypack/applypack/compare/v2.40.0...v2.41.0
 [2.40.0]: https://github.com/applypack/applypack/compare/v2.39.0...v2.40.0
 [2.39.0]: https://github.com/applypack/applypack/compare/v2.38.0...v2.39.0

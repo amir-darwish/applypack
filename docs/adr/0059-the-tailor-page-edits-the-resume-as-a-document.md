@@ -115,3 +115,20 @@ version replaced them before; the original stays wherever the user keeps it.
   --convert-to pdf` of the user's own `.docx` earns its place beside print.
 - A PDF whose look the reader gets wrong in a way a user reports: the looks
   are read per kind of line, and a new kind is a new role.
+
+## Addendum (2026-09-30): after the owner's first run (v2.41.1)
+
+- Decision 3 widened: a line set in columns is edited too — its tab written
+  back as " | ", which the reader and the patcher both split on — and a
+  paragraph is found by part of a line (a skills-table cell) or by up to four
+  lines in a row (`locateParagraph`). On the owner's resume every paragraph
+  of the clean version maps (69 of 69, 74 of 74); only a formula is refused.
+- Decision 4 widened: Apply all adds every keyword the resume backs, and a
+  term no skills line takes gets a line of its own (`appendSkills`); the
+  resume card lists every missing keyword to add in one press, unproven ones
+  unticked (`apply-all.mjs:addKeywords`).
+- The match prompt asks every bullet or summary rewrite to carry a keyword
+  the resume does not show in a sentence (v15); a must-level one no rewrite
+  carries is a coverage gap in code (`suggestion-floor.ts:unwrittenMusts`).
+- Fixed: a headline with its own "|" printed twice (read as a header line
+  too), and a wording's own "- " kept after the resume's bullet.
