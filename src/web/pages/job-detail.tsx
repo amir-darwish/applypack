@@ -23,6 +23,7 @@ import {
 } from '../ui';
 import { intervalLabel } from '../../watchlist/interval';
 import { formatDate, formatRelative, formatSalary, safeHref } from '../format';
+import { techLabel } from '../tech-label';
 import { AdzunaLabel, FranceTravailLine, JsonTree } from './attribution';
 import { formatUsdPerYear } from '../../currency';
 import { flagOf, placeLabel } from '../../countries';
@@ -417,7 +418,7 @@ const ClassifierCard: FC<{ job: JobDetail; scores: ProfileScore[]; tab: JobTab }
         <>
           {job.summary && <p class="mb-3 text-sm leading-6 text-ink">{job.summary}</p>}
           <dl class="space-y-2">
-            <TagRow label="Tech" items={job.techMatch} tone="ok" />
+            <TagRow label="Tech" items={job.techMatch.map(techLabel)} tone="ok" />
             <TagRow label="Flags" items={job.redFlags} tone="danger" />
             <TagRow label="Priority rules" items={job.priorityRulesApplied} tone="neutral" />
           </dl>
@@ -770,7 +771,7 @@ const MuteCard: FC<{ jobId: number; tab: JobTab; mute: MuteState }> = ({ jobId, 
             Its new postings are turned away before any AI, and the job list hides the stored ones. Nothing changes
             status; Unmute undoes it.
           </Hint>
-          <Button size="sm" variant="secondary">
+          <Button variant="secondary">
             Mute {mute.name}
           </Button>
         </form>

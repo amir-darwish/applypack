@@ -90,6 +90,7 @@ import { setCoverAngles } from '../../settings';
 import { stageChangeEvent, type StageEventData } from '../stage-events';
 import { findMute, mutedKeys } from '../../jobs/employer-store';
 import { employerKey, hiringName, withoutMuted } from '../../employer';
+import { preferredPlaces } from '../place-line';
 
 const PAGE_SIZE = 50;
 
@@ -252,6 +253,8 @@ jobsRoute.get('/jobs', async (c) => {
         url: true,
         location: true,
         countries: true,
+        regions: true,
+        workplace: true,
         fitScore: true,
         salaryMin: true,
         salaryMax: true,
@@ -314,6 +317,7 @@ jobsRoute.get('/jobs', async (c) => {
       statusCounts={statusCounts}
       facets={tallyFacets(facetRows, { places: country, workplaces: workplace, posted }, now)}
       profiles={activeProfiles.map((p) => ({ id: p.id, name: p.name }))}
+      searchPlaces={preferredPlaces(activeProfiles)}
       blankProfileBanner={activeProfile !== null && isBlankProfile(activeProfile)}
       mutedHidden={mutedHidden}
     />,
