@@ -158,10 +158,13 @@ export const TargetPage: FC<TargetPageProps> = ({
       : null,
     // Heads "Copy my changes"; the suggestion sheet is rendered server-side.
     sheet: { jobTitle: job.title, companyName: job.companyName, resumeName: resume.name },
+    // The document pane draws the draft through POST /resumes/:id/document.
+    resumeId: resume.id,
+    documentName: resume.name,
   };
   return (
     <Layout title={`Tailor resume · ${job.title}`} active="jobs">
-      <div class="w-full">
+      <div class="w-full" id="target-root">
       <nav aria-label="Breadcrumb" class="mb-1.5 flex items-center gap-1.5 text-note text-ink-faint">
         <a href="/jobs" class="transition-colors duration-150 hover:text-ink">
           Jobs
@@ -344,16 +347,36 @@ export const TargetPage: FC<TargetPageProps> = ({
                 {' →'}
               </button>
             )}
+            {/* The one-click path: every suggestion written into the text, then
+                the Suggestions view, where the document shows the result.
+                Hidden until the script has counted what it can do. */}
+            {!fast && (actions.length > 0 || removals.length > 0) && (
+              <div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  data-apply-all
+                  data-goto-tab="changes"
+                  hidden
+                  title="Writes every suggestion the gate let through, the removals and the missing keywords into the text — nothing is saved until you download or save"
+                >
+                  {/* One span: the button is a flex row, and its gap would stand between the words and the count. */}
+                  <span>Apply all suggestions (<span data-apply-all-count>0</span>)</span>
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Right rail: actions on top, the live estimate below while editing. */}
           <div class="flex flex-col gap-3 lg:items-end">
             <div class="flex flex-wrap items-center gap-2">
-            {/* One visible action — a fresh file is how a better match usually happens.
-                Analyse and Save live in the ⋯ menu; the sticky bar resurfaces them while editing.
+            {/* A fresh file is the other way to a better match. Outlined: the
+                card's one solid button is Apply all. Analyse and Save live in
+                the ⋯ menu; the sticky bar resurfaces them while editing.
                 data-menu opts into light dismiss (outside click / Escape) in target-page.mjs. */}
             <details class="relative" data-menu>
-              <summary class={`${SUMMARY_BUTTON} bg-accent-strong px-3 text-white shadow-sm hover:bg-accent-deep`}>
+              <summary class={`${SUMMARY_BUTTON} border border-line-strong bg-surface-raised px-3 text-ink shadow-sm hover:bg-surface-overlay`}>
                 Re-upload resume
               </summary>
               <div class={MENU_PANEL}>
@@ -439,7 +462,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                       class="w-full"
                       data-save-button
                       disabled
-                      title={`Enabled once you edit the text — saves it as v${resume.version + 1} of this resume; a .docx is patched in place when its layout allows (~1 min)`}
+                      title={`Enabled once you edit the text — saves it as v${resume.version + 1} of this resume: your .docx with the edits written in, or the clean version the Document view shows (~1 min)`}
                     >
                       Save as v{resume.version + 1}
                     </Button>
@@ -565,14 +588,36 @@ export const TargetPage: FC<TargetPageProps> = ({
 
         <Card class="pane-resume">
           <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div class="text-label text-ink">
-              Your resume · {resume.name}
-              {resume.ephemeral ? '' : ` v${match.resumeVersion}`}
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="text-label text-ink">
+                Your resume · {resume.name}
+                {resume.ephemeral ? '' : ` v${match.resumeVersion}`}
+              </div>
+              {/* The document is drawn by a script, so the switch appears with it. */}
+              <div
+                id="resume-views"
+                hidden
+                class="inline-flex rounded-md border border-line bg-surface-overlay p-0.5"
+                role="group"
+                aria-label="Show the resume as"
+              >
+                {(['doc', 'text'] as const).map((v) => (
+                  <button
+                    type="button"
+                    data-resume-view={v}
+                    aria-pressed={v === 'doc' ? 'true' : 'false'}
+                    class="cursor-pointer rounded-[5px] px-2.5 py-0.5 text-note text-ink-muted transition-colors duration-150 hover:text-ink aria-pressed:bg-surface-raised aria-pressed:font-medium aria-pressed:text-ink aria-pressed:shadow-sm"
+                  >
+                    {v === 'doc' ? 'Document' : 'Plain text'}
+                  </button>
+                ))}
+              </div>
             </div>
             <div class="flex flex-wrap items-center gap-3 text-meta text-ink-faint">
-              <span><mark class="kw-present rounded px-1">matched</mark></span>
-              <span><mark class="edit-change rounded px-1">change</mark></span>
-              <span><mark class="edit-remove rounded px-1">remove</mark></span>
+              <span data-text-only><mark class="kw-present rounded px-1">matched</mark></span>
+              <span data-text-only><mark class="edit-change rounded px-1">change</mark></span>
+              <span data-text-only><mark class="edit-remove rounded px-1">remove</mark></span>
+              <span data-doc-only hidden><mark class="doc-changed-sample rounded px-1">changed</mark></span>
               <button
                 type="button"
                 id="expand-editor"
@@ -591,6 +636,33 @@ export const TargetPage: FC<TargetPageProps> = ({
             </div>
           </div>
           <div id="missing-chips" class="mb-3 flex flex-wrap gap-1.5"></div>
+          {/* The draft as the file it would be: the user's own .docx with the
+              edits written in, or the clean version of a PDF — drawn from the
+              same text the plain view edits (public/doc-pane.mjs). */}
+          <div id="doc-view" hidden>
+            <p id="doc-notice" class="mb-2 text-note leading-6 text-ink-muted" hidden></p>
+            <div
+              id="doc-pane"
+              class="doc-pane editor h-[70vh] overflow-auto rounded-md border border-line-strong bg-surface-overlay"
+              role="region"
+              aria-label="Your resume as a document — click a paragraph to edit it"
+            ></div>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <Button type="button" variant="secondary" size="sm" data-download="docx" title="The document as drawn above — nothing is saved">
+                Download .docx
+              </Button>
+              <Button type="button" variant="secondary" size="sm" data-download="pdf" title="The document as drawn above — nothing is saved">
+                Download .pdf
+              </Button>
+              <span id="doc-status" class="text-meta text-ink-faint" role="status"></span>
+            </div>
+            <Hint class="mt-1">
+              Click a paragraph to change its words; Enter keeps the change, Escape puts it back. A line set in columns
+              is changed in Plain text. The downloads are this document as it stands — nothing is saved until you save a
+              version.
+            </Hint>
+          </div>
+          <div id="text-view">
           <Hint class="mb-2">
             {fileVerdict}
             {cleanHref && (
@@ -618,6 +690,7 @@ export const TargetPage: FC<TargetPageProps> = ({
             {readMatchEvidence(match.breakdown) === 'text' &&
               ' Judged on its own text: your confirmed facts and other resumes were left out, since it may not be yours.'}
           </Hint>
+          </div>
           {notEnglishNotice(job.description) && <Hint class="mt-1">{notEnglishNotice(job.description)}</Hint>}
         </Card>
 
@@ -659,6 +732,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                       you change the text.
                     </Hint>
                   </div>
+                  <ApplyAllBar removals={removals.filter((r) => r.quote).length} />
                   <ActionsBlock
                     actions={actions}
                     interactive
@@ -732,6 +806,37 @@ export const TargetPage: FC<TargetPageProps> = ({
     </Layout>
   );
 };
+
+/**
+ * Apply all, beside the cards it acts on: the same press as the header's, the
+ * removals as a choice (they cut text, the rest only adds or rewords), Undo
+ * all, and the line that says what landed. The count is the script's — it is
+ * the only one that knows which quotes the text still carries.
+ */
+const ApplyAllBar: FC<{ removals: number }> = ({ removals }) => (
+  <div class="rounded-md border border-line bg-surface-overlay/60 p-3">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <Button type="button" variant="primary" size="sm" data-apply-all hidden>
+        <span>Apply all (<span data-apply-all-count>0</span>)</span>
+      </Button>
+      {removals > 0 && (
+        <label class="inline-flex min-h-[28px] cursor-pointer items-center gap-1.5 text-note text-ink-muted">
+          <input id="apply-all-removals" type="checkbox" checked class="h-3.5 w-3.5 accent-accent" />
+          include the {removals === 1 ? 'removal' : `${removals} removals`}
+        </label>
+      )}
+      <Button type="button" variant="ghost" size="sm" id="undo-all" hidden>
+        Undo all
+      </Button>
+      <span id="apply-all-status" class="text-note text-ink-muted" role="status"></span>
+    </div>
+    <Hint class="mt-1.5">
+      Every wording the check let through, the removals and the missing keywords a skills line can take, written
+      into your resume below in one press. Nothing is saved until you download it or save a version; each card keeps
+      its own Undo.
+    </Hint>
+  </div>
+);
 
 const RunChip: FC<{ m: MatchWithResume; currentId: number; jobId: number }> = ({
   m,
@@ -824,9 +929,25 @@ const TARGET_CSS = `
     #panes.editor-tall .editor { height: 75vh; }
   }
   /* The Button primitive is inline-flex, which outranks the user agent's
-     [hidden] { display: none } — without this, every card's Undo button is
-     visible from the first paint. */
-  #panes [hidden] { display: none !important; }
+     [hidden] { display: none } — without this, every card's Undo button (and
+     Apply all before the script counts what it can do) is visible from the
+     first paint. */
+  #target-root [hidden] { display: none !important; }
+  /* The document pane. The sheet is paper whatever the theme; docx-preview's
+     grey wrapper gives way to the dashboard's surface, and its own shadow to
+     ours. The stage is where a drawing settles (tab stops) before it swaps in. */
+  .doc-stage { position: fixed; left: -20000px; top: 0; width: 1000px; visibility: hidden; pointer-events: none; }
+  #doc-pane .docx-wrapper { background: transparent; padding: 16px; }
+  /* docx-preview hyphenates every paragraph; Word does not unless the file asks. */
+  #doc-pane section.docx { hyphens: manual; }
+  #doc-pane .docx-wrapper > section.docx { box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 8px 24px -8px rgb(0 0 0 / 0.18); margin-bottom: 16px; color: #000; }
+  #doc-pane section.docx article p { cursor: text; border-radius: 2px; }
+  #doc-pane section.docx article p:hover { box-shadow: 0 0 0 1px rgb(var(--accent) / 0.35); }
+  #doc-pane .doc-changed, .doc-changed-sample { background: rgb(var(--accent) / 0.12); box-shadow: -3px 0 0 rgb(var(--accent) / 0.7); }
+  #doc-pane .doc-editing { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; background: rgb(var(--accent) / 0.06); }
+  .doc-page-guide { position: absolute; left: 0; right: 0; border-top: 1px dashed rgb(0 0 0 / 0.28); font: 10px/1 Inter, ui-sans-serif, sans-serif; color: rgb(0 0 0 / 0.45); text-align: right; padding: 2px 6px 0 0; pointer-events: none; }
+  #doc-pane .located { outline: 2px solid rgb(var(--accent) / 0.9); }
+  .doc-print-frame { position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0; opacity: 0; }
   /* A card that has been applied or skipped steps back without disappearing —
      it is still the record of what was suggested, and Undo lives on it. */
   .card-done { opacity: 0.55; }

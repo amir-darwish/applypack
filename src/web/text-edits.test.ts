@@ -11,6 +11,9 @@ const edits = import('./public/text-edits.mjs') as Promise<{
   insertAfterLine: (text: string, anchor: string, wording: string) => Edit;
   inverseEdit: (before: string, after: string) => { start: number; removed: string; inserted: string };
   undoEdit: (text: string, edit: { start: number; removed: string; inserted: string }) => Edit;
+  withContext: (after: string, edit: { start: number; removed: string; inserted: string }) => {
+    start: number; removed: string; inserted: string; lead: string; trail: string;
+  };
 }>;
 
 const ok = (r: Edit) => {
@@ -90,6 +93,36 @@ test('removeSpan cuts only the span when the quote is part of a line', async () 
   const r = ok(removeSpan(RESUME, 'shipping production systems end-to-end.'));
   assert.match(r.text, /^Senior engineer \(10\+ years\)\s*$/m, 'the rest of the line survives');
   assert.equal(r.text.split('\n').length, RESUME.split('\n').length, 'no line was removed');
+});
+
+test('removeSpan takes a bullet whole when the quote is its words without the marker', async () => {
+  const { removeSpan } = await edits;
+  const r = ok(removeSpan(RESUME, 'Improved SEO rankings for marketing pages.'));
+  assert.equal(r.text.includes('•  '), false);
+  assert.equal(/^•\s*$/m.test(r.text), false, 'no bare marker left');
+  assert.equal(r.text.split('\n').length, RESUME.split('\n').length - 1);
+});
+
+test('removeSpan takes a separator with a cut from a list, on the side that is open', async () => {
+  const { removeSpan } = await edits;
+  const text = 'SKILLS\nBlade, Twig, Jira, AWS, S3, OWASP\nGo, PHP, JavaScript';
+  assert.match(ok(removeSpan(text, 'Blade, Twig, Jira,')).text, /^AWS, S3, OWASP$/m, 'no space left in front');
+  assert.match(ok(removeSpan(text, 'PHP')).text, /^Go, JavaScript$/m, 'no double comma');
+  assert.match(ok(removeSpan(text, ', JavaScript')).text, /^Go, PHP$/m);
+  assert.match(ok(removeSpan(text, 'OWASP')).text, /^Blade, Twig, Jira, AWS, S3$/m, 'the last item takes the comma before it');
+});
+
+test('an edit whose one side was shared when recorded is not found by that side alone', async () => {
+  const { removeSpan, applyReplacement, inverseEdit, undoEdit, withContext } = await edits;
+  // Two roles end on the same stack line; a bullet is cut from the first.
+  const stack = 'Technology Stack: PHP, Laravel.';
+  const text = `ROLE A\n• Built A.\n• Cut me.\n${stack}\nROLE B\n• Built B.\n${stack}\nEDUCATION`;
+  const cut = ok(removeSpan(text, '• Cut me.')).text;
+  const removal = withContext(cut, inverseEdit(text, cut));
+  // The bullet before it is rewritten, and role A's stack line gains a term: both sides moved.
+  const moved = ok(applyReplacement(cut, 'Built A.', 'Built A, faster.')).text.replace(`${stack}\nROLE B`, 'Technology Stack: PHP, Laravel, Redis.\nROLE B');
+  // Only role B's stack line still reads like the trail: that is not where the bullet was.
+  assert.equal(err(undoEdit(moved, removal)), 'moved-on');
 });
 
 test('removeSpan refuses the contact line — email and phone are not edits to make blind', async () => {
@@ -220,6 +253,27 @@ test('inverseEdit round-trips every operation', async () => {
     const back = ok(undoEdit(after, inverseEdit(text, after)));
     assert.equal(back.text, text, 'undo restores the text exactly');
   }
+});
+
+test('an edit with its context is undone after edits above it moved it', async () => {
+  const { applyReplacement, removeSpan, inverseEdit, undoEdit, withContext } = await edits;
+  const text = 'SUMMARY\nShort summary.\n\nEXPERIENCE\n• Led backend architecture.\n• Improved SEO rankings.';
+  // A removal below, then a longer summary above it: the removal's offset is stale.
+  const cut = ok(removeSpan(text, '• Improved SEO rankings.')).text;
+  const removal = withContext(cut, inverseEdit(text, cut));
+  const longer = ok(applyReplacement(cut, 'Short summary.', 'A much longer summary that pushes every line below it down.')).text;
+  const back = ok(undoEdit(longer, removal));
+  assert.match(back.text, /• Led backend architecture\.\n• Improved SEO rankings\.$/);
+  assert.match(back.text, /^SUMMARY\nA much longer summary/, 'the later edit above stays');
+});
+
+test('an edit with its context refuses when the text around it was rewritten', async () => {
+  const { applyReplacement, inverseEdit, undoEdit, withContext } = await edits;
+  const text = 'EXPERIENCE\n• Led backend architecture.\n• Improved SEO rankings.';
+  const after = ok(applyReplacement(text, 'Led backend architecture.', 'Owned the payments backend.')).text;
+  const edit = withContext(after, inverseEdit(text, after));
+  const typed = after.replace('Owned the payments backend.', 'Owned it all.');
+  assert.equal(err(undoEdit(typed, edit)), 'moved-on');
 });
 
 test('insertAfterLine adds the wording as the next line and inherits the bullet marker', async () => {

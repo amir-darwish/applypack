@@ -19,7 +19,9 @@ import {
 import { computeScore, entriesFromLive } from './score.mjs';
 import { formatEditSheet } from './change-sheet.mjs';
 import { wireCopy, copyFrom, announce } from './copy.mjs';
-import { applyReplacement, insertAfterLine, removeSpan, insertIntoSkills, inverseEdit, undoEdit } from './text-edits.mjs';
+import { applyReplacement, insertAfterLine, removeSpan, insertIntoSkills, inverseEdit, undoEdit, withContext } from './text-edits.mjs';
+import { applyAll, applyAllSummary } from './apply-all.mjs';
+import { mountDocPane, fileNameFrom } from './doc-pane.mjs';
 
 // Full literal class names — the Tailwind CDN JIT only generates what it can
 // see verbatim in the document, composed strings would come out unstyled.
@@ -72,6 +74,9 @@ const REASON = {
   'moved-on': 'The text moved on since you applied this — undo it by hand',
 };
 
+/** The key an added keyword is remembered under — cards own the plain keys. */
+const keywordKey = (term) => 'kw:' + term;
+
 export function init(data) {
   const editor = document.getElementById('editor');
   const backdrop = document.getElementById('backdrop');
@@ -94,13 +99,20 @@ export function init(data) {
   // offset into text the user has since changed points at the wrong words.
   let located = null;
   // What each card did, so it can be undone and so the marks survive a reload.
-  // applied holds the inverse edit (one sentence), never a copy of the resume.
-  let edits = { applied: {}, skipped: [] };
+  // applied holds the inverse edit (one sentence), never a copy of the resume;
+  // order is the sequence they were made in, which Undo all walks backwards.
+  // A keyword added to the skills line is kept under keywordKey(term).
+  let edits = { applied: {}, skipped: [], order: [] };
+  // The missing keywords a skills line can take right now, refreshed by render().
+  let addable = [];
 
   function loadEdits() {
     try {
       const raw = JSON.parse(localStorage.getItem(editsKey) ?? 'null');
-      if (raw && typeof raw === 'object') edits = { applied: raw.applied ?? {}, skipped: raw.skipped ?? [] };
+      if (raw && typeof raw === 'object') {
+        const applied = raw.applied ?? {};
+        edits = { applied, skipped: raw.skipped ?? [], order: raw.order ?? Object.keys(applied) };
+      }
     } catch {}
   }
   function storeEdits() {
@@ -108,6 +120,17 @@ export function init(data) {
       if (Object.keys(edits.applied).length === 0 && edits.skipped.length === 0) localStorage.removeItem(editsKey);
       else localStorage.setItem(editsKey, JSON.stringify(edits));
     } catch {}
+  }
+
+  /** Remember an applied edit under `key`, context included so it can be undone out of order. */
+  function remember(key, before, result) {
+    edits.applied[key] = withContext(result.text, result.change ?? inverseEdit(before, result.text));
+    edits.order = [...edits.order.filter((k) => k !== key), key];
+    edits.skipped = edits.skipped.filter((k) => k !== key);
+  }
+  function forget(key) {
+    delete edits.applied[key];
+    edits.order = edits.order.filter((k) => k !== key);
   }
 
   function load() {
@@ -167,6 +190,7 @@ export function init(data) {
     jd.innerHTML = highlightHtml(data.jobText, jobSpans(data.keywords, data.jobText, scored));
 
     chips.innerHTML = '';
+    addable = [];
     // Hardest requirement first, then the words the posting keeps repeating.
     for (const r of orderKeywords(keywordGaps(scored.rows), data.jobText)) {
       const unproven = r.status === 'cannot_claim';
@@ -203,6 +227,7 @@ export function init(data) {
       if (r.status !== 'add') continue;
       const probe = insertIntoSkills(editor.value, r.term, r.where);
       if (probe.error) continue;
+      addable.push({ term: r.term, where: r.where });
       const add = document.createElement('button');
       add.type = 'button';
       add.className = CHIP_BASE + ' ' + CHIP_ADD;
@@ -213,6 +238,8 @@ export function init(data) {
         const result = insertIntoSkills(before, r.term, r.where);
         if (result.error) { announce(REASON[result.error] ?? 'Could not add it'); return; }
         editor.value = result.text;
+        remember(keywordKey(r.term), before, result);
+        storeEdits();
         located = result.span;
         render();
         scrollEditorTo(result.span.start);
@@ -238,7 +265,9 @@ export function init(data) {
     const copyEdits = document.getElementById('copy-edits');
     if (copyEdits) copyEdits.disabled = !dirty;
     paintCards();
+    paintBatch();
     store(text);
+    if (resumeView === 'doc') docPane?.schedule();
   }
 
   /** Open the "no evidence" tier of the confirm card and bring it into view. */
@@ -286,8 +315,9 @@ export function init(data) {
     // The outline was an offset into the text being discarded, and so were the
     // applied/skipped marks — they describe edits that no longer exist.
     located = null;
-    edits = { applied: {}, skipped: [] };
+    edits = { applied: {}, skipped: [], order: [] };
     storeEdits();
+    setBatchStatus('');
     render();
   }
 
@@ -413,8 +443,7 @@ export function init(data) {
       return false;
     }
     editor.value = result.text;
-    edits.applied[card.dataset.card] = inverseEdit(before, result.text);
-    edits.skipped = edits.skipped.filter((k) => k !== card.dataset.card);
+    remember(card.dataset.card, before, result);
     storeEdits();
     located = result.span;
     render();
@@ -455,13 +484,186 @@ export function init(data) {
         editor.value = back.text;
         located = back.span;
       }
-      delete edits.applied[key];
+      forget(key);
       edits.skipped = edits.skipped.filter((k) => k !== key);
       storeEdits();
       render();
       say(card, 'Undone', false);
     }
   });
+
+  /* ---------- Apply all / Undo all ---------- */
+
+  const removalsBox = document.getElementById('apply-all-removals');
+  const batchStatus = document.getElementById('apply-all-status');
+  const undoAll = document.getElementById('undo-all');
+
+  function setBatchStatus(message) {
+    if (batchStatus) batchStatus.textContent = message;
+  }
+
+  /**
+   * Every suggestion still open on the page, in the order the cards stand:
+   * the changes and additions the gate let through, then the removals (unless
+   * the box is unticked), then the keywords a skills line can take.
+   */
+  function collectOperations() {
+    const ops = [];
+    const withRemovals = !removalsBox || removalsBox.checked;
+    // Two additions with the same section and place share a key: one edit
+    // under it, or the second would overwrite the first one's Undo.
+    const queued = new Set();
+    for (const card of document.querySelectorAll('[data-card]')) {
+      const key = card.dataset.card;
+      if (edits.applied[key] || edits.skipped.includes(key) || queued.has(key)) continue;
+      queued.add(key);
+      const apply = card.querySelector('[data-apply]');
+      const box = card.querySelector('[data-edit-box]');
+      if (apply && box?.dataset.anchor) ops.push({ key, kind: 'add', anchor: box.dataset.anchor, wording: apply.dataset.apply });
+      else if (apply && box?.dataset.quote) ops.push({ key, kind: 'change', quote: box.dataset.quote, wording: apply.dataset.apply });
+      const remove = card.querySelector('[data-remove]');
+      if (remove && withRemovals) ops.push({ key, kind: 'remove', quote: remove.dataset.remove });
+    }
+    for (const k of addable) ops.push({ key: keywordKey(k.term), kind: 'keyword', term: k.term, where: k.where });
+    return ops;
+  }
+
+  /** The count on the buttons, and Undo all only while something is applied. */
+  function paintBatch() {
+    const open = collectOperations().length;
+    for (const b of document.querySelectorAll('[data-apply-all]')) {
+      b.hidden = false;
+      b.disabled = open === 0;
+      const count = b.querySelector('[data-apply-all-count]');
+      if (count) count.textContent = String(open);
+    }
+    if (undoAll) undoAll.hidden = edits.order.length === 0;
+  }
+
+  function applyEverything() {
+    const before = editor.value;
+    const ops = collectOperations();
+    if (ops.length === 0) return;
+    const result = applyAll(before, ops);
+    editor.value = result.text;
+    for (const d of result.done) {
+      edits.applied[d.key] = d.edit;
+      edits.order = [...edits.order.filter((k) => k !== d.key), d.key];
+    }
+    storeEdits();
+    located = null;
+    render();
+    // A card that could not be placed says why on itself, as its own Apply would.
+    for (const f of result.failed) {
+      const card = document.querySelector('[data-card="' + CSS.escape(f.key) + '"]');
+      if (card) say(card, REASON[f.error] ?? 'That edit could not be made', true);
+    }
+    const summary = applyAllSummary(result);
+    setBatchStatus(summary);
+    announce(summary);
+    if (resumeView === 'doc') docPane?.refresh();
+  }
+
+  /** Every applied edit undone, newest first; one the text has since moved past stays. */
+  function undoEverything() {
+    let undone = 0;
+    let stuck = 0;
+    for (const key of [...edits.order].reverse()) {
+      const entry = edits.applied[key];
+      if (!entry) { forget(key); continue; }
+      const back = undoEdit(editor.value, entry);
+      if (back.error) { stuck++; continue; }
+      editor.value = back.text;
+      forget(key);
+      undone++;
+    }
+    storeEdits();
+    located = null;
+    render();
+    const summary =
+      `Undid ${undone === 1 ? '1 edit' : undone + ' edits'}.` +
+      (stuck > 0 ? ` ${stuck === 1 ? '1 stays' : stuck + ' stay'}: the text there changed since — undo it by hand.` : '');
+    setBatchStatus(summary);
+    announce(summary);
+  }
+
+  for (const b of document.querySelectorAll('[data-apply-all]')) b.addEventListener('click', applyEverything);
+  undoAll?.addEventListener('click', undoEverything);
+  removalsBox?.addEventListener('change', paintBatch);
+
+  /* ---------- the document view ---------- */
+
+  const docView = document.getElementById('doc-view');
+  const textView = document.getElementById('text-view');
+  const views = document.getElementById('resume-views');
+  const docStatus = document.getElementById('doc-status');
+  const viewKey = 'target-view';
+  let resumeView = 'text';
+  // Without ResizeObserver or fetch there is no pane, and the plain text is the whole page, as before.
+  const docPane =
+    docView && typeof ResizeObserver === 'function' && typeof fetch === 'function'
+      ? mountDocPane({
+          pane: document.getElementById('doc-pane'),
+          notice: document.getElementById('doc-notice'),
+          resumeId: data.resumeId,
+          name: data.documentName,
+          baseText: data.resumeText,
+          getText: () => editor.value,
+          setText: (text) => {
+            editor.value = text;
+            located = null;
+            render();
+          },
+          say: (message) => {
+            if (docStatus) docStatus.textContent = message;
+          },
+        })
+      : null;
+
+  function showView(view) {
+    resumeView = docPane ? view : 'text';
+    if (docView) docView.hidden = resumeView !== 'doc';
+    if (textView) textView.hidden = resumeView !== 'text';
+    for (const b of document.querySelectorAll('[data-resume-view]')) b.setAttribute('aria-pressed', String(b.dataset.resumeView === resumeView));
+    for (const el of document.querySelectorAll('[data-text-only]')) el.hidden = resumeView !== 'text';
+    for (const el of document.querySelectorAll('[data-doc-only]')) el.hidden = resumeView !== 'doc';
+    try { localStorage.setItem(viewKey, resumeView); } catch {}
+    if (resumeView === 'doc') docPane.refresh();
+  }
+  if (docPane && views) {
+    views.hidden = false;
+    for (const b of views.querySelectorAll('[data-resume-view]')) b.addEventListener('click', () => showView(b.dataset.resumeView));
+  }
+
+  /** A download of the document as drawn: the file the route answers, saved under the name it gives. */
+  async function download(format, button) {
+    if (!docPane) return;
+    if (format === 'pdf' && docPane.last?.pdf === 'print') { docPane.print(data.documentName); return; }
+    button.disabled = true;
+    try {
+      const res = await fetch(`/resumes/${data.resumeId}/document`, {
+        method: 'POST',
+        body: new URLSearchParams({ text: editor.value, baseText: data.resumeText, name: data.documentName, as: format }),
+      });
+      // The user's own .docx is printed as drawn: no renderer of ours re-sets it.
+      if (res.status === 409) { docPane.print(data.documentName); return; }
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `the server answered ${res.status}`);
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileNameFrom(res.headers.get('Content-Disposition')) ?? `resume.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      if (docStatus) docStatus.textContent = 'Downloaded ' + a.download + '.';
+    } catch (err) {
+      if (docStatus) docStatus.textContent = 'Could not make the file: ' + err.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+  for (const b of document.querySelectorAll('[data-download]')) b.addEventListener('click', () => download(b.dataset.download, b));
 
   // Copy works the same on every page; Locate only exists where this editor does.
   wireCopy(document);
@@ -471,6 +673,10 @@ export function init(data) {
   for (const button of document.querySelectorAll('[data-locate]')) {
     const card = button.closest('[data-card]');
     button.addEventListener('click', () => {
+      if (resumeView === 'doc' && docPane?.locate(button.dataset.locate)) {
+        if (card) say(card, 'Outlined in the document', true);
+        return;
+      }
       const loc = locateQuote(editor.value, button.dataset.locate);
       if (!loc) {
         located = null;
@@ -517,5 +723,8 @@ export function init(data) {
 
   editor.value = load() ?? data.resumeText;
   loadEdits();
+  let stored = null;
+  try { stored = localStorage.getItem(viewKey); } catch {}
+  showView(stored === 'text' ? 'text' : 'doc');
   render();
 }

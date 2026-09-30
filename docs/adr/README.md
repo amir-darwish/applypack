@@ -51,8 +51,8 @@ gets a dated addendum at the end of the ADR.
 - [0035 — Many installs, one set of boards: spread the tick, shuffle the walk, revalidate](./0035-many-installs-one-set-of-boards.md)
 - [0036 — Watched companies are checked by reading what a site publishes for machines, never by rendering it](./0036-watchlist-reads-published-data-only.md) — *addendum 2026-09-28: a page drawn in the browser is pasted*
 - [0037 — Suggestions carry replacement text; the fact gate decides what is applicable](./0037-suggestions-carry-replacement-text-gated-in-code.md) — *extended by 0042; amended by 0044*
-- [0038 — Save patches the user's .docx in place; text-only versions are the fallback](./0038-save-patches-the-users-docx-in-place.md) *(supersedes the text-only consequence of 0010)* — *extended by 0039*
-- [0039 — A resume that cannot be patched is re-typeset from JSON Resume, in the user's own typography](./0039-clean-render-from-json-resume.md) *(extends 0038)*
+- [0038 — Save patches the user's .docx in place; text-only versions are the fallback](./0038-save-patches-the-users-docx-in-place.md) *(supersedes the text-only consequence of 0010)* — *extended by 0039, amended by 0059*
+- [0039 — A resume that cannot be patched is re-typeset from JSON Resume, in the user's own typography](./0039-clean-render-from-json-resume.md) *(extends 0038)* — *extended by 0059*
 - [0040 — The default source set is the aggregators; employer boards are starter packs](./0040-default-sources-are-the-aggregators.md) *(extends 0017)*
 - [0041 — Alerts go through a channel seam; Telegram and Discord are its first two channels](./0041-notification-channels.md)
 - [0042 — The verifier's company facts are context for the match, never evidence](./0042-company-facts-are-context-never-evidence.md) *(extends 0021 and 0037)*
@@ -72,6 +72,7 @@ gets a dated addendum at the end of the ADR.
 - [0056 — A company can be muted, and a company applied to can rest, before any AI reads its postings](./0056-mute-an-employer-and-a-reapply-window.md)
 - [0057 — A model on this machine is an engine of its own, and it is held to its window](./0057-a-local-model-is-an-engine-of-its-own.md) *(extends 0013/0014)*
 - [0058 — How strongly the text shows a term counts, a little (score v6)](./0058-evidence-strength-counts-a-little.md) *(amends 0012/0045)*
+- [0059 — The Tailor page edits the resume as a document, and a save is always one](./0059-the-tailor-page-edits-the-resume-as-a-document.md) *(extends 0038/0039)*
 
 ## When to write a new one
 

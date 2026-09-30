@@ -59,8 +59,10 @@ export const JsonResumeSchema = z.object({
       location: line,
       summary: line,
       profiles: textList,
+      /** Header lines that are neither the name, the label nor a contact part ("Fully Work Authorized"). Ours, not the standard's. */
+      lines: textList,
     })
-    .default({ profiles: [] }),
+    .default({ profiles: [], lines: [] }),
   work: entries(
       z.object({
         name: line,
@@ -70,6 +72,8 @@ export const JsonResumeSchema = z.object({
         endDate: line,
         summary: line,
         highlights: textList,
+        /** What the role says after its bullets — the "Technology Stack: …" line. Ours, not the standard's. */
+        after: line,
       }),
   ),
   education: entries(
@@ -88,6 +92,12 @@ export const JsonResumeSchema = z.object({
   projects: entries(z.object({ name: line, description: line, url: line, highlights: textList })),
   /** Sections the reader found but the schema has no home for, kept as headed prose. */
   extras: entries(z.object({ heading: required, lines: textList })),
+  /**
+   * Each section's heading as the resume writes it ("KEY SKILLS"), by section
+   * key; a render falls back to its own label where there is none. Renaming a
+   * user's heading is changing their words. Ours, not the standard's.
+   */
+  headings: z.record(z.string(), z.string().trim().max(MAX_LINE_CHARS)).catch({}).default({}),
 });
 
 export type JsonResume = z.infer<typeof JsonResumeSchema>;

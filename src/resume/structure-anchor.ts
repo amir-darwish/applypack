@@ -84,6 +84,7 @@ export function anchorStructure(structure: JsonResume, resumeText: string): Anch
     location: anchored(b.location),
     summary: anchored(b.summary),
     profiles: list(b.profiles),
+    lines: list(b.lines),
   };
 
   let emptiedRoles = 0;
@@ -98,6 +99,7 @@ export function anchorStructure(structure: JsonResume, resumeText: string): Anch
       endDate: anchored(w.endDate),
       summary: anchored(w.summary),
       highlights,
+      after: anchored(w.after),
     });
   }
   for (const e of structure.education) {
@@ -128,6 +130,11 @@ export function anchorStructure(structure: JsonResume, resumeText: string): Anch
     // extras.heading is required by the schema, so a dropped one takes the
     // section: a heading the resume does not contain has nothing under it.
     if (heading !== null) out.extras.push({ heading, lines: list(x.lines) });
+  }
+
+  for (const [key, heading] of Object.entries(structure.headings)) {
+    const kept = anchored(heading);
+    if (kept !== null) out.headings[key] = kept;
   }
 
   return { structure: prune(out), kept, dropped, emptiedRoles, samples };

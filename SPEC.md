@@ -578,6 +578,24 @@ chips carry **+ add** when the term is claimable and the resume has a skills
 line shaped like a list. None of this writes to the database: the edits live in
 the editor until "Save as vN".
 
+**Apply all** (ADR 0059) does every open card at once — the changes and
+additions the gate let through, the removals while their box is ticked, the
+claimable keywords — through the same operations, in page order
+(`public/apply-all.mjs`). Each operation reports the exact change it made, and
+the page keeps it with a little of the text either side, so a card can still
+be undone on its own after others moved it; **Undo all** walks them back.
+
+The resume card opens on **Document**: the draft drawn as the file it would be
+(`POST /resumes/:id/document`, `resume/draft-document.ts`) — the user's own
+`.docx` with the edits patched in, or the clean version below with a sentence
+saying why — by docx-preview, vendored under `public/vendor/`
+(`public/doc-pane.mjs`). Changed paragraphs are marked and a dashed guide shows
+where a page would end. A paragraph clicked becomes editable, and the edit is
+written back into the text by the paragraph's words; a line set in columns is
+edited in **Plain text**, the editor as before. **Download .docx / .pdf** hand
+over the document as it stands; the PDF of the user's own `.docx` is printed
+from a frame at the file's own page size.
+
 Since prompt v7 (ADR 0037) the model writes the wording into a field of its
 own: `replacement` is the complete new text for the quoted span, and for an
 addition `insert_after` is the resume line it follows, verbatim. Whether that
@@ -601,11 +619,13 @@ removes deleted paragraphs, clones the paragraph above for an inserted line,
 and passes four gates before the bytes leave (the analysed text matches the
 file, the result reads back as the edit, no math / drawing / text-box /
 hidden-run count moved, nothing skipped). **Save as vN** is the only save the
-page offers, and a refused patch is a text version whose flash says why. There
+page offers, and a refused patch saves the clean version, its flash saying why. There
 is no "save as a tailored copy": one comparison per posting used to mint one
 more row on Resumes, named after the company, and the page a user opens to
-compare should not quietly fill their library. PDFs keep text versions; the line above the editor says
-so and suggests uploading the `.docx` they were printed from. The document
+compare should not quietly fill their library. A refused patch, a PDF or a
+plain-text resume saves the clean `.docx` the Document view showed (ADR 0059),
+and the next save patches that file in place; a text version is left only when
+the clean file would drop a line. The document
 properties of a downloaded template (its author's name) are fixed on click
 only, bytes only, current values shown.
 
@@ -621,7 +641,12 @@ a verbatim span of the resume text, and a reply the guard emptied is not
 stored. Until a reading is stored, `resume/structure-from-text.ts` reads the
 text deterministically instead. `resume/style-infer.ts` takes the typography from
 the file's own runs (not its style sheet, which on the corpus file says a
-different font and size entirely) and from a PDF's embedded fonts. One plan
+different font and size entirely) and from a PDF's embedded fonts. A PDF's
+page says more (ADR 0059): `resume/pdf-geometry.ts` reads each character's
+colour off pdf.js's operator list and the rules off its paths, and
+`resume/pdf-layout.ts` turns them into the columns a line is set in, a skills
+table's pairing and a look per kind of line, which the reader and both writers
+follow. One plan
 (`resume/render/sections.ts`) is drawn twice: `render/clean-docx.ts` names the
 user's family and lets Word supply it, `render/clean-pdf.ts` embeds Liberation
 Sans, whose letter widths are identical to Arial's, so the two files break

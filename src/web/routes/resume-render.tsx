@@ -6,7 +6,8 @@ import { createResume, getResume, getResumeOriginal, versionFileName, type Resum
 import { readStructure, type JsonResume } from '../../resume/json-resume';
 import { structureFromText } from '../../resume/structure-from-text';
 import { anchorStructure, structureIsUsable } from '../../resume/structure-anchor';
-import { blankStyle, inferFromDocx, inferFromPdf, type InferredStyle } from '../../resume/style-infer';
+import { blankStyle, type InferredStyle } from '../../resume/style-infer';
+import { resumeStyle } from '../resume-style';
 import { knobsFrom, readKnobs, type RenderKnobs } from '../../resume/render/knobs';
 import { DOCX_MIME } from '../../resume/docx-write';
 import { renderDocx } from '../../resume/render/clean-docx';
@@ -171,16 +172,12 @@ async function load(c: Context): Promise<RenderContext | { response: Response }>
   if (guarded && !usable) {
     logger.info({ id, dropped: guarded.dropped }, 'resume: stored structure no longer matches the text');
   }
-  const structure = usable ? guarded.structure : structureFromText(resume.text);
-  const origin: Origin = usable ? 'ai' : 'text';
-
   const row = await getResumeOriginal(id);
   const bytes = row ? Buffer.from(row.original) : null;
-  let style = blankStyle();
-  if (row && bytes) {
-    if (isDocx(row.sourceFilename)) style = inferFromDocx(bytes);
-    else if (isPdf(row.sourceFilename)) style = await inferFromPdf(bytes);
-  }
+  const style = row ? await resumeStyle(resume, row) : blankStyle();
+  // The built-in reading takes the page's own columns and skills table, when the file is a PDF that has them.
+  const structure = usable ? guarded.structure : structureFromText(resume.text, style.layout);
+  const origin: Origin = usable ? 'ai' : 'text';
 
   return { resume, structure, origin, style, reason: reasonFor(resume, bytes) };
 }

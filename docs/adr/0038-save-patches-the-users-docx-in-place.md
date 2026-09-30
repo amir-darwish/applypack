@@ -3,7 +3,9 @@
 **Status:** Accepted (2026-09-04). Supersedes the "a saved version is a text
 file" consequence of [ADR 0010](./0010-two-scores-live-keywords-vs-ai-match.md).
 Extended by [0039](./0039-clean-render-from-json-resume.md) (a clean
-single-column render for a file that cannot be patched in place).
+single-column render for a file that cannot be patched in place); amended by
+[0059](./0059-the-tailor-page-edits-the-resume-as-a-document.md) (a save the
+patcher refuses keeps the clean `.docx`, not a text version).
 See the 2026-09-24 addendum.
 
 ## Context

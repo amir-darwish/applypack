@@ -1,7 +1,8 @@
 # 0039 — A resume that cannot be patched is re-typeset from JSON Resume, in the user's own typography
 
 **Status:** Accepted (2026-09-04). Extends [ADR 0038](./0038-save-patches-the-users-docx-in-place.md);
-supersedes nothing. See the 2026-09-24 addendum.
+supersedes nothing. Extended by [0059](./0059-the-tailor-page-edits-the-resume-as-a-document.md)
+(a PDF's clean version set the way its page looks). See the 2026-09-24 addendum.
 
 ## Context
 

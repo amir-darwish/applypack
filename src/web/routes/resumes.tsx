@@ -39,6 +39,9 @@ import { describeStructure, docxStructure, type DocxStructure } from '../../resu
 import { patchDocx } from '../../resume/docx-patch';
 import { readProps, withProps, type DocxProps } from '../../resume/docx-props';
 import { DOCX_MIME } from '../../resume/docx-write';
+import { cleanDocx } from '../../resume/draft-document';
+import { knobsFrom } from '../../resume/render/knobs';
+import { resumeStyle } from '../resume-style';
 import { deltaSentence, reviewDelta, type ReviewDelta, type ReviewSnapshot } from '../../resume/review-delta';
 import { readReviewAdvice, readReviewGrades } from '../../resume/prompts';
 import { coverage, MIN_POSTINGS } from '../../resume/coverage';
@@ -234,7 +237,7 @@ resumesRoute.post('/resumes/:id/draft', async (c) => {
   }
   // What the edits are relative to — the text the editor started from. Without
   // it a .docx cannot be patched (the diff would be against nothing) and the
-  // save is a text version, as before ADR 0038.
+  // save is the clean version (ADR 0059).
   const baseText = typeof form.baseText === 'string' ? form.baseText.replace(/\r\n/g, '\n').trim() : '';
   const jobId = idParam(form.jobId);
   const job = Number.isFinite(jobId)
@@ -262,10 +265,10 @@ resumesRoute.post('/resumes/:id/draft', async (c) => {
   // Scan and match are the slow part after it: two AI calls back to back is
   // the worst wait on the site, which is why this gets a run at all.
   startRun(run.id, async () => {
-    const { resume, note, patched } = await saveEdited(id, text, baseText);
+    const { resume, note, document } = await saveEdited(id, text, baseText);
     const saved = `Saved as v${resume.version} (${note})`;
-    // TASKS R25: the user's own .docx, written into — the flash hands it back.
-    const downloadUrl = patched ? `/resumes/${resume.id}/download` : undefined;
+    // TASKS R25: the saved file — the user's own .docx written into, or the clean one — handed back.
+    const downloadUrl = document ? `/resumes/${resume.id}/download` : undefined;
     updateRun(run.id, {
       resumeName: resume.name,
       subtitle: `${saved}.${job ? ' Scoring it against the posting.' : ''}`,
@@ -310,10 +313,12 @@ function isDocx(filename: string): boolean {
 }
 
 /**
- * Save the editor's text as the next version of the resume. When the file is a
- * .docx the template check allows, the user's own file is patched with the
- * edits (ADR 0038); otherwise, or when the patch is refused, the version is
- * plain text and `note` says why.
+ * Save the editor's text as the next version of the resume — as a document,
+ * never as a Markdown file. When the file is a .docx the template check
+ * allows, the user's own file is patched with the edits (ADR 0038); otherwise
+ * the version is the clean .docx the Tailor page's document pane drew, in the
+ * typeface read off the file it replaces (ADR 0039), and `note` says why. A
+ * text version is left only for a clean file that would drop a line.
  *
  * There is no "save as a tailored copy" any more: one comparison per posting
  * used to mint one more row on /resumes, named after the company, and a user
@@ -323,28 +328,40 @@ async function saveEdited(
   id: number,
   text: string,
   baseText: string,
-): Promise<{ resume: ResumeSummary; note: string; patched: boolean }> {
+): Promise<{ resume: ResumeSummary; note: string; document: boolean }> {
   const [current, row] = await Promise.all([getResume(id), getResumeOriginal(id)]);
   if (!current) throw new Error(`resume ${id} is gone`);
   const nextVersion = current.version + 1;
   const name = current.name;
   let file: { sourceFilename: string; mimeType: string; original: Buffer; text: string } | null = null;
-  let note = 'text version';
+  let why = row && /\.pdf$/i.test(row.sourceFilename) ? 'a PDF cannot be edited in place' : 'the resume was plain text';
   if (row && isDocx(row.sourceFilename)) {
     const original = Buffer.from(row.original);
-    if (!baseText) note = 'text version — the editor did not say which text the edits started from';
-    else if (docxStructure(original).kind === 'unsupported') note = 'text version — this .docx cannot be edited in place';
+    if (!baseText) why = 'the editor did not say which text the edits started from';
+    else if (docxStructure(original).kind === 'unsupported') why = 'this .docx cannot be edited in place';
     else {
       const patched = await patchDocx(original, baseText, text);
       if (patched.ok) {
         const r = patched.report;
         file = { sourceFilename: versionFileName(name, nextVersion, 'docx'), mimeType: DOCX_MIME, original: patched.docx, text: patched.text };
-        note = `.docx patched: ${r.changed} changed, ${r.added} added, ${r.removed} removed`;
+        why = `.docx patched: ${r.changed} changed, ${r.added} added, ${r.removed} removed`;
         logger.info({ id, ...r, bytes: patched.docx.length }, 'resume: docx patched');
       } else {
-        note = `text version — the .docx could not be patched: ${patched.reason}`;
+        why = `the .docx could not be patched: ${patched.reason}`;
         logger.info({ id, reason: patched.reason, skipped: patched.report?.skipped }, 'resume: docx patch refused');
       }
+    }
+  }
+  let note = why;
+  if (!file) {
+    const style = row ? await resumeStyle(current, row) : undefined;
+    const clean = await cleanDocx(text, knobsFrom(style), style?.layout ?? null);
+    if (clean.missing.length === 0) {
+      file = { sourceFilename: versionFileName(name, nextVersion, 'docx'), mimeType: DOCX_MIME, original: clean.docx, text: clean.text };
+      note = `a clean .docx in your typeface — ${why}`;
+    } else {
+      note = `text version — ${why}, and the clean .docx would have lost ${clean.missing.length} line${clean.missing.length === 1 ? '' : 's'}`;
+      logger.info({ id, missing: clean.missing.slice(0, 3) }, 'resume: clean save would drop lines');
     }
   }
   const payload = file ?? {
@@ -353,7 +370,7 @@ async function saveEdited(
     original: Buffer.from(text, 'utf8'),
     text,
   };
-  return { resume: await replaceResumeFile(id, payload), note, patched: file !== null };
+  return { resume: await replaceResumeFile(id, payload), note, document: file !== null };
 }
 
 /**

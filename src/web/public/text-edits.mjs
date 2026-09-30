@@ -9,10 +9,10 @@
  * bullet say this" — it quotes the leading bullet and proposes new words for
  * it, which is a replacement. A real move applied to only 4 of the 24.
  *
- * Every function is total: it returns either { text, span } — the whole new
- * text plus where the edit landed, so the caller can outline it — or
- * { error }, never a partial write and never a throw. The caller keeps the old
- * text for Undo; nothing here mutates.
+ * Every function is total: it returns either { text, span, change } — the
+ * whole new text, where the edit landed (so the caller can outline it) and
+ * exactly what it replaced (so Undo can put it back) — or { error }, never a
+ * partial write and never a throw. Nothing here mutates.
  *
  * It lives beside target.mjs rather than inside it because the landing demo
  * ships a byte copy of that file (site-vendor.test.ts) and imports it in the
@@ -72,7 +72,11 @@ export function applyReplacement(text, quote, replacement) {
   const keep = marker && loc.start <= start + marker[1].length ? marker[1] : '';
   const body = keep + replacement.trim();
   const from = keep ? start : loc.start;
-  return { text: text.slice(0, from) + body + text.slice(loc.end), span: { start: from, end: from + body.length } };
+  return {
+    text: text.slice(0, from) + body + text.slice(loc.end),
+    span: { start: from, end: from + body.length },
+    change: { start: from, removed: text.slice(from, loc.end), inserted: body },
+  };
 }
 
 /**
@@ -86,15 +90,38 @@ export function removeSpan(text, quote) {
   if (affectedLines(text, loc.start, loc.end).split('\n').some(isContactLine)) return { error: 'protected' };
   const start = lineStart(text, loc.start);
   const end = lineEnd(text, loc.end);
-  const wholeLine = text.slice(start, loc.start).trim() === '' && text.slice(loc.end, end).trim() === '';
-  const from = wholeLine ? start : loc.start;
+  const before = text.slice(start, loc.start);
+  const after = text.slice(loc.end, end);
+  // A quote of a bullet's words is the bullet: cutting only the words left a
+  // lone "• " behind (measured on the live corpus, the formula bullet).
+  const bareBefore = before.trim() === '' || before.replace(BULLET, '') === '';
+  const wholeLine = bareBefore && after.trim() === '';
+  let from = wholeLine ? start : loc.start;
   // Take the trailing newline with the line; at the end of the text take the leading one.
-  const to = wholeLine ? (end < text.length ? end + 1 : end) : loc.end;
+  let to = wholeLine ? (end < text.length ? end + 1 : end) : loc.end;
+  if (!wholeLine) {
+    // Part of a line: take the separator on the open side with it, so a cut
+    // from a list leaves "Go, JavaScript" rather than "Go, , JavaScript", and
+    // one at the start of a line leaves no space in front of it.
+    // The last item of a list takes the separator before it: after it there is none.
+    if (after.trim() === '' && !bareBefore) {
+      while (from > start && SEPARATOR_CHAR.test(text[from - 1])) from--;
+    } else if (bareBefore || SEPARATOR_AT.test(text.slice(from - 2, from))) {
+      while (to < end && SEPARATOR_CHAR.test(text[to])) to++;
+    }
+  }
   const cutLeadingNewline = wholeLine && end >= text.length && from > 0;
-  const next = text.slice(0, cutLeadingNewline ? from - 1 : from) + text.slice(to);
   const at = cutLeadingNewline ? from - 1 : from;
-  return { text: next, span: { start: at, end: at } };
+  return {
+    text: text.slice(0, at) + text.slice(to),
+    span: { start: at, end: at },
+    change: { start: at, removed: text.slice(at, to), inserted: '' },
+  };
 }
+
+/** What stands between two items of a line — a cut takes one side's with it. */
+const SEPARATOR_CHAR = /[\s,;·∙•|]/;
+const SEPARATOR_AT = /[,;·∙•|]\s?$/;
 
 /** The separators a skills line uses between terms, most specific first. */
 const SEPARATORS = [' | ', ' · ', ' • ', '; ', ', '];
@@ -157,10 +184,15 @@ export function insertIntoSkills(text, term, where) {
   const target = lists.find((l) => hintWords.some((w) => label(l.i).includes(w))) ?? lists[0];
 
   const line = lines[target.i];
-  const next = line.replace(/\s*$/, '') + target.sep + clean;
-  lines[target.i] = next;
-  const start = lines.slice(0, target.i).reduce((n, l) => n + l.length + 1, 0) + next.length - clean.length;
-  return { text: lines.join('\n'), span: { start, end: start + clean.length } };
+  const kept = line.replace(/\s*$/, '');
+  lines[target.i] = kept + target.sep + clean;
+  const lineAt = lines.slice(0, target.i).reduce((n, l) => n + l.length + 1, 0);
+  const start = lineAt + kept.length + target.sep.length;
+  return {
+    text: lines.join('\n'),
+    span: { start, end: start + clean.length },
+    change: { start: lineAt + kept.length, removed: line.slice(kept.length), inserted: target.sep + clean },
+  };
 }
 
 /**
@@ -178,7 +210,11 @@ export function insertAfterLine(text, anchor, wording) {
   const body = wording.trim();
   const marker = BULLET.exec(anchorLine)?.[1] ?? '';
   const line = (marker && !BULLET.test(body) ? marker : '') + body;
-  return { text: text.slice(0, end) + '\n' + line + text.slice(end), span: { start: end + 1, end: end + 1 + line.length } };
+  return {
+    text: text.slice(0, end) + '\n' + line + text.slice(end),
+    span: { start: end + 1, end: end + 1 + line.length },
+    change: { start: end, removed: '', inserted: '\n' + line },
+  };
 }
 
 /**
@@ -205,13 +241,83 @@ export function inverseEdit(before, after) {
   };
 }
 
+/** Characters of the unchanged text kept either side of an edit, so Undo can find it after the text moved. */
+const UNDO_CONTEXT = 32;
+
+/**
+ * An inverse edit that remembers what stood around it in `after`. Apply all
+ * makes a dozen edits in a row, and every one above a card shifts the offsets
+ * below it: an edit that only knew its offset could no longer be undone on its
+ * own — and a removal, whose `inserted` is empty, would have put its text back
+ * at the old offset, inside some other sentence.
+ */
+export function withContext(after, edit) {
+  const end = edit.start + edit.inserted.length;
+  const lead = after.slice(Math.max(0, edit.start - UNDO_CONTEXT), edit.start);
+  const trail = after.slice(end, end + UNDO_CONTEXT);
+  return {
+    ...edit,
+    lead,
+    trail,
+    // Whether one side alone told the place apart when it was recorded: a
+    // stack line two roles share is no anchor, even if one of them changes later.
+    leadUnique: occurrences(after, lead + edit.inserted) === 1,
+    trailUnique: occurrences(after, edit.inserted + trail) === 1,
+  };
+}
+
+function occurrences(text, needle) {
+  if (needle.length === 0) return 0;
+  let n = 0;
+  for (let at = text.indexOf(needle); at !== -1; at = text.indexOf(needle, at + 1)) n++;
+  return n;
+}
+
 /**
  * Put `edit.removed` back where `edit.inserted` still stands. Refuses when the
- * text has moved on, so Undo can never silently overwrite later typing.
+ * text has moved on, so Undo can never silently overwrite later typing. An
+ * edit carrying its context (`withContext`) is found again when other edits
+ * moved it — only where exactly one place in the text still reads so.
  */
 export function undoEdit(text, edit) {
-  const at = edit.start;
-  if (text.slice(at, at + edit.inserted.length) !== edit.inserted) return { error: 'moved-on' };
+  const at = locateEdit(text, edit);
+  if (at === null) return { error: 'moved-on' };
   const next = text.slice(0, at) + edit.removed + text.slice(at + edit.inserted.length);
   return { text: next, span: { start: at, end: at + edit.removed.length } };
+}
+
+/** Shortest run of text a relocated edit is found by; under this a match proves nothing. */
+const MIN_NEEDLE = 12;
+
+/**
+ * Where `edit.inserted` stands now. An edit stored before context existed
+ * knows only its offset. One with context is found at its offset when either
+ * side still reads the same, else by its context: both sides, then each alone
+ * — the neighbour Apply all changed next to it spoils one side, rarely both —
+ * and only where exactly one place in the text matches.
+ */
+function locateEdit(text, edit) {
+  const ins = edit.inserted;
+  const at = edit.start;
+  const insertedAt = text.slice(at, at + ins.length) === ins;
+  if (edit.lead === undefined) return insertedAt ? at : null;
+  const { lead, trail } = edit;
+  // An empty side confirms nothing: at the end of the text, trail is '' everywhere.
+  const leadAt = lead.length > 0 && at >= lead.length && text.slice(at - lead.length, at) === lead;
+  const trailAt = trail.length > 0 && text.slice(at + ins.length, at + ins.length + trail.length) === trail;
+  if (insertedAt && (leadAt || trailAt || (lead.length === 0 && trail.length === 0))) return at;
+  // No trail means the edit ended the text, no lead that it opened it — the
+  // ends of the text are anchors of their own, whatever changed next to them.
+  if (trail.length === 0 && text.endsWith(ins)) return text.length - ins.length;
+  if (lead.length === 0 && text.startsWith(ins)) return 0;
+  const sides = [[lead, trail]];
+  if (edit.leadUnique !== false) sides.push([lead, '']);
+  if (edit.trailUnique !== false) sides.push(['', trail]);
+  for (const [before, after] of sides) {
+    const needle = before + ins + after;
+    if (needle.length < MIN_NEEDLE) continue;
+    const first = text.indexOf(needle);
+    if (first !== -1 && text.indexOf(needle, first + 1) === -1) return first + before.length;
+  }
+  return null;
 }

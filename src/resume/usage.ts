@@ -27,7 +27,7 @@ export const STALE_MONTHS = 36;
 
 /** A role's own words: its title, company, summary and bullets, its stack line among them. */
 function roleText(w: WorkEntry): string {
-  return [w.position, w.name, w.summary, ...w.highlights].filter(Boolean).join('\n');
+  return [w.position, w.name, w.summary, ...w.highlights, w.after].filter(Boolean).join('\n');
 }
 
 /** Usage per present term, keyed by the term as the table spells it; a term no dated role names has none. */
