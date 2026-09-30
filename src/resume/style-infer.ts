@@ -1,6 +1,8 @@
 import type { Document, Element } from '@xmldom/xmldom';
 import { getDocumentProxy } from 'unpdf';
 import { parseDocumentXml, W_NS } from './docx-text';
+import { readPdfGeometry } from './pdf-geometry';
+import { readLayout, type PdfLayout } from './pdf-layout';
 import { readZipEntry } from './zip';
 
 /*
@@ -25,11 +27,13 @@ export interface InferredStyle {
   bodyPt: number | null;
   namePt: number | null;
   headingPt: number | null;
-  /** Six hex digits, no hash. Only a .docx can say (see inferFromPdf). */
+  /** Six hex digits, no hash — the runs' colour in a .docx, the page's colour in a PDF (pdf-layout.ts). */
   accentHex: string | null;
   margins: Margins | null;
   page: PageSize | null;
   nameCentered: boolean | null;
+  /** A PDF's own layout — its columns, its skills table, the look of each kind of line. Null for anything else. */
+  layout: PdfLayout | null;
   source: 'docx' | 'pdf' | 'none';
 }
 
@@ -45,7 +49,7 @@ export type PageSize = 'A4' | 'LETTER';
 export function blankStyle(): InferredStyle {
   return {
     fontFamily: null, bodyPt: null, namePt: null, headingPt: null,
-    accentHex: null, margins: null, page: null, nameCentered: null, source: 'none',
+    accentHex: null, margins: null, page: null, nameCentered: null, layout: null, source: 'none',
   };
 }
 
@@ -202,8 +206,9 @@ interface TextItem {
  *   ("sans-serif") and never the family. The real name lives in
  *   `page.commonObjs` — `AAAAAU+ArialMT` — but only after `getOperatorList()`
  *   has populated it, so that call is not optional.
- * - There is no accent. pdf.js does not expose fill colours in a shape worth
- *   guessing at, so `accentHex` stays null and the render page's knob decides.
+ * - The accent is not in the text content at all. pdf.js keeps fill colours
+ *   in the operator list, and pdf-geometry.ts lays them onto the characters;
+ *   the accent is the colour the page gives its places and links.
  */
 export async function inferFromPdf(bytes: Buffer): Promise<InferredStyle> {
   let doc;
@@ -279,7 +284,25 @@ export async function inferFromPdf(bytes: Buffer): Promise<InferredStyle> {
   } finally {
     await (doc as { destroy?: () => Promise<void> }).destroy?.().catch(() => undefined);
   }
+  // The page's own look (pdf-layout.ts). Its accent is the colour the page
+  // gives its places, links and labels — the fill colours pdf.js keeps in the
+  // operator list, not in the text content.
+  const pages = await readPdfGeometry(bytes);
+  if (pages && pages.length > 0) {
+    style.layout = readLayout(pages);
+    style.accentHex = accentOf(style.layout);
+  }
   return style;
+}
+
+/** The first colour the page sets apart from its text — a place, a link, a label — that is not a grey. */
+function accentOf(layout: PdfLayout): string | null {
+  const r = layout.looks.roles;
+  for (const look of [r.place, r.link, r.stackLabel, r.heading, r.company]) {
+    const hex = look?.color ?? null;
+    if (hex && !NEUTRAL.test(hex)) return hex;
+  }
+  return null;
 }
 
 /** `AAAAAU+ArialMT` → `Arial`: the subset prefix and the PostScript suffixes off. */

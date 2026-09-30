@@ -1,4 +1,5 @@
 import type { JsonResume } from '../json-resume';
+import type { LookRole } from '../pdf-layout';
 import { drawable, undrawable } from './drawable';
 import { SECTION_LABELS, type RenderKnobs, type SectionKey } from './knobs';
 
@@ -38,7 +39,14 @@ export interface GapBlock {
   kind: 'gap';
 }
 
-export type RenderBlock = HeadingBlock | LineBlock | BulletBlock | ParagraphBlock | GapBlock;
+/** A skills-table row: the label in its own column, the values beside it (drawn only when the file had such a table). */
+export interface PairBlock {
+  kind: 'pair';
+  label: string;
+  values: string;
+}
+
+export type RenderBlock = HeadingBlock | LineBlock | BulletBlock | ParagraphBlock | GapBlock | PairBlock;
 
 export interface Run {
   text: string;
@@ -46,12 +54,16 @@ export interface Run {
   muted?: boolean;
   /** Set in the resume's accent colour, when it has one; otherwise in the body colour. */
   accent?: boolean;
+  /** Which kind of line this is, for a file whose page said how each kind looks (knobs.looks). */
+  role?: LookRole;
 }
 
 export interface RenderedHeader {
   name: string | null;
   label: string | null;
   contact: string | null;
+  /** The same contact line in runs, its links apart — they carry their own colour on a page that gave them one. */
+  contactRuns: Run[];
   /** Header lines under the contact line, as the resume writes them. */
   extra: string[];
 }
@@ -120,7 +132,7 @@ export function planLines(text: string): RenderPlan {
     else if (bullet) blocks.push({ kind: 'bullet', text: bullet[1]!.trim() });
     else blocks.push({ kind: 'paragraph', text: line.trim() });
   }
-  return fold({ header: { name, label: null, contact: null, extra: [] }, blocks });
+  return fold({ header: { name, label: null, contact: null, contactRuns: [], extra: [] }, blocks });
 }
 
 /**
@@ -145,11 +157,17 @@ function rawPlan(resume: JsonResume, knobs: RenderKnobs): RenderPlan {
   // A model reading a one-link contact line often fills BOTH `url` and
   // `profiles` with it, and the line then says linkedin.com twice (measured on
   // the first live scan). Same link, once.
-  const contact = unique([b.location, b.email, b.phone, b.url, ...b.profiles]).join(DOT);
+  const parts = unique([b.location, b.email, b.phone, b.url, ...b.profiles]);
+  const contact = parts.join(DOT);
+  const links = new Set([b.email, b.url, ...b.profiles].filter(Boolean));
+  const contactRuns: Run[] = parts.flatMap((text, i) => [
+    ...(i > 0 ? [{ text: DOT, role: 'contact' as const }] : []),
+    { text, role: links.has(text) ? ('link' as const) : ('contact' as const) },
+  ]);
   const blocks: RenderBlock[] = [];
-  for (const key of knobs.sectionOrder) blocks.push(...section(key, resume));
+  for (const key of knobs.sectionOrder) blocks.push(...section(key, resume, knobs));
   return {
-    header: { name: b.name, label: b.label, contact: contact.length > 0 ? contact : null, extra: b.lines },
+    header: { name: b.name, label: b.label, contact: contact.length > 0 ? contact : null, contactRuns, extra: b.lines },
     blocks,
   };
 }
@@ -162,6 +180,7 @@ function planStrings(plan: RenderPlan): string[] {
   for (const b of plan.blocks) {
     if (b.kind === 'gap') continue;
     if (b.kind === 'line') out.push(...[...b.left, ...b.right].map((r) => r.text));
+    else if (b.kind === 'pair') out.push(b.label, b.values);
     else out.push(b.text);
   }
   return out;
@@ -176,17 +195,19 @@ function fold(plan: RenderPlan): RenderPlan {
       name: text(plan.header.name),
       label: text(plan.header.label),
       contact: text(plan.header.contact),
+      contactRuns: runs(plan.header.contactRuns),
       extra: plan.header.extra.map(drawable),
     },
     blocks: plan.blocks.map((b) =>
       b.kind === 'line' ? { ...b, left: runs(b.left), right: runs(b.right) }
       : b.kind === 'gap' ? b
+      : b.kind === 'pair' ? { ...b, label: drawable(b.label), values: drawable(b.values) }
       : { ...b, text: drawable(b.text) },
     ),
   };
 }
 
-function section(key: SectionKey, resume: JsonResume): RenderBlock[] {
+function section(key: SectionKey, resume: JsonResume, knobs: RenderKnobs): RenderBlock[] {
   switch (key) {
     case 'summary':
       return resume.basics.summary ? headed(key, resume, [{ kind: 'paragraph', text: resume.basics.summary }]) : [];
@@ -194,14 +215,21 @@ function section(key: SectionKey, resume: JsonResume): RenderBlock[] {
       return headed(
         key,
         resume,
-        resume.skills.map((s) => ({
-          kind: 'line' as const,
-          left: [
-            ...(s.name ? [{ text: `${s.name.replace(/:\s*$/, '')}: `, bold: true }] : []),
-            ...(s.keywords.length > 0 ? [{ text: s.keywords.join(', ') }] : []),
-          ],
-          right: [],
-        })).filter((l) => l.left.length > 0),
+        resume.skills
+          .map((s): RenderBlock => {
+            const values = s.keywords.join(', ');
+            // The file set its skills as a table: the label in a column of its own.
+            if (s.name && values && knobs.looks?.labelColumnPt) return { kind: 'pair', label: `${s.name.replace(/:\s*$/, '')}:`, values };
+            return {
+              kind: 'line',
+              left: [
+                ...(s.name ? [{ text: `${s.name.replace(/:\s*$/, '')}: `, bold: true, role: 'skillLabel' as const }] : []),
+                ...(values ? [{ text: values, role: 'skillValues' as const }] : []),
+              ],
+              right: [],
+            };
+          })
+          .filter((b) => b.kind !== 'line' || b.left.length > 0),
       );
     case 'work':
       return headed(key, resume, resume.work.flatMap(role));
@@ -259,8 +287,8 @@ function role(w: JsonResume['work'][number]): RenderBlock[] {
   const dateRange = dates(w.startDate, w.endDate);
   // Company and place on the first line, title and dates on the second: the
   // shape every resume in the corpus already uses.
-  if (w.name || w.location) out.push({ kind: 'line', left: bolded(w.name), right: muted(w.location) });
-  if (w.position || dateRange) out.push({ kind: 'line', left: bolded(w.position), right: muted(dateRange) });
+  if (w.name || w.location) out.push({ kind: 'line', left: as(bolded(w.name), 'company'), right: as(muted(w.location), 'place') });
+  if (w.position || dateRange) out.push({ kind: 'line', left: as(bolded(w.position), 'position'), right: as(muted(dateRange), 'dates') });
   if (w.summary) out.push({ kind: 'paragraph', text: w.summary });
   for (const text of w.highlights) out.push({ kind: 'bullet', text });
   if (w.after) out.push(labelled(w.after));
@@ -273,7 +301,15 @@ const LABEL = /^([^:]{2,40}:)\s+(.+)$/;
 function labelled(text: string): RenderBlock {
   const m = LABEL.exec(text);
   if (!m) return { kind: 'paragraph', text };
-  return { kind: 'line', left: [{ text: `${m[1]} `, accent: true }, { text: m[2]!, muted: true }], right: [] };
+  return {
+    kind: 'line',
+    left: [{ text: `${m[1]} `, accent: true, role: 'stackLabel' }, { text: m[2]!, muted: true, role: 'stackValues' }],
+    right: [],
+  };
+}
+
+function as(runs: Run[], role: LookRole): Run[] {
+  return runs.map((r) => ({ ...r, role }));
 }
 
 /** A section is drawn only when it has something in it — no empty headings — under the resume's own heading when it has one. */
@@ -320,6 +356,9 @@ export function planToText(plan: RenderPlan): string {
         break;
       case 'paragraph':
         lines.push(block.text);
+        break;
+      case 'pair':
+        lines.push(`${block.label} ${block.values}`);
         break;
       case 'gap':
         lines.push('');

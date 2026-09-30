@@ -7,6 +7,7 @@ import { parseWarnings } from '../parse-warnings';
 import { docxStructure } from '../docx-structure';
 import { readProps } from '../docx-props';
 import { inferFromPdf } from '../style-infer';
+import { readPdfGeometry } from '../pdf-geometry';
 import { renderDocx } from './clean-docx';
 import { renderPdf, typefaceNote } from './clean-pdf';
 import { knobsFrom, readKnobs, readOrder, isMetricTwin, normaliseHex, LIMITS, type RenderKnobs } from './knobs';
@@ -43,6 +44,7 @@ const RESUME = JsonResumeSchema.parse({
 const KNOBS = knobsFrom({
   fontFamily: 'Arial', bodyPt: 10.5, namePt: 20, headingPt: 11.5, accentHex: '0070c0',
   margins: { top: 0.5, right: 0.6, bottom: 0.5, left: 0.6 }, page: 'LETTER', nameCentered: true, source: 'docx',
+    layout: null,
 });
 
 /* ---------- knobs ---------- */
@@ -51,6 +53,7 @@ test('knobsFrom takes the file’s typography and our defaults where it is silen
   const k = knobsFrom({
     fontFamily: 'Calibri', bodyPt: 11, namePt: 26, headingPt: null, accentHex: '#0070C0',
     margins: null, page: 'A4', nameCentered: null, source: 'docx',
+    layout: null,
   });
   assert.equal(k.fontFamily, 'Calibri');
   assert.equal(k.bodyPt, 11);
@@ -65,6 +68,7 @@ test('knobsFrom clamps a size a file can carry but a page cannot use', () => {
   const k = knobsFrom({
     fontFamily: null, bodyPt: 72, namePt: 200, headingPt: 0.5, accentHex: 'not a colour',
     margins: { top: 9, right: 0, bottom: 0.5, left: 0.5 }, page: null, nameCentered: false, source: 'docx',
+    layout: null,
   });
   assert.equal(k.bodyPt, LIMITS.bodyPt.max);
   assert.equal(k.namePt, LIMITS.namePt.max);
@@ -117,7 +121,7 @@ test('normaliseHex and isMetricTwin', () => {
 test('the plan drops a section the resume has nothing for', () => {
   const plan = planRender(emptyResume(), KNOBS);
   assert.deepEqual(plan.blocks, []);
-  assert.deepEqual(plan.header, { name: null, label: null, contact: null, extra: [] });
+  assert.deepEqual(plan.header, { name: null, label: null, contact: null, contactRuns: [], extra: [] });
 });
 
 test('the plan puts the dates and the place on the right of their line', () => {
@@ -249,4 +253,54 @@ test('an empty structure renders a file rather than throwing', async () => {
 test('typefaceNote says which case the reader is in', () => {
   assert.match(typefaceNote('Arial'), /same letter widths as Arial/);
   assert.match(typefaceNote('Calibri'), /may break differently/);
+});
+
+/* ---------- a file whose page said how it looks (pdf-layout.ts) ---------- */
+
+const LOOKS: NonNullable<RenderKnobs['looks']> = {
+  roles: {
+    body: { bold: false, color: '000000', size: 11 },
+    heading: { bold: true, color: '000000', size: 12 },
+    company: { bold: true, color: '000000', size: 11 },
+    place: { bold: false, color: '0070c0', size: 11 },
+    position: { bold: false, color: '404040', size: 10 },
+    dates: { bold: true, color: '404040', size: 10 },
+    link: { bold: false, color: '0070c0', size: 10 },
+    contact: { bold: false, color: '000000', size: 10 },
+  },
+  headerRule: true,
+  headingRule: false,
+  justify: true,
+  labelColumnPt: 120,
+};
+const LOOKED: RenderKnobs = { ...KNOBS, bodyPt: 11, looks: LOOKS };
+
+test('with the page’s looks the .docx carries its table, its colours, its rule and justified text', async () => {
+  const docx = await renderDocx(RESUME, LOOKED);
+  const xml = (await import('jszip')).default;
+  const doc = await (await xml.loadAsync(docx)).file('word/document.xml')!.async('string');
+  assert.match(doc, /<w:tbl>/, 'the skills row is a table');
+  assert.match(doc, /<w:jc w:val="both"\/>/, 'justified body');
+  assert.match(doc, /<w:tab\/>/, 'the flush-right part sits on a real tab');
+  assert.match(doc, /<w:color w:val="0070C0"\/>[\s\S]{0,200}Austin, Texas, US/i, 'the place in the accent');
+  // The reader sees the table row as label | values, and the patcher can write it cell by cell.
+  const text = docxToText(docx);
+  assert.match(text, /^Programming: \| PHP, Go, JavaScript$/m);
+  assert.equal(docxStructure(docx).kind, 'structural');
+});
+
+test('with the page’s looks the .pdf reads back in the same colours', async () => {
+  const pdf = await renderPdf(RESUME, LOOKED);
+  const pages = (await readPdfGeometry(pdf))!;
+  // The colours of the text itself, whatever pdf.js merged into the same item around it.
+  const colourOf = (s: string) => {
+    const it = pages[0]!.items.find((i) => i.str.includes(s))!;
+    const at = it.str.indexOf(s);
+    return [...new Set(it.colors.slice(at, at + s.length).filter(Boolean))];
+  };
+  assert.deepEqual(colourOf('Austin, Texas, US'), ['#0070c0']);
+  assert.deepEqual(colourOf('Dec. 2024'), ['#404040']);
+  assert.deepEqual(colourOf('boyko.nazar@gmail.com'), ['#0070c0']);
+  assert.equal(pages[0]!.rules.filter((r) => r.x1 - r.x0 > 300).length, 1, 'the header rule, and none under the headings');
+  assert.match(await pdfToText(pdf), /Programming:[\s\S]*PHP, Go, JavaScript/);
 });

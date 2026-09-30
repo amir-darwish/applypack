@@ -41,7 +41,7 @@ const ORIGIN_NOTE: Record<RenderPageProps['origin'], string> = {
 
 const STYLE_NOTE: Record<RenderPageProps['styleSource'], string> = {
   docx: 'Prefilled from your .docx — its own font, sizes, accent colour, page and margins.',
-  pdf: 'Prefilled from your PDF — its font, sizes, page and margins. A PDF does not report its accent colour, so that one is yours to set.',
+  pdf: 'Prefilled from your PDF — its font, sizes, page, margins and accent colour, and the look of each kind of line: its skills table, the colour of a place, the weight of a date, the rule under the header.',
   none: 'Your file did not say what it is set in, so these are the defaults. Change anything.',
 };
 

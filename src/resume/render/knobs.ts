@@ -1,4 +1,5 @@
 import { blankStyle, type InferredStyle, type Margins, type PageSize } from '../style-infer';
+import type { LookRole, Looks } from '../pdf-layout';
 
 /*
  * What the clean re-render is set in (ADR 0039). Defaults come from the user's
@@ -42,6 +43,12 @@ export interface RenderKnobs {
   sectionOrder: SectionKey[];
   nameCentered: boolean;
   page: PageSize;
+  /**
+   * The look of each kind of line, read off a PDF's own page (pdf-layout.ts):
+   * the colour of a place, the weight of a date, whether headings carry a
+   * rule. Null for every other file, and then the render keeps its own looks.
+   */
+  looks: Looks | null;
 }
 
 export const LIMITS = {
@@ -61,6 +68,7 @@ const DEFAULTS: RenderKnobs = {
   sectionOrder: DEFAULT_SECTION_ORDER,
   nameCentered: true,
   page: 'LETTER',
+  looks: null,
 };
 
 /** The knobs a resume starts with: its own typography where the file said, ours where it did not. */
@@ -77,6 +85,7 @@ export function knobsFrom(style: InferredStyle = blankStyle()): RenderKnobs {
     sectionOrder: DEFAULT_SECTION_ORDER,
     nameCentered: style.nameCentered ?? DEFAULTS.nameCentered,
     page: style.page ?? DEFAULTS.page,
+    looks: style.layout?.looks ?? null,
   };
 }
 
@@ -143,6 +152,8 @@ export function readKnobs(form: Record<string, unknown>, base: RenderKnobs): Ren
     // A checkbox that is off sends nothing, so absence is false, not "unchanged".
     nameCentered: form.nameCentered === undefined ? false : form.nameCentered !== 'off',
     page: str('page') === 'A4' ? 'A4' : str('page') === 'LETTER' ? 'LETTER' : base.page,
+    // Read off the file, never typed: the form has nothing to say about it.
+    looks: base.looks,
   };
 }
 
@@ -156,4 +167,18 @@ export function readOrder(value: string | null): SectionKey[] | null {
   if (asked.length === 0) return null;
   const seen = new Set(asked);
   return [...asked, ...SECTION_KEYS.filter((k) => !seen.has(k))];
+}
+
+/**
+ * A kind of line's look on the user's own page (pdf-layout.ts), its size
+ * scaled with the body size — so the form's "body size" still moves every
+ * line together. Null when the file said nothing, and the writers keep theirs.
+ */
+export function lookFor(knobs: RenderKnobs, role: LookRole | undefined): { bold: boolean; color: string | null; pt: number | undefined } | null {
+  if (!role || !knobs.looks) return null;
+  const look = knobs.looks.roles[role];
+  if (!look) return null;
+  const base = knobs.looks.roles.body?.size;
+  const pt = look.size && base ? Math.round(look.size * (knobs.bodyPt / base) * 10) / 10 : undefined;
+  return { bold: look.bold, color: look.color, pt };
 }

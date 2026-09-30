@@ -1,7 +1,7 @@
 import { docxStructure } from './docx-structure';
 import { docxToText } from './docx-text';
 import { patchDocx } from './docx-patch';
-import { structureFromText } from './structure-from-text';
+import { structureFromText, wordsKey, type TextLayout } from './structure-from-text';
 import { drawDocx } from './render/clean-docx';
 import { drawPdf } from './render/clean-pdf';
 import type { RenderKnobs } from './render/knobs';
@@ -37,6 +37,8 @@ export interface DraftInput {
   text: string;
   /** The clean version's typography, read from the user's own file. */
   knobs: RenderKnobs;
+  /** What a PDF's page says about its lines — its columns and its skills table (pdf-layout.ts). */
+  layout?: TextLayout | null;
 }
 
 export interface DraftDocument {
@@ -65,11 +67,11 @@ export async function draftDocx(input: DraftInput): Promise<DraftDocument> {
 
 /** The clean .pdf of the draft; the user's own .docx has no PDF of ours (the route prints or converts it). */
 export async function draftPdf(input: DraftInput): Promise<Buffer> {
-  return drawPdf(cleanPlan(input.text, input.knobs), input.knobs);
+  return drawPdf(cleanPlan(input.text, input.knobs, input.layout ?? null), input.knobs);
 }
 
 async function clean(input: DraftInput, basis: Exclude<DocumentBasis, 'own'>, reason?: string): Promise<DraftDocument> {
-  const docx = await drawDocx(cleanPlan(input.text, input.knobs), input.knobs);
+  const docx = await drawDocx(cleanPlan(input.text, input.knobs, input.layout ?? null), input.knobs);
   return { kind: 'clean', basis, docx, notice: noticeFor(basis, reason) };
 }
 
@@ -79,14 +81,9 @@ async function clean(input: DraftInput, basis: Exclude<DocumentBasis, 'own'>, re
  * stands. Measured on the table fixture: the structured reading kept one
  * line of eleven, because the whole table arrives as one run-on "heading".
  */
-function cleanPlan(text: string, knobs: RenderKnobs): RenderPlan {
-  const structured = planRender(structureFromText(text), knobs);
+function cleanPlan(text: string, knobs: RenderKnobs, layout: TextLayout | null): RenderPlan {
+  const structured = planRender(structureFromText(text, layout), knobs);
   return missingLines(text, planToText(structured)).length === 0 ? structured : planLines(text);
-}
-
-/** Letters and digits only, case folded: the words of a line, whatever the render did to its punctuation and marks. */
-function wordsOf(s: string): string {
-  return s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
 /**
@@ -95,12 +92,12 @@ function wordsOf(s: string): string {
  * its bullets) or split one (a company from its place), and neither loses it.
  */
 function missingLines(text: string, rendered: string): string[] {
-  const haystack = wordsOf(rendered);
+  const haystack = wordsKey(rendered);
   return text
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => {
-      const words = wordsOf(line);
+      const words = wordsKey(line);
       return words.length > 0 && !haystack.includes(words);
     });
 }
@@ -110,8 +107,12 @@ function missingLines(text: string, rendered: string): string[] {
  * (the version's text), and any line it would lose — Save keeps a text
  * version rather than a file that dropped a word of the resume.
  */
-export async function cleanDocx(text: string, knobs: RenderKnobs): Promise<{ docx: Buffer; text: string; missing: string[] }> {
-  const docx = await drawDocx(cleanPlan(text, knobs), knobs);
+export async function cleanDocx(
+  text: string,
+  knobs: RenderKnobs,
+  layout: TextLayout | null = null,
+): Promise<{ docx: Buffer; text: string; missing: string[] }> {
+  const docx = await drawDocx(cleanPlan(text, knobs, layout), knobs);
   const read = docxToText(docx);
   return { docx, text: read, missing: missingLines(text, read) };
 }

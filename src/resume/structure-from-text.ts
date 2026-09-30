@@ -1,4 +1,8 @@
 import { emptyResume, JsonResumeSchema, type JsonResume } from './json-resume';
+import type { PdfLayout } from './pdf-layout';
+
+/** What a PDF's own page says about its lines (pdf-layout.ts) — the only hints the reader takes. */
+export type TextLayout = Pick<PdfLayout, 'columns' | 'pairs'>;
 
 /*
  * The structure a resume has before any model has read it (ADR 0039): headings,
@@ -67,7 +71,7 @@ interface Section {
   lines: string[];
 }
 
-export function structureFromText(text: string): JsonResume {
+export function structureFromText(text: string, layout: TextLayout | null = null): JsonResume {
   const all = text.replace(/\r\n/g, '\n').split('\n').map((l) => l.trimEnd());
   const { header, sections } = split(all);
   const out = emptyResume();
@@ -84,10 +88,10 @@ export function structureFromText(text: string): JsonResume {
         out.basics.summary = joinWrapped(lines).join(' ') || null;
         break;
       case 'skills':
-        out.skills.push(...skillsFrom(lines));
+        out.skills.push(...skillsFrom(lines, layout));
         break;
       case 'work':
-        out.work.push(...rolesFrom(lines));
+        out.work.push(...rolesFrom(lines, layout));
         break;
       case 'education':
         out.education.push(...educationFrom(lines));
@@ -208,9 +212,12 @@ function looksLikePlace(part: string): boolean {
  * group per line, because pairing them is a guess and a wrong pairing reads
  * as a lie about the candidate.
  */
-function skillsFrom(lines: string[]): JsonResume['skills'] {
+function skillsFrom(lines: string[], layout: TextLayout | null): JsonResume['skills'] {
+  const joined = joinWrapped(lines);
+  const table = layout ? pairedByPage(joined, layout.pairs) : null;
+  if (table) return table;
   const out: JsonResume['skills'] = [];
-  for (const line of joinWrapped(lines)) {
+  for (const line of joined) {
     const colon = line.indexOf(':');
     if (colon > 0 && colon < line.length - 1) {
       const name = line.slice(0, colon).trim();
@@ -234,7 +241,45 @@ function splitList(text: string): string[] {
  * position line, the one before it the company. Everything bulleted is a
  * highlight, and an unbulleted line inside a role is its summary.
  */
-function rolesFrom(lines: string[]): JsonResume['work'] {
+/**
+ * A skills table whose labels and values the text gives apart — eight labels
+ * above eight value lines — paired row by row, but only on the page's own
+ * word: its table (pdf-layout.ts) holds exactly these labels, in this order,
+ * and the text has one value line for each. The values are the TEXT's, so an
+ * edit to one is kept; anything that does not line up stays unpaired.
+ */
+function pairedByPage(lines: string[], pairs: TextLayout['pairs']): JsonResume['skills'] | null {
+  if (pairs.length === 0) return null;
+  const labels = lines.filter((l) => /:$/.test(l.trim()));
+  const values = lines.filter((l) => !/:$/.test(l.trim()));
+  if (labels.length !== pairs.length || values.length !== labels.length) return null;
+  if (labels.some((l, i) => wordsKey(l) !== wordsKey(pairs[i]!.label))) return null;
+  return labels.map((l, i) => ({ name: l.trim().replace(/:$/, '').trim(), keywords: splitList(values[i]!) }));
+}
+
+/** The words of a line, case and punctuation aside — how a line of the text is matched to one on the page. */
+export function wordsKey(s: string): string {
+  return s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+/**
+ * A company line the page sets in two places — the company, and its place
+ * flush right — split where the page split it, in the text's own characters.
+ * Any other line, or one edited since, is split on its separator as before.
+ */
+function splitCompany(line: string, layout: TextLayout | null): [string, string] {
+  const key = wordsKey(line);
+  const hit = layout?.columns.find(([left, right]) => wordsKey(`${left} ${right}`) === key);
+  if (hit) {
+    const want = wordsKey(hit[0]);
+    for (let i = line.indexOf(' '); i !== -1; i = line.indexOf(' ', i + 1)) {
+      if (wordsKey(line.slice(0, i)) === want) return [line.slice(0, i).trim(), line.slice(i + 1).trim()];
+    }
+  }
+  return splitTail(line);
+}
+
+function rolesFrom(lines: string[], layout: TextLayout | null): JsonResume['work'] {
   const out: JsonResume['work'] = [];
   let current: JsonResume['work'][number] | null = null;
   let seenBullet = false;
@@ -255,7 +300,7 @@ function rolesFrom(lines: string[]): JsonResume['work'] {
     if (before.length > 0 && previous) previous.after = [previous.after, ...before].filter(Boolean).join(' ');
 
     const { text: position, start, end } = withDates(heads[positionAt] ?? '');
-    const [name, location] = splitTail(companyAt >= 0 ? heads[companyAt] ?? '' : '');
+    const [name, location] = companyAt >= 0 ? splitCompany(heads[companyAt] ?? '', layout) : ['', ''];
     const after = heads.slice(positionAt + 1);
     current = {
       name: name || null,

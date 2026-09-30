@@ -5,14 +5,22 @@ import {
   LevelFormat,
   Packer,
   Paragraph,
+  Table,
+  TableBorders,
+  TableCell,
+  TableLayoutType,
+  TableRow,
+  Tab,
   TabStopType,
   TextRun,
+  WidthType,
   convertInchesToTwip,
   type IParagraphOptions,
 } from 'docx';
 import type { JsonResume } from '../json-resume';
-import { planRender, type RenderPlan } from './sections';
-import type { RenderKnobs } from './knobs';
+import type { LookRole } from '../pdf-layout';
+import { planRender, type RenderPlan, type Run } from './sections';
+import { lookFor, type RenderKnobs } from './knobs';
 
 /*
  * The clean single-column .docx (ADR 0039): one section, no tables, no text
@@ -31,6 +39,12 @@ import type { RenderKnobs } from './knobs';
 
 const BULLETS = 'clean-bullets';
 const MUTED = '404040';
+/** The rule under a header, when the page drew one. */
+const RULE = '000000';
+const TWIPS_PER_INCH = 1440;
+/** A skills table's label column when the page did not say, and the space between the two columns. */
+const DEFAULT_LABEL_COLUMN_PT = 110;
+const PAIR_GAP_PT = 8;
 /** docx counts font size in half-points and spacing in twentieths of a point. */
 const halfPoints = (pt: number) => Math.round(pt * 2);
 const twips = (pt: number) => Math.round(pt * 20);
@@ -48,49 +62,68 @@ export async function drawDocx(plan: RenderPlan, knobs: RenderKnobs): Promise<Bu
   const body = halfPoints(knobs.bodyPt);
   const accent = knobs.accentHex ?? undefined;
   const name = plan.header.name ?? 'Resume';
+  const looks = knobs.looks;
 
-  const run = (text: string, o: { bold?: boolean; muted?: boolean; accent?: boolean; size?: number; color?: string } = {}) =>
-    new TextRun({
+  // A run in the look its kind of line has on the user's own page, when the
+  // page said (a PDF, pdf-layout.ts); otherwise in ours: bold, muted, accent.
+  const run = (text: string, o: Run | { bold?: boolean; muted?: boolean; accent?: boolean; role?: LookRole; size?: number; color?: string } = {}) => {
+    const look = lookFor(knobs, o.role);
+    const size = 'size' in o && o.size !== undefined ? o.size : look?.pt !== undefined ? halfPoints(look.pt) : body;
+    return new TextRun({
       text,
       font,
-      size: o.size ?? body,
-      bold: o.bold,
-      color: o.color ?? (o.accent && accent ? accent : o.muted ? MUTED : undefined),
+      size,
+      bold: look ? look.bold : o.bold,
+      color: look?.color ?? ('color' in o && o.color ? o.color : o.accent && accent ? accent : o.muted ? MUTED : undefined),
     });
-  const para = (children: TextRun[], options: Omit<IParagraphOptions, 'children'> = {}) =>
-    new Paragraph({ children, ...options });
+  };
+  const para = (children: (TextRun | Table)[] | TextRun[], options: Omit<IParagraphOptions, 'children'> = {}) =>
+    new Paragraph({ children: children as TextRun[], ...options });
+  const justify = looks?.justify ? { alignment: AlignmentType.JUSTIFIED } : {};
 
-  const children: Paragraph[] = [];
+  const children: (Paragraph | Table)[] = [];
   const centred = knobs.nameCentered ? { alignment: AlignmentType.CENTER } : {};
   if (plan.header.name) {
-    children.push(para([run(plan.header.name, { bold: true, size: halfPoints(knobs.namePt) })], centred));
+    children.push(para([run(plan.header.name, { bold: true, role: 'name', size: halfPoints(knobs.namePt) })], centred));
   }
   if (plan.header.label) {
-    children.push(para([run(plan.header.label, { size: halfPoints(knobs.headingPt), muted: true })], centred));
+    children.push(para([run(plan.header.label, { muted: true, role: 'label', size: looks ? undefined : halfPoints(knobs.headingPt) })], centred));
   }
-  if (plan.header.contact) children.push(para([run(plan.header.contact, { muted: true })], centred));
-  for (const line of plan.header.extra) children.push(para([run(line, { muted: true })], centred));
+  if (plan.header.contact) {
+    const runs = looks ? plan.header.contactRuns.map((r) => run(r.text, r)) : [run(plan.header.contact, { muted: true })];
+    children.push(para(runs, centred));
+  }
+  for (const line of plan.header.extra) children.push(para([run(line, { muted: true, role: 'contact' })], centred));
+  // The page drew a rule under its header: so does this file, and no rule under each heading unless it drew those too.
+  if (looks?.headerRule) {
+    children.push(new Paragraph({ children: [], spacing: { after: twips(4) }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: RULE, space: 1 } } }));
+  }
+  const headingRule = looks ? looks.headingRule : true;
+  const heading = lookFor(knobs, 'heading');
 
   // The right-hand run of a line sits on a right tab at the text width, which
   // is what makes a role's dates line up with the margin.
-  const rightTab = convertInchesToTwip(pageWidthIn(knobs) - knobs.margins.left - knobs.margins.right);
+  const textWidthIn = pageWidthIn(knobs) - knobs.margins.left - knobs.margins.right;
+  const rightTab = convertInchesToTwip(textWidthIn);
 
   for (const block of plan.blocks) {
     switch (block.kind) {
       case 'heading':
         children.push(
-          para([run(block.text.toUpperCase(), { bold: true, size: halfPoints(knobs.headingPt), color: accent })], {
+          para([run(block.text.toUpperCase(), { bold: true, size: halfPoints(knobs.headingPt), color: heading?.color ?? accent, role: 'heading' })], {
             spacing: { before: twips(knobs.bodyPt * 0.8), after: twips(2) },
-            border: {
-              bottom: { style: BorderStyle.SINGLE, size: 4, color: accent ?? MUTED, space: 1 },
-            },
+            border: headingRule
+              ? { bottom: { style: BorderStyle.SINGLE, size: 4, color: heading?.color ?? accent ?? MUTED, space: 1 } }
+              : undefined,
           }),
         );
         break;
       case 'line': {
         const runs = block.left.map((r) => run(r.text, r));
         if (block.right.length > 0) {
-          runs.push(new TextRun({ text: '\t', font, size: body }));
+          // A tab element, not a tab character: Word forgives the character,
+          // but a renderer and the patcher's tab groups read only the element.
+          runs.push(new TextRun({ children: [new Tab()], font, size: body }));
           runs.push(...block.right.map((r) => run(r.text, r)));
         }
         children.push(
@@ -100,16 +133,42 @@ export async function drawDocx(plan: RenderPlan, knobs: RenderKnobs): Promise<Bu
         );
         break;
       }
+      case 'pair':
+        children.push(pairRow(block.label, block.values));
+        break;
       case 'bullet':
-        children.push(para([run(block.text)], { numbering: { reference: BULLETS, level: 0 } }));
+        children.push(para([run(block.text, { role: 'body' })], { numbering: { reference: BULLETS, level: 0 }, ...justify }));
         break;
       case 'paragraph':
-        children.push(para([run(block.text)]));
+        children.push(para([run(block.text, { role: 'body' })], justify));
         break;
       case 'gap':
         children.push(para([run('')], { spacing: { after: twips(knobs.bodyPt * 0.4) } }));
         break;
     }
+  }
+
+  /**
+   * One skills-table row as a table of its own, two cells, no borders: the
+   * label right-aligned in the column the page gave it, the values beside it.
+   * One table per row keeps each row a line the patcher can write cell by cell.
+   */
+  function pairRow(label: string, values: string): Table {
+    const labelTwips = Math.round((looks?.labelColumnPt ?? DEFAULT_LABEL_COLUMN_PT) * 20);
+    const total = Math.round(textWidthIn * TWIPS_PER_INCH);
+    const cell = (text: string, width: number, role: LookRole, align: IParagraphOptions['alignment']) =>
+      new TableCell({
+        width: { size: width, type: WidthType.DXA },
+        margins: { top: 0, bottom: 0, left: role === 'skillValues' ? twips(PAIR_GAP_PT) : 0, right: 0 },
+        children: [new Paragraph({ children: [run(text, { role, bold: role === 'skillLabel' })], alignment: align })],
+      });
+    return new Table({
+      layout: TableLayoutType.FIXED,
+      borders: TableBorders.NONE,
+      width: { size: total, type: WidthType.DXA },
+      columnWidths: [labelTwips, total - labelTwips],
+      rows: [new TableRow({ children: [cell(label, labelTwips, 'skillLabel', AlignmentType.RIGHT), cell(values, total - labelTwips, 'skillValues', AlignmentType.LEFT)] })],
+    });
   }
 
   const doc = new Document({

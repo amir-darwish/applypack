@@ -42,12 +42,14 @@ resumeDocumentRoute.post('/resumes/:id/document', async (c) => {
   if (!resume || !row) return c.json({ error: 'Not found' }, 404);
 
   const original = Buffer.from(row.original);
+  const style = await resumeStyle(resume, row);
   const input: DraftInput = {
     sourceFilename: row.sourceFilename,
     original,
     baseText: baseText || text,
     text,
-    knobs: knobsFrom(await resumeStyle(resume, row)),
+    knobs: knobsFrom(style),
+    layout: style.layout,
   };
   // A one-off check carries the name of the file it was (match-name.ts); the page sends it.
   const name = typeof form.name === 'string' && form.name.trim() ? form.name : resume.name;
