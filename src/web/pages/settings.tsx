@@ -371,7 +371,7 @@ const ScheduleForm: FC<{ view: ScheduleView }> = ({ view }) => {
         <Hint class="mt-2">"Fetch now" ignores the schedule.</Hint>
       </div>
 
-      <div class="border-t border-line pt-4">
+      <div class="border-t border-line pt-4" data-ui="alert-modes">
         <div class="text-label text-ink">Send alerts</div>
         {held && (
           <Hint class="mt-0.5 text-warn">
@@ -396,24 +396,34 @@ const ScheduleForm: FC<{ view: ScheduleView }> = ({ view }) => {
               {mode === 'instant'
                 ? 'One message per match, as soon as it is scored.'
                 : mode === 'window'
-                  ? 'Matches found outside the hours arrive in one message when it opens.'
-                  : 'Everything comes at the digest times below.'}
+                  ? 'Matches found outside the window wait, and arrive in one message when it opens.'
+                  : 'Every match comes at the scheduled times below.'}
             </Radio>
           ))}
         </div>
-        <div class="mt-4 border-t border-line pt-3">
-          <Hint>These hours and days apply to "Only during these hours".</Hint>
-          <div class="mt-2 flex flex-wrap items-end gap-3">
-            <HourSelect name="alertFrom" value={s.alerts.from} label="Alerts from" />
+        {/* The window belongs to one mode, so it shows under that mode alone (one :has()
+            rule in layout.tsx). Hidden, its fields are still submitted; where :has() is
+            missing it simply stays in sight, as before 2.40. */}
+        <div class="mt-3 rounded-md bg-surface-overlay p-4" data-ui="alert-window">
+          <div class="text-label text-ink">Alert window</div>
+          <Hint class="mt-0.5">The hours and the days an alert may arrive in.</Hint>
+          <div class="mt-3 flex flex-wrap items-end gap-3">
+            <HourSelect name="alertFrom" value={s.alerts.from} label="From" />
             <HourSelect name="alertTo" value={s.alerts.to} label="Until (inclusive)" />
           </div>
           <DayPills name="alertDays" days={s.alerts.days} />
         </div>
-        <Field
-          label="Digest times"
-          hint={`Up to ${MAX_DIGEST_HOURS}; the daily recap and the stale-application nudge go out then too.`}
-          class="mt-3"
-        >
+      </div>
+
+      {/* Its own block: these hours run every day, whichever alert mode is picked. */}
+      <div class="border-t border-line pt-4">
+        <div class="text-label text-ink">Scheduled messages</div>
+        <Hint class="mt-0.5">
+          Every day at the hours you pick, whatever the alert window says: the daily recap at each of them, and the
+          stale-application reminder once, at the first ({String(s.alerts.digestAt[0] ?? 9).padStart(2, '0')}:00).
+        </Hint>
+        <fieldset class="mt-2">
+          <legend class="sr-only">Hours the scheduled messages go out</legend>
           <div class="flex flex-wrap gap-1.5">
             {HOURS.map((h) => (
               <PillCheckbox name="digestAt" value={String(h)} checked={s.alerts.digestAt.includes(h)}>
@@ -421,7 +431,8 @@ const ScheduleForm: FC<{ view: ScheduleView }> = ({ view }) => {
               </PillCheckbox>
             ))}
           </div>
-        </Field>
+        </fieldset>
+        <Hint class="mt-2">Up to {MAX_DIGEST_HOURS} hours a day.</Hint>
       </div>
 
       <Button type="submit">Save schedule</Button>
@@ -800,7 +811,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                   ))}
                 </Select>
               </Field>
-              <Button variant="secondary" size="sm">
+              <Button variant="secondary">
                 Save
               </Button>
             </form>
@@ -854,7 +865,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                           aria-label={`Rename ${s.label}`}
                           class="max-w-[14rem]"
                         />
-                        <Button size="sm" variant="ghost" aria-label={`Save name for ${s.label}`}>
+                        <Button variant="ghost" aria-label={`Save name for ${s.label}`}>
                           Save
                         </Button>
                       </form>
@@ -913,7 +924,7 @@ export const SettingsPage: FC<SettingsProps> = ({
                 aria-label="New column name"
                 class="max-w-[14rem]"
               />
-              <Button size="sm">Add column</Button>
+              <Button>Add column</Button>
             </form>
           ) : (
             <Hint class="mt-4 border-t border-line pt-4">
@@ -1370,7 +1381,7 @@ const SourceKeysSection: FC<{ rows: SourceKeyRow[] }> = ({ rows }) => (
                 mono
                 class="min-w-[14rem] flex-1"
               />
-              <Button size="sm" variant="secondary">
+              <Button variant="secondary">
                 Save
               </Button>
               {f.origin === 'db' && (
@@ -1433,7 +1444,7 @@ const EngineKeyRow: FC<{ engine: AiEngineRow }> = ({ engine: e }) => {
           mono
           class="min-w-[16rem] flex-1"
         />
-        <Button size="sm" variant="secondary">
+        <Button variant="secondary">
           Save
         </Button>
       </form>
@@ -1483,7 +1494,7 @@ const EngineServerRow: FC<{ server: EngineServer }> = ({ server }) => (
         mono
         class="min-w-[16rem] flex-1"
       />
-      <Button size="sm" variant="secondary">
+      <Button variant="secondary">
         Save
       </Button>
     </form>
@@ -1503,7 +1514,7 @@ const EngineServerRow: FC<{ server: EngineServer }> = ({ server }) => (
             ))}
           </Select>
         </Field>
-        <Button size="sm" variant="secondary">
+        <Button variant="secondary">
           Save window
         </Button>
       </form>
