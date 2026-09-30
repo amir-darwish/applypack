@@ -90,10 +90,25 @@ export function removeSpan(text, quote) {
   if (affectedLines(text, loc.start, loc.end).split('\n').some(isContactLine)) return { error: 'protected' };
   const start = lineStart(text, loc.start);
   const end = lineEnd(text, loc.end);
-  const wholeLine = text.slice(start, loc.start).trim() === '' && text.slice(loc.end, end).trim() === '';
-  const from = wholeLine ? start : loc.start;
+  const before = text.slice(start, loc.start);
+  const after = text.slice(loc.end, end);
+  // A quote of a bullet's words is the bullet: cutting only the words left a
+  // lone "• " behind (measured on the live corpus, the formula bullet).
+  const bareBefore = before.trim() === '' || before.replace(BULLET, '') === '';
+  const wholeLine = bareBefore && after.trim() === '';
+  let from = wholeLine ? start : loc.start;
   // Take the trailing newline with the line; at the end of the text take the leading one.
-  const to = wholeLine ? (end < text.length ? end + 1 : end) : loc.end;
+  let to = wholeLine ? (end < text.length ? end + 1 : end) : loc.end;
+  if (!wholeLine) {
+    // Part of a line: take the separator on the open side with it, so a cut
+    // from a list leaves "Go, JavaScript" rather than "Go, , JavaScript", and
+    // one at the start of a line leaves no space in front of it.
+    if (bareBefore || SEPARATOR_AT.test(text.slice(from - 2, from))) {
+      while (to < end && SEPARATOR_CHAR.test(text[to])) to++;
+    } else if (after.trim() === '') {
+      while (from > start && SEPARATOR_CHAR.test(text[from - 1])) from--;
+    }
+  }
   const cutLeadingNewline = wholeLine && end >= text.length && from > 0;
   const at = cutLeadingNewline ? from - 1 : from;
   return {
@@ -102,6 +117,10 @@ export function removeSpan(text, quote) {
     change: { start: at, removed: text.slice(at, to), inserted: '' },
   };
 }
+
+/** What stands between two items of a line — a cut takes one side's with it. */
+const SEPARATOR_CHAR = /[\s,;·∙•|]/;
+const SEPARATOR_AT = /[,;·∙•|]\s?$/;
 
 /** The separators a skills line uses between terms, most specific first. */
 const SEPARATORS = [' | ', ' · ', ' • ', '; ', ', '];

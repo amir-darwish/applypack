@@ -95,6 +95,22 @@ test('removeSpan cuts only the span when the quote is part of a line', async () 
   assert.equal(r.text.split('\n').length, RESUME.split('\n').length, 'no line was removed');
 });
 
+test('removeSpan takes a bullet whole when the quote is its words without the marker', async () => {
+  const { removeSpan } = await edits;
+  const r = ok(removeSpan(RESUME, 'Improved SEO rankings for marketing pages.'));
+  assert.equal(r.text.includes('•  '), false);
+  assert.equal(/^•\s*$/m.test(r.text), false, 'no bare marker left');
+  assert.equal(r.text.split('\n').length, RESUME.split('\n').length - 1);
+});
+
+test('removeSpan takes a separator with a cut from a list, on the side that is open', async () => {
+  const { removeSpan } = await edits;
+  const text = 'SKILLS\nBlade, Twig, Jira, AWS, S3, OWASP\nGo, PHP, JavaScript';
+  assert.match(ok(removeSpan(text, 'Blade, Twig, Jira,')).text, /^AWS, S3, OWASP$/m, 'no space left in front');
+  assert.match(ok(removeSpan(text, 'PHP')).text, /^Go, JavaScript$/m, 'no double comma');
+  assert.match(ok(removeSpan(text, ', JavaScript')).text, /^Go, PHP$/m);
+});
+
 test('removeSpan refuses the contact line — email and phone are not edits to make blind', async () => {
   const { removeSpan } = await edits;
   // The real corpus quotes this line 7 times in 237; gotcha 11 is exactly this.
