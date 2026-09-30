@@ -136,3 +136,32 @@ test('styleText leaves nothing in a stylesheet that could close its element', as
   assert.equal(styleText(css).includes('</'), false);
   assert.equal(styleText('p { color: red; }'), 'p { color: red; }');
 });
+
+test('locateParagraph finds a paragraph the text broke over lines, and a cell the text keeps on one line', async () => {
+  const { locateParagraph, rewriteSpan } = await mod;
+  const text = [
+    'SUMMARY',
+    'Full stack engineer (10+ years) building production PHP/Laravel systems and',
+    'Vue.js front ends, at 99.9% uptime.',
+    'KEY SKILLS',
+    'Programming: PHP, Go, JavaScript, TypeScript',
+    'EXPERIENCE',
+    'V Shred Austin, Texas, US ∙ Remote',
+  ].join('\n');
+  const summary = locateParagraph(text, 'Full stack engineer (10+ years) building production PHP/Laravel systems and Vue.js front ends, at 99.9% uptime.')!;
+  assert.ok(summary, 'two lines read as one paragraph');
+  const rewritten = rewriteSpan(text, summary, 'Full stack engineer (10+ years) owning PHP/Laravel and Vue.js systems.');
+  assert.match(rewritten, /^SUMMARY\nFull stack engineer \(10\+ years\) owning PHP\/Laravel and Vue\.js systems\.\nKEY SKILLS$/m, 'one line now');
+  // The clean version draws "Programming:" and its values as two cells of a table row.
+  const values = locateParagraph(text, 'PHP, Go, JavaScript, TypeScript')!;
+  assert.equal(text.slice(values.start, values.end), 'PHP, Go, JavaScript, TypeScript');
+  assert.match(rewriteSpan(text, values, 'PHP, Go, JavaScript, TypeScript, Kafka'), /^Programming: PHP, Go, JavaScript, TypeScript, Kafka$/m);
+  const label = locateParagraph(text, 'Programming:')!;
+  assert.equal(text.slice(label.start, label.end), 'Programming:');
+  assert.match(rewriteSpan(text, label, 'Languages:'), /^Languages: PHP, Go/m);
+  // Whole words only.
+  assert.equal(locateParagraph('The brothers built it.\nOthers: Jira, Blade', 'Others:')!.line, 1);
+  // A company line the clean version sets on a tab reads as the whole line, and a tab written back as " | ".
+  const company = locateParagraph(text, 'V Shred Austin, Texas, US ∙ Remote')!;
+  assert.match(rewriteSpan(text, company, 'V Shred Inc. | Austin, Texas, US ∙ Remote'), /^V Shred Inc\. \| Austin, Texas, US ∙ Remote$/m);
+});
