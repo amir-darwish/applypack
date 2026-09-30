@@ -237,6 +237,7 @@ src/
   update-check.ts              ← the optional weekly look at GitHub's latest release (off by default)
   text-utils.ts                ← pure helpers: parseTagList, extractJson, extractAtsToken, feedItemKey,
                                  daysSince, hashShortId, maskToken, decideStageStrategy
+  text-language.ts             ← pure: which language a posting is in, and the notice that the comparison and the letter are English (TASKS S20)
   cancellation.ts              ← makeLatchingProbe: a flag long loops can poll cheaply (pure)
   concurrency.ts               ← createLimiter(max), pure
   schedule.ts                  ← pure: this install's cron minute, from instanceId (ADR 0035)
@@ -356,6 +357,7 @@ src/
     suggestion-floor.ts        ← pure: floorGaps, REQUIRED COVERAGE checked in code
     parse-warnings.ts          ← ATS parseability checks over extracted text, pure
     pick.ts                    ← preselect: profile link first, then skill-tag overlap, pure
+    duplicate.ts               ← pure: the same resume uploaded twice, told by its text, not its bytes (TASKS R16)
     brief-depth.ts             ← pure: postingDepth, how much the posting said
     posting-orientation.ts     ← pure: the posting's sector, product and first reader, off the stored brief
     domain.ts                  ← pure: domainMismatch, the posting's sector against the resume's (ADR 0046)
@@ -364,6 +366,7 @@ src/
     answers.ts                 ← pure: the strength review's questions and the candidate's answers (ADR 0030)
     review-score.ts            ← pure: the strength score from the model's grades (ADR 0030)
     review-delta.ts            ← pure: what moved between two reviews of the same resume
+    review-gate.ts             ← pure: a strength review's example bullet fact-checked; a blocked one asks instead (TASKS R3)
     json-resume.ts             ← pure: the JSON Resume subset ApplyPack renders (ADR 0039)
     structure-anchor.ts        ← pure: anchorStructure, every string a verbatim span of the text
     structure-from-text.ts     ← pure: a resume's shape from the extracted text alone
@@ -400,6 +403,7 @@ src/
     anchor.ts                  ← pure: every quote checked against the redacted text; unproven rungs lowered
     score.ts                   ← pure: the employer score, its caps, the bucket, the confidence (ADR 0050)
     trajectory.ts              ← pure: the career read off the dated roles (years, employers, average stay, sectors) — a fact, never points
+    sectors.ts                 ← pure: one name per sector (payments and banking are fintech) for the industry criterion and the career line (TASKS E6)
     comparison.ts              ← pure: a shortlist's two readings — stored shape, the anchor, where they differ, the Markdown (ADR 0051)
     compare.ts                 ← Compare with AI: two calls at once (the second reversed), both stored as one ScreeningComparison
     calibration.ts             ← pure: the person's decisions against the table's order — pairs, top k, surprises, per-criterion gaps (ADR 0052)
@@ -518,6 +522,7 @@ src/
     format.ts                   ← formatSalary, formatDate / formatStamp (in the request's zone), formatRelative, statusTone, fitTone, fitWord
     display-zone.ts             ← the zone a request's dates are written in: the schedule's, set by app.ts (AsyncLocalStorage)
     flash.ts                    ← POST → redirect → GET flash cookie; firstIssue names the field a schema refused (pure)
+    run-failure.ts              ← pure: a failed run's sentence — what failed, what is safe, the way forward (TASKS U6)
     params.ts                   ← idParam / intQuery: ids and numbers off the request, a 400 where a 500 would be
     same-origin.ts              ← pure: sameOriginPost, the cross-origin write decision (issue #69)
     origin-guard.ts             ← originGuard: the middleware that answers a cross-origin POST with a 403
@@ -567,6 +572,9 @@ src/
     resume-source.ts            ← the launchers' "which resume": one of yours / file / paste → scratch row
     resume-label.ts             ← a resume as a <select> option: name · kind version · why preselected (pure)
     lane.ts                     ← pure: which engine and model family a resume call runs on, and its time band
+    parsed-view.ts              ← pure: "What the ATS sees" — name, contacts, sections and dated roles off structure-from-text.ts (TASKS R12)
+    format-compare.ts           ← pure: the same resume as another file, read beside the saved one — which reads better and why (TASKS R14)
+    resume-style.ts             ← a resume's typography (and a PDF's layout) for the Document view, cached per version (ADR 0059)
     match-history.ts            ← pure: a resume page's comparisons grouped by posting
     score-lines.ts              ← pure: the five sentences under the score, mainAdvice, readyToApply
     no-edits.ts                 ← pure: what an empty suggestion list says about itself
@@ -578,6 +586,7 @@ src/
       fonts/                    ← Inter (woff2) and its licence
       target.mjs                ← browser keyword matcher (pure ES module, node-tested)
       score.mjs                 ← browser mirror of resume/score.ts (parity-tested, ADR 0012)
+      evidence.mjs              ← browser mirror of resume/evidence.ts, the live ring's evidence grade (parity-tested, ADR 0058)
       target-page.mjs           ← the targeted view's DOM wiring over target.mjs and score.mjs
       text-edits.mjs            ← apply / remove / add-a-term / undo over the resume text (pure, node-tested)
       apply-all.mjs             ← every open suggestion in one press, each undoable on its own (pure, node-tested)
@@ -614,6 +623,7 @@ src/
       attribution.tsx           ← what a vendor's terms make a listing say (AdzunaLabel, FranceTravailLine) (ADR 0034)
       applications.tsx          ← /applications (board + quick-move + closed panel)
       companies.tsx             ← /companies
+      muted-companies.tsx       ← the Muted companies card on /companies: add, unmute (ADR 0056)
       starter-pack.tsx          ← pack picker card + preview + import result
       watchlist.tsx             ← the watchlist section of /companies, the resolve progress page, its preview
       discovery.tsx             ← /discovery
@@ -627,6 +637,8 @@ src/
       ai-spend-card.tsx         ← Usage & cost on the AI engine tab: three kinds of money, never added; the budget form
       resumes.tsx               ← /resumes (list + upload form component)
       resume-detail.tsx         ← /resumes/:id
+      parsed-view-block.tsx     ← "What the ATS sees" on /resumes/:id: the parsed view above the warnings
+      format-compare.tsx        ← the two files read side by side, the verdict and the lines only one carries
       resume-review-card.tsx    ← "Resume strength" on /resumes/:id (ADR 0030)
       resume-render.tsx         ← /resumes/:id/render, "Clean version in your typeface" (ADR 0039)
       target-start.tsx          ← /target (one of your jobs or a pasted posting + pick/upload/paste resume → one run)

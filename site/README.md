@@ -9,7 +9,7 @@ Static landing for the project. Zero build step, zero dependencies —
   keeps a short section that links to it. `sitemap.xml` lists the three.
 - `tour.webm` is the README's tour as a 20-second video for the launch
   posts (the recipe is in `docs/screenshots/README.md`).
-- `demo/score.mjs` and `demo/target.mjs` are byte copies of
+- `demo/score.mjs`, `demo/target.mjs` and `demo/evidence.mjs` are byte copies of
   `src/web/public/` (enforced by `src/web/site-vendor.test.ts` — re-copy
   when they change); `demo/fixture.json` is the synthetic Fernway /
   Dana Ruiz comparison exported from a real match run.

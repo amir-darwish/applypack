@@ -4,6 +4,46 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.41.2] — 2026-10-01
+
+### Fixed
+- **The Claude Code CLI read the project's instructions into every call.**
+  Under `npm start` it ran in the ApplyPack folder and loaded its
+  `CLAUDE.md` and memory: about 53 000 extra tokens on every classification,
+  scan and comparison, taken from your plan, and a resume scan that reported
+  those instructions as an injection in the resume. It now runs in the
+  temporary folder, as the Gemini and Codex CLIs already did. Docker was not
+  affected.
+- **No cover letter could be written** when your own Claude Code settings
+  ask for `xhigh` or `max` effort: with thinking off, Opus 5 refuses an
+  effort above `high`, and every letter failed. Calls without thinking now
+  ask for `high`.
+- **A keyword added from Tailor resume could land inside a job.** A bullet
+  or a title with "stack" in it ("Built full-stack checkout features",
+  "Senior Full-Stack Engineer") was read as the skills heading, so **+ add**,
+  **Apply all** and **Add missing keywords** wrote the term into a role's
+  "Technology Stack" line, its dates line, or an "Also:" line between its
+  bullets. Only a real heading opens a skills section now.
+- Two last lines removed in a row and undone out of order came back swapped.
+- Removing the first item after a label left "Skills: , PHP".
+- In the Document view, a missing keyword's chip and **Locate** did nothing
+  when the document could not outline the line: they open Plain text there.
+- **"NestJS is a must here and nothing backs it yet"** beside Express and
+  Fastify: a must in an either/or group the resume already answers asks for
+  nothing more, as the score already counted it.
+- A plain-text or PDF resume whose headings are not in capitals
+  ("Experience", "Skills") was read as one header block: the clean version,
+  What the ATS sees and the years-at-work line came out empty. A title that
+  opens the contact line is the title, and a role keeps no comma where its
+  dates were.
+- The Text / Document switch showed no pressed state (its classes were
+  missing from the stylesheet); CI now fails a stylesheet that is out of
+  date.
+- The Overview counted "node", "nodejs" and "node.js" as three bars, and
+  compared a new install's week with a week it never lived through.
+- A resume whose name ran past 80 characters with an emoji at the cut could
+  not be downloaded.
+
 ## [2.41.1] — 2026-09-30
 
 ### Added
