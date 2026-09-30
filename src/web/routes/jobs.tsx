@@ -1151,8 +1151,8 @@ function sortToOrderBy(sort: string): Prisma.JobOrderByWithRelationInput[] {
  * One sentence on what a Save can do with the resume's own file (ADR 0038),
  * and whether the clean re-render is worth offering beside it (ADR 0039).
  * Only a .docx is read from the database. `clean` is true exactly when Save
- * cannot write the whole file — a PDF, a text version, or a layout the
- * patcher only partly reaches.
+ * cannot write the whole file — a PDF, plain text, or a layout the patcher
+ * only partly reaches; such a save keeps the clean version (ADR 0059).
  */
 async function describeResumeFile(resume: { id: number; sourceFilename: string; hidden: boolean }): Promise<{ verdict: string; clean: boolean }> {
   // A one-off check has no Save, so it is not told what one would keep: the
@@ -1169,9 +1169,9 @@ async function describeResumeFile(resume: { id: number; sourceFilename: string; 
   }
   if (/\.pdf$/i.test(resume.sourceFilename)) {
     return {
-      verdict: 'This file is a PDF: Save keeps a text version; upload the .docx it was printed from to get a styled file back.',
+      verdict: 'This file is a PDF: Document shows the clean version in its look, and Save keeps it as a .docx the next save can edit in place.',
       clean: true,
     };
   }
-  return { verdict: 'This file is plain text: Save keeps a text version.', clean: true };
+  return { verdict: 'This file is plain text: Save keeps the clean version as a .docx.', clean: true };
 }

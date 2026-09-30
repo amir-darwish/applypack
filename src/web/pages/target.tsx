@@ -462,7 +462,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                       class="w-full"
                       data-save-button
                       disabled
-                      title={`Enabled once you edit the text — saves it as v${resume.version + 1} of this resume; a .docx is patched in place when its layout allows (~1 min)`}
+                      title={`Enabled once you edit the text — saves it as v${resume.version + 1} of this resume: your .docx with the edits written in, or the clean version the Document view shows (~1 min)`}
                     >
                       Save as v{resume.version + 1}
                     </Button>
