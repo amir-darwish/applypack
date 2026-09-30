@@ -189,7 +189,10 @@ export function insertIntoSkills(text, term, where) {
   const hint = String(where ?? '').toLowerCase();
   const hintWords = hint.match(/[a-z]{4,}/g) ?? [];
   const label = (i) => lines[i].toLowerCase().slice(0, lines[i].indexOf(':') + 1 || HEADING_MAX);
-  const target = lists.find((l) => hintWords.some((w) => label(l.i).includes(w))) ?? lists[0];
+  // With no hint that names a line, the last list: it is the "Others" line far
+  // more often than the first one is, and a framework does not belong among
+  // the programming languages the first line usually lists.
+  const target = lists.find((l) => hintWords.some((w) => label(l.i).includes(w))) ?? lists[lists.length - 1];
 
   const line = lines[target.i];
   const kept = line.replace(/\s*$/, '');
@@ -200,6 +203,51 @@ export function insertIntoSkills(text, term, where) {
     text: lines.join('\n'),
     span: { start, end: start + clean.length },
     change: { start: lineAt + kept.length, removed: line.slice(kept.length), inserted: target.sep + clean },
+  };
+}
+
+/** A work-history heading: where a skills section goes when the resume has none. */
+const WORK_HEADING = /^(?:#{1,6}\s*)?(?:professional\s+)?(?:experience|employment|work history|career)\b/i;
+
+/**
+ * Add terms a skills line could not take as a line of their own: after the
+ * last line of the skills section when there is one ("Also: Kafka, Redis"),
+ * else as a skills section of their own before the work history, else at the
+ * end. The resume's skills are sometimes a column of labels with nothing to
+ * append to — and adding eight keywords one by one by hand was the complaint.
+ */
+export function appendSkills(text, terms) {
+  const clean = [...new Set((terms ?? []).map((t) => String(t).trim()).filter(Boolean))].filter(
+    (t) => findTerm(text, t).length === 0,
+  );
+  if (clean.length === 0) return { error: 'already-present' };
+  const lines = text.split('\n');
+  const heading = lines.findIndex((l) => l.trim().length < HEADING_MAX && SKILLS_HEADING.test(l) && !termList(l));
+  let at;
+  let insert;
+  if (heading >= 0) {
+    // The section runs to the next short line that is neither a list nor a label.
+    at = heading;
+    for (let i = heading + 1; i < lines.length; i++) {
+      const l = lines[i];
+      if (l.trim() === '') break;
+      const isLabel = l.trimEnd().endsWith(':');
+      if (!termList(l) && !isLabel && l.length < HEADING_MAX && /\p{Lu}/u.test(l) && !/\p{Ll}/u.test(l.replace(/^#+\s*/, ''))) break;
+      at = i;
+    }
+    insert = [`Also: ${clean.join(', ')}`];
+  } else {
+    const work = lines.findIndex((l) => WORK_HEADING.test(l.trim()));
+    at = work > 0 ? work - 1 : lines.length - 1;
+    // A section of its own, set off by a blank line on either side like the rest.
+    insert = [...(lines[at].trim() === '' ? [] : ['']), 'SKILLS', clean.join(', '), ...(work > 0 ? [''] : [])];
+  }
+  const before = lines.slice(0, at + 1).join('\n');
+  const added = '\n' + insert.join('\n');
+  return {
+    text: before + added + text.slice(before.length),
+    span: { start: before.length + 1, end: before.length + added.length },
+    change: { start: before.length, removed: '', inserted: added },
   };
 }
 

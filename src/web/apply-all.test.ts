@@ -16,6 +16,7 @@ type Result = {
 const mod = import('./public/apply-all.mjs') as Promise<{
   applyAll: (text: string, ops: Op[]) => Result;
   applyAllSummary: (r: Result) => string;
+  addKeywords: (text: string, terms: { term: string; where?: string }[]) => Result;
 }>;
 // @ts-expect-error — plain JS with no declaration file.
 const edits = import('./public/text-edits.mjs') as Promise<{
@@ -96,4 +97,30 @@ test('applyAllSummary says what landed and what did not', async () => {
   const partial = applyAll(RESUME, [OPS[0]!, { key: 'x', kind: 'change', quote: 'nope', wording: 'y' }]);
   assert.equal(applyAllSummary(partial), 'Applied 1 change. 1 could not be placed — the card says why.');
   assert.equal(applyAllSummary(applyAll(RESUME, [])), 'Nothing was applied.');
+});
+
+test('addKeywords puts each term on the skills line its hint names, and undoes one by one', async () => {
+  const { addKeywords } = await mod;
+  const { undoEdit } = await edits;
+  const text = 'KEY SKILLS\nProgramming: Go, PHP, JavaScript\nData: MySQL, Redis\n\nEXPERIENCE\n• Built things.';
+  const r = addKeywords(text, [{ term: 'Kafka', where: 'Data line' }, { term: 'Rust', where: 'Programming' }, { term: 'PHP' }]);
+  assert.match(r.text, /^Data: MySQL, Redis, Kafka$/m);
+  assert.match(r.text, /^Programming: Go, PHP, JavaScript, Rust$/m);
+  assert.deepEqual(r.done.map((d) => d.key), ['kw:Kafka', 'kw:Rust'], 'PHP is already there — neither done nor failed');
+  let back = r.text;
+  for (const d of [...r.done].reverse()) back = (undoEdit(back, d.edit) as { text: string }).text;
+  assert.equal(back, text);
+});
+
+test('addKeywords gives terms no list line can take a line of their own', async () => {
+  const { addKeywords } = await mod;
+  // A skills section written as prose has no list to append to.
+  const prose = 'SKILLS\nComfortable across the backend and the browser.\n\nEXPERIENCE\n• Built things.';
+  const a = addKeywords(prose, [{ term: 'Kafka' }, { term: 'Redis' }]);
+  assert.match(a.text, /^Comfortable across the backend and the browser\.\nAlso: Kafka, Redis$/m);
+  // No skills section at all: one goes in before the work history.
+  const none = 'Alex\nSUMMARY\nEngineer.\n\nPROFESSIONAL EXPERIENCE\n• Built things.';
+  const b = addKeywords(none, [{ term: 'Kafka' }]);
+  assert.match(b.text, /Engineer\.\n\nSKILLS\nKafka\n\nPROFESSIONAL EXPERIENCE/);
+  assert.deepEqual(b.failed, []);
 });
