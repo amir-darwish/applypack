@@ -21,7 +21,7 @@
 import JSZip from 'jszip';
 import { XMLSerializer } from '@xmldom/xmldom';
 import type { Document, Element } from '@xmldom/xmldom';
-import { docxToText, markerFor, parseDocumentXml, renderLines, walkDocument, W_NS, type Block, type LineOwner } from './docx-text';
+import { docxToText, markerFor, parseDocumentXml, renderLines, styleMarker, walkDocument, W_NS, type Block, type LineOwner } from './docx-text';
 import { setCoreProps } from './docx-props';
 import { loadLineDiff } from './line-diff';
 import { readZipEntry, ZipError } from './zip';
@@ -49,8 +49,6 @@ export interface PatchOptions {
 const DOCUMENT_PART = 'word/document.xml';
 const CORE_PART = 'docProps/core.xml';
 const M_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/math';
-/** The renderer's markers, stripped from an edited line before it is written back. */
-const MARKER = /^(?:- |## |# )/;
 const CELL_JOIN = ' | ';
 
 export async function patchDocx(
@@ -144,7 +142,7 @@ export async function patchDocx(
     const cloneAfter = anchor.node;
     plan.push(() => insertAfter(doc, cloneAfter, anchor, text, lastInserted));
     report.added++;
-    const body = text.replace(anchor.kind === 'bullet' ? /^- / : MARKER, '');
+    const body = insertedBody(anchor, text);
     expected.push(markerFor(anchor.node, body) + body);
     // Later inserts follow this one, not the paragraph above it: keep the
     // anchor and let insertAfter place each clone after the previous clone.
@@ -193,9 +191,25 @@ export async function patchDocx(
  */
 function readBack(block: Block, prev: string, next: string): string {
   if (block.lines.length !== 1) return next;
-  const marker = MARKER.exec(prev)?.[0] ?? '';
-  const body = next.startsWith(marker) ? next.slice(marker.length) : next;
+  const body = withoutMarker(block, 0, prev, next);
   return markerFor(block.node, body) + body;
+}
+
+/**
+ * The words to write for rendered line `line` of `block`: `next` without the
+ * marker the READER put in front of `prev` — never a "- " or "# " the file's
+ * own text carries, which is words like any other (the reviewer's case: a
+ * plain paragraph typed "- Did the first thing well").
+ */
+function withoutMarker(block: Block, line: number, prev: string, next: string): string {
+  const marker = line === 0 ? block.marker : '';
+  return marker && prev.startsWith(marker) && next.startsWith(marker) ? next.slice(marker.length) : next;
+}
+
+/** A new line's words, without the marker its paragraph's properties will earn it anyway. */
+function insertedBody(anchor: Block, text: string): string {
+  const marker = styleMarker(anchor.node);
+  return marker && text.startsWith(marker) ? text.slice(marker.length) : text;
 }
 
 /**
@@ -238,8 +252,7 @@ function planRowChange(members: Block[], prev: string, next: string): { write: (
  */
 function planChange(block: Block, line: number, prev: string, next: string): (() => void) | string {
   if (boxed(block.node)) return 'text inside a text box is not edited in place';
-  const marker = MARKER.exec(prev)?.[0] ?? '';
-  const body = next.startsWith(marker) ? next.slice(marker.length) : next;
+  const body = withoutMarker(block, line, prev, next);
   const segments = segmentsOf(block.node);
   const segment = segments[line];
   if (!segment) return 'the line and its paragraph no longer line up';
@@ -368,8 +381,7 @@ function insertAfter(doc: Document, after: Element, anchor: Block, text: string,
   const t = doc.createElementNS(W_NS, 'w:t');
   run.appendChild(t);
   clone.appendChild(run);
-  const marker = anchor.kind === 'bullet' ? /^- / : MARKER;
-  setText(t, text.replace(marker, ''));
+  setText(t, insertedBody(anchor, text));
   // Each clone goes after the last one, so a run of inserts keeps its order.
   const at = lastInserted.get(after) ?? after;
   at.parentNode!.insertBefore(clone, at.nextSibling);

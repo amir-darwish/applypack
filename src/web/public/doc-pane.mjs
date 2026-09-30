@@ -38,6 +38,9 @@ const RENDER_OPTIONS = {
   renderEndnotes: false,
   renderComments: false,
   renderChanges: false,
+  // An altChunk is raw HTML from inside the file, drawn into a same-origin
+  // frame where the page's CSP lets its scripts run. A resume has no need of one.
+  renderAltChunks: false,
   // data: URLs, not blob: — the dashboard's CSP allows the one and not the other.
   useBase64URL: true,
 };
@@ -98,11 +101,11 @@ export function locateParagraph(text, paragraphText, occurrence = 0) {
     const marker = MARKER.exec(line)?.[0] ?? '';
     const body = line.slice(marker.length);
     if (wordsKey(body) === want) {
-      if (seen++ === occurrence) return { line: i, start: offset + marker.length, end: offset + line.length, cell: false };
+      if (seen++ === occurrence) return { line: i, start: offset + marker.length, end: offset + line.length, cell: false, marker };
     } else if (body.includes(' | ')) {
       let at = offset + marker.length;
       for (const part of body.split(' | ')) {
-        if (wordsKey(part) === want && seen++ === occurrence) return { line: i, start: at, end: at + part.length, cell: true };
+        if (wordsKey(part) === want && seen++ === occurrence) return { line: i, start: at, end: at + part.length, cell: true, marker: '' };
         at += part.length + 3;
       }
     }
@@ -118,7 +121,11 @@ export function locateParagraph(text, paragraphText, occurrence = 0) {
  * around it stays.
  */
 export function rewriteSpan(text, at, words) {
-  const clean = String(words).replace(/[\s ]+/g, ' ').trim();
+  let clean = String(words).replace(/[\s\u2003]+/g, ' ').trim();
+  // A bullet the file types as text is in the paragraph's words too; the span
+  // starts after it, so it goes once, not twice.
+  const marker = (at.marker ?? '').trim();
+  if (marker && clean.startsWith(marker)) clean = clean.slice(marker.length).trim();
   if (clean.length > 0 || at.cell) return text.slice(0, at.start) + clean + text.slice(at.end);
   const lineStart = text.lastIndexOf('\n', at.start - 1) + 1;
   const newline = text.indexOf('\n', at.end);
@@ -166,6 +173,21 @@ export function fileNameFrom(header) {
     try { return decodeURIComponent(utf[1].trim()); } catch {}
   }
   return /filename="([^"]*)"/i.exec(h)?.[1] ?? null;
+}
+
+/**
+ * A link's address as the pane keeps it: http(s) and mailto only. A link's
+ * target is whatever the file's relationships say, and a `javascript:` one
+ * would run in the dashboard's origin on a click (format.ts:safeHref, the
+ * same rule for a feed's links).
+ */
+export function safeLink(href) {
+  return /^(?:https?:|mailto:)/i.test(String(href ?? '').trim()) ? String(href).trim() : null;
+}
+
+/** A stylesheet's text made safe to write between <style> tags: nothing in it can close the element. */
+export function styleText(css) {
+  return String(css ?? '').replace(/<\//g, '<\\/');
 }
 
 /** Bytes from the base64 the route sends. */
@@ -239,11 +261,19 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
       await docx.renderAsync(bytesOf(data.docx), stageBody, stageStyles, RENDER_OPTIONS);
       await new Promise((r) => setTimeout(r, TAB_SETTLE_MS));
     } catch (err) {
-      if (mine === token) say('Could not draw the document: ' + err.message + '. The plain text is intact.');
+      if (mine === token) {
+        drawingText = null;
+        say('Could not draw the document: ' + err.message + '. The plain text is intact.');
+      }
       return;
     }
     if (mine !== token) return;
     if (editing) { deferred = true; return; }
+    for (const a of stageBody.querySelectorAll('a')) {
+      const href = safeLink(a.getAttribute('href'));
+      if (href) a.setAttribute('href', href);
+      else a.removeAttribute('href');
+    }
     const keep = pane.scrollTop;
     pane.replaceChildren(...stageStyles.childNodes, ...stageBody.childNodes);
     pane.scrollTop = keep;
@@ -360,6 +390,8 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
   }
 
   pane.addEventListener('click', (event) => {
+    // A link in the resume is words to edit here, not somewhere to go.
+    if (event.target.closest?.('a')) event.preventDefault();
     const p = event.target.closest?.('section.docx article p');
     if (p) begin(p, event);
   });
@@ -416,7 +448,13 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
     frame.className = 'doc-print-frame';
     frame.setAttribute('aria-hidden', 'true');
     frame.tabIndex = -1;
-    const styles = [...pane.querySelectorAll('style')].map((st) => st.outerHTML).join('');
+    // No scripts in the frame, whatever the file holds: docx-preview writes a
+    // font name or a style id from the file into its <style> text unescaped,
+    // and HTML never escapes <style> text — "x</style><img onerror=…>" in a
+    // crafted .docx would otherwise run here, in the dashboard's origin
+    // (review 2026-09-30). Printing needs only the modal.
+    frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
+    const styles = [...pane.querySelectorAll('style')].map((st) => `<style>${styleText(st.textContent)}</style>`).join('');
     const wrapper = pane.querySelector('.docx-wrapper').outerHTML;
     const safeTitle = String(title).replace(/[<&]/g, '');
     frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title>${styles}<style>${printCss(page)}</style></head><body>${wrapper}</body></html>`;

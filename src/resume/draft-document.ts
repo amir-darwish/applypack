@@ -1,11 +1,11 @@
 import { docxStructure } from './docx-structure';
 import { docxToText } from './docx-text';
 import { patchDocx } from './docx-patch';
-import { structureFromText, wordsKey, type TextLayout } from './structure-from-text';
+import { structureFromText, type TextLayout } from './structure-from-text';
 import { drawDocx } from './render/clean-docx';
 import { drawPdf } from './render/clean-pdf';
 import type { RenderKnobs } from './render/knobs';
-import { planLines, planRender, planToText, type RenderPlan } from './render/sections';
+import { planLines, planRender, planToText, type PlanOptions, type RenderPlan } from './render/sections';
 
 /*
  * The resume on the Tailor page as a document rather than a text: the draft
@@ -67,11 +67,11 @@ export async function draftDocx(input: DraftInput): Promise<DraftDocument> {
 
 /** The clean .pdf of the draft; the user's own .docx has no PDF of ours (the route prints or converts it). */
 export async function draftPdf(input: DraftInput): Promise<Buffer> {
-  return drawPdf(cleanPlan(input.text, input.knobs, input.layout ?? null), input.knobs);
+  return drawPdf(cleanPlan(input.text, input.knobs, input.layout ?? null, { fold: true }), input.knobs);
 }
 
 async function clean(input: DraftInput, basis: Exclude<DocumentBasis, 'own'>, reason?: string): Promise<DraftDocument> {
-  const docx = await drawDocx(cleanPlan(input.text, input.knobs, input.layout ?? null), input.knobs);
+  const docx = await drawDocx(cleanPlan(input.text, input.knobs, input.layout ?? null, { fold: false }), input.knobs);
   return { kind: 'clean', basis, docx, notice: noticeFor(basis, reason) };
 }
 
@@ -81,9 +81,24 @@ async function clean(input: DraftInput, basis: Exclude<DocumentBasis, 'own'>, re
  * stands. Measured on the table fixture: the structured reading kept one
  * line of eleven, because the whole table arrives as one run-on "heading".
  */
-function cleanPlan(text: string, knobs: RenderKnobs, layout: TextLayout | null): RenderPlan {
-  const structured = planRender(structureFromText(text, layout), knobs);
-  return missingLines(text, planToText(structured)).length === 0 ? structured : planLines(text);
+function cleanPlan(text: string, knobs: RenderKnobs, layout: TextLayout | null, opts: PlanOptions): RenderPlan {
+  const structure = structureFromText(text, layout);
+  // Decided on the unfolded reading, so a ₴ the PDF face cannot draw does not
+  // turn the whole file into the plainer line-by-line version.
+  const keeps = missingLines(text, planToText(planRender(structure, knobs, { fold: false }))).length === 0;
+  return keeps ? planRender(structure, knobs, opts) : planLines(text, opts);
+}
+
+/** What stands between items and is not content: a render may write one for another. */
+const SEPARATORS = /[∙·•‣▪◦|]/gu;
+
+/**
+ * A line's content, as a render must keep it: letters, digits and symbols
+ * (₴, ✓, ★, +, $) — case, spacing, punctuation and separators aside. Letters
+ * alone let a save that dropped "₴" and "✓" pass as whole — found in review, 2026-09-30.
+ */
+function contentKey(s: string): string {
+  return s.normalize('NFKC').toLowerCase().replace(SEPARATORS, '').replace(/[^\p{L}\p{N}\p{S}]+/gu, '');
 }
 
 /**
@@ -92,12 +107,12 @@ function cleanPlan(text: string, knobs: RenderKnobs, layout: TextLayout | null):
  * its bullets) or split one (a company from its place), and neither loses it.
  */
 function missingLines(text: string, rendered: string): string[] {
-  const haystack = wordsKey(rendered);
+  const haystack = contentKey(rendered);
   return text
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => {
-      const words = wordsKey(line);
+      const words = contentKey(line);
       return words.length > 0 && !haystack.includes(words);
     });
 }
@@ -112,7 +127,7 @@ export async function cleanDocx(
   knobs: RenderKnobs,
   layout: TextLayout | null = null,
 ): Promise<{ docx: Buffer; text: string; missing: string[] }> {
-  const docx = await drawDocx(cleanPlan(text, knobs, layout), knobs);
+  const docx = await drawDocx(cleanPlan(text, knobs, layout, { fold: false }), knobs);
   const read = docxToText(docx);
   return { docx, text: read, missing: missingLines(text, read) };
 }
@@ -154,5 +169,7 @@ const MAX_FILE_NAME_CHARS = 80;
  */
 export function contentDisposition(fileName: string): string {
   const ascii = fileName.normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/["\\]/g, '').trim() || 'resume';
-  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+  // encodeURIComponent leaves ' ( ) * alone, and RFC 5987 allows none of them in the value.
+  const utf8 = encodeURIComponent(fileName).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${utf8}`;
 }

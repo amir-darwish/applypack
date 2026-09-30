@@ -90,10 +90,20 @@ function unique(parts: Array<string | null>): string[] {
 const DOT = ' · ';
 const DASH = ' – ';
 
-export function planRender(resume: JsonResume, knobs: RenderKnobs): RenderPlan {
+/**
+ * `fold: false` is for a writer that names the user's own font rather than
+ * embedding ours — the .docx: Word draws the ₴ and the ✓ the bundled face
+ * cannot, and folding them there would drop them from the saved file.
+ */
+export interface PlanOptions {
+  fold?: boolean;
+}
+
+export function planRender(resume: JsonResume, knobs: RenderKnobs, opts: PlanOptions = {}): RenderPlan {
   // Folded here, once, rather than at each of the dozen places a string is
   // put into a block: a construction site added later cannot forget it.
-  return fold(rawPlan(resume, knobs));
+  const plan = rawPlan(resume, knobs);
+  return opts.fold === false ? plan : fold(plan);
 }
 
 /** A line the text marks as a heading: `## Skills`, or a short line in capitals with nothing after it. */
@@ -116,7 +126,7 @@ function lineHeading(line: string): string | null {
  * a line (a run-on table row, a heading that is really content), the clean
  * version is drawn from this instead, plainer and complete.
  */
-export function planLines(text: string): RenderPlan {
+export function planLines(text: string, opts: PlanOptions = {}): RenderPlan {
   const lines = text.replace(/\r\n/g, '\n').split('\n').map((l) => l.trimEnd());
   const first = lines.findIndex((l) => l.trim().length > 0);
   const name = first >= 0 ? lines[first]!.trim().replace(MD_HEADING, '$1') : null;
@@ -132,7 +142,8 @@ export function planLines(text: string): RenderPlan {
     else if (bullet) blocks.push({ kind: 'bullet', text: bullet[1]!.trim() });
     else blocks.push({ kind: 'paragraph', text: line.trim() });
   }
-  return fold({ header: { name, label: null, contact: null, contactRuns: [], extra: [] }, blocks });
+  const plan: RenderPlan = { header: { name, label: null, contact: null, contactRuns: [], extra: [] }, blocks };
+  return opts.fold === false ? plan : fold(plan);
 }
 
 /**

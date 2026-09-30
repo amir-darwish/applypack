@@ -510,9 +510,13 @@ export function init(data) {
   function collectOperations() {
     const ops = [];
     const withRemovals = !removalsBox || removalsBox.checked;
+    // Two additions with the same section and place share a key: one edit
+    // under it, or the second would overwrite the first one's Undo.
+    const queued = new Set();
     for (const card of document.querySelectorAll('[data-card]')) {
       const key = card.dataset.card;
-      if (edits.applied[key] || edits.skipped.includes(key)) continue;
+      if (edits.applied[key] || edits.skipped.includes(key) || queued.has(key)) continue;
+      queued.add(key);
       const apply = card.querySelector('[data-apply]');
       const box = card.querySelector('[data-edit-box]');
       if (apply && box?.dataset.anchor) ops.push({ key, kind: 'add', anchor: box.dataset.anchor, wording: apply.dataset.apply });

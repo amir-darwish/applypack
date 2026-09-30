@@ -221,3 +221,14 @@ test('a table row is rewritten cell by cell when the edit keeps its cells', asyn
   assert.equal(merged.ok, false);
   assert.match(merged.ok ? '' : merged.reason, /how many cells/);
 });
+
+test('a "- " the paragraph’s own text carries is words, not the reader’s marker, and survives an edit', async () => {
+  const original = docxOf(p(r('- Did the first thing well')) + bullet(r('A real list item')));
+  const before = docxToText(original);
+  assert.equal(before, '- Did the first thing well\n- A real list item');
+  const after = before.replace('first thing well', 'first thing very well').replace('A real list item', 'A real list item, edited');
+  const res = ok(await patchDocx(original, before, after));
+  assert.equal(res.text, after);
+  assert.match(await documentXml(res.docx), />- Did the first thing very well</, 'the typed dash stays in the file');
+  assert.doesNotMatch(await documentXml(res.docx), />- A real list item/, 'the list marker is the list’s, not text');
+});

@@ -63,6 +63,8 @@ export interface Block {
   kind: BlockKind;
   node: Element;
   lines: string[];
+  /** The marker the reader wrote before line 0 ("- ", "## ", "# "), '' when none — never text the file itself holds. */
+  marker: string;
   table?: { row: number; cell: number };
 }
 
@@ -106,7 +108,7 @@ function walkTable(table: Element, blocks: Block[]): void {
     row++;
   }
   // A table ends with a blank line, as the regex reader wrote one after every table.
-  blocks.push({ kind: 'body', node: table, lines: [''], table: { row: -1, cell: -1 } });
+  blocks.push({ kind: 'body', node: table, lines: [''], marker: '', table: { row: -1, cell: -1 } });
 }
 
 /** Elements named `name` under `root`, not descending into a nested `stop` element (a table inside a cell is its own table). */
@@ -129,12 +131,17 @@ function descendantsUntil(root: Element, name: string, stop: string): Element[] 
  * line it writes, so its read-back gate expects what the reader will say.
  */
 export function markerFor(p: Element, text: string): string {
+  return styleMarker(p) || (looksLikeHeading(text) ? '## ' : '');
+}
+
+/** The marker a paragraph earns by its properties alone — a list item, the Title style, a heading style. */
+export function styleMarker(p: Element): string {
   const props = children(p).find((c) => isW(c, 'pPr'));
   const isListItem = props ? descendantsUntil(props, 'numPr', 'p').length > 0 : false;
   const style = props ? (descendantsUntil(props, 'pStyle', 'p')[0]?.getAttribute('w:val') ?? '') : '';
   if (isListItem) return '- ';
   if (/^Title$/i.test(style)) return '# ';
-  if (/^Heading/i.test(style) || looksLikeHeading(text)) return '## ';
+  if (/^Heading/i.test(style)) return '## ';
   return '';
 }
 
@@ -157,12 +164,12 @@ function paragraphBlock(p: Element): Block {
     .split('\n')
     .map((line) => line.replace(/[ \t]*\t[ \t]*/g, ' | ').replace(/ {2,}/g, ' ').trim())
     .filter((line) => line.length > 0);
-  if (lines.length === 0) return { kind: 'body', node: p, lines: [''] };
+  if (lines.length === 0) return { kind: 'body', node: p, lines: [''], marker: '' };
 
   const text = lines.join('\n');
   const marker = markerFor(p, text);
   const kind: BlockKind = marker === '- ' ? 'bullet' : marker ? 'heading' : tabbed ? 'tabbed' : 'body';
-  return { kind, node: p, lines: `${marker}${text}`.split('\n') };
+  return { kind, node: p, lines: `${marker}${text}`.split('\n'), marker };
 }
 
 /**

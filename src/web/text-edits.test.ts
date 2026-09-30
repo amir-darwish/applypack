@@ -109,6 +109,20 @@ test('removeSpan takes a separator with a cut from a list, on the side that is o
   assert.match(ok(removeSpan(text, 'Blade, Twig, Jira,')).text, /^AWS, S3, OWASP$/m, 'no space left in front');
   assert.match(ok(removeSpan(text, 'PHP')).text, /^Go, JavaScript$/m, 'no double comma');
   assert.match(ok(removeSpan(text, ', JavaScript')).text, /^Go, PHP$/m);
+  assert.match(ok(removeSpan(text, 'OWASP')).text, /^Blade, Twig, Jira, AWS, S3$/m, 'the last item takes the comma before it');
+});
+
+test('an edit whose one side was shared when recorded is not found by that side alone', async () => {
+  const { removeSpan, applyReplacement, inverseEdit, undoEdit, withContext } = await edits;
+  // Two roles end on the same stack line; a bullet is cut from the first.
+  const stack = 'Technology Stack: PHP, Laravel.';
+  const text = `ROLE A\n• Built A.\n• Cut me.\n${stack}\nROLE B\n• Built B.\n${stack}\nEDUCATION`;
+  const cut = ok(removeSpan(text, '• Cut me.')).text;
+  const removal = withContext(cut, inverseEdit(text, cut));
+  // The bullet before it is rewritten, and role A's stack line gains a term: both sides moved.
+  const moved = ok(applyReplacement(cut, 'Built A.', 'Built A, faster.')).text.replace(`${stack}\nROLE B`, 'Technology Stack: PHP, Laravel, Redis.\nROLE B');
+  // Only role B's stack line still reads like the trail: that is not where the bullet was.
+  assert.equal(err(undoEdit(moved, removal)), 'moved-on');
 });
 
 test('removeSpan refuses the contact line — email and phone are not edits to make blind', async () => {

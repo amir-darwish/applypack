@@ -103,10 +103,11 @@ export function removeSpan(text, quote) {
     // Part of a line: take the separator on the open side with it, so a cut
     // from a list leaves "Go, JavaScript" rather than "Go, , JavaScript", and
     // one at the start of a line leaves no space in front of it.
-    if (bareBefore || SEPARATOR_AT.test(text.slice(from - 2, from))) {
-      while (to < end && SEPARATOR_CHAR.test(text[to])) to++;
-    } else if (after.trim() === '') {
+    // The last item of a list takes the separator before it: after it there is none.
+    if (after.trim() === '' && !bareBefore) {
       while (from > start && SEPARATOR_CHAR.test(text[from - 1])) from--;
+    } else if (bareBefore || SEPARATOR_AT.test(text.slice(from - 2, from))) {
+      while (to < end && SEPARATOR_CHAR.test(text[to])) to++;
     }
   }
   const cutLeadingNewline = wholeLine && end >= text.length && from > 0;
@@ -252,11 +253,24 @@ const UNDO_CONTEXT = 32;
  */
 export function withContext(after, edit) {
   const end = edit.start + edit.inserted.length;
+  const lead = after.slice(Math.max(0, edit.start - UNDO_CONTEXT), edit.start);
+  const trail = after.slice(end, end + UNDO_CONTEXT);
   return {
     ...edit,
-    lead: after.slice(Math.max(0, edit.start - UNDO_CONTEXT), edit.start),
-    trail: after.slice(end, end + UNDO_CONTEXT),
+    lead,
+    trail,
+    // Whether one side alone told the place apart when it was recorded: a
+    // stack line two roles share is no anchor, even if one of them changes later.
+    leadUnique: occurrences(after, lead + edit.inserted) === 1,
+    trailUnique: occurrences(after, edit.inserted + trail) === 1,
   };
+}
+
+function occurrences(text, needle) {
+  if (needle.length === 0) return 0;
+  let n = 0;
+  for (let at = text.indexOf(needle); at !== -1; at = text.indexOf(needle, at + 1)) n++;
+  return n;
 }
 
 /**
@@ -296,7 +310,10 @@ function locateEdit(text, edit) {
   // ends of the text are anchors of their own, whatever changed next to them.
   if (trail.length === 0 && text.endsWith(ins)) return text.length - ins.length;
   if (lead.length === 0 && text.startsWith(ins)) return 0;
-  for (const [before, after] of [[lead, trail], [lead, ''], ['', trail]]) {
+  const sides = [[lead, trail]];
+  if (edit.leadUnique !== false) sides.push([lead, '']);
+  if (edit.trailUnique !== false) sides.push(['', trail]);
+  for (const [before, after] of sides) {
     const needle = before + ins + after;
     if (needle.length < MIN_NEEDLE) continue;
     const first = text.indexOf(needle);

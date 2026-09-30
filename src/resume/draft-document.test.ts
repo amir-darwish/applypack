@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { docxToText } from './docx-text';
 import { pdfToText } from './pdf-text';
 import { knobsFrom } from './render/knobs';
-import { contentDisposition, documentFileName, draftDocx, draftPdf, noticeFor, type DraftInput } from './draft-document';
+import { cleanDocx, contentDisposition, documentFileName, draftDocx, draftPdf, noticeFor, type DraftInput } from './draft-document';
 
 const fixture = (name: string) => readFileSync(join(__dirname, 'fixtures', name));
 const FLOW = fixture('flow-simple.docx');
@@ -90,4 +90,22 @@ test('contentDisposition carries a Cyrillic name without breaking the header', (
   assert.ok(header.includes(encodeURIComponent('Назар Бойко Resume.pdf')));
   // Every byte of the header is ASCII, or Node refuses to send it.
   assert.ok([...header].every((ch) => ch.charCodeAt(0) < 128));
+  assert.match(contentDisposition("O'Brien (final).pdf"), /filename\*=UTF-8''O%27Brien%20%28final%29\.pdf$/);
+});
+
+test('a save keeps the symbols the PDF face cannot draw — the .docx names the user’s font', async () => {
+  const text = [
+    'Alex Example',
+    'Senior Backend Engineer',
+    '',
+    'EXPERIENCE',
+    'Marketplace Co',
+    'Senior Backend Engineer Jan 2022 – Present',
+    '• Cut payment losses by ₴2.4M a year ✓',
+    '• Rated ★★★★★ by the on-call team.',
+  ].join('\n');
+  const clean = await cleanDocx(text, knobs);
+  assert.deepEqual(clean.missing, []);
+  assert.match(clean.text, /₴2\.4M a year ✓/);
+  assert.match(clean.text, /★★★★★/);
 });

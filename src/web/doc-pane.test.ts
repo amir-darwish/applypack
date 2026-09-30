@@ -15,6 +15,8 @@ const mod = import('./public/doc-pane.mjs') as Promise<{
   printCss: (page: Page) => string;
   fileNameFrom: (header: string | null) => string | null;
   bytesOf: (b64: string) => Uint8Array;
+  safeLink: (href: string | null) => string | null;
+  styleText: (css: string) => string;
 }>;
 
 const TEXT = [
@@ -81,6 +83,15 @@ test('rewriteSpan keeps the marker, and an emptied paragraph takes its line with
   assert.match(rewriteSpan(TEXT, cell, ''), /^Programming: \| $/m, 'a cell is emptied, never removed with its row');
 });
 
+test('a bullet the paragraph types as text is written back once, not twice', async () => {
+  const { locateParagraph, rewriteSpan } = await mod;
+  // The user's own .docx types "• " as text: the pane's paragraph carries it, the span starts after it.
+  const at = locateParagraph(TEXT, '• Led backend architecture for PHP services.')!;
+  const next = rewriteSpan(TEXT, at, '• Led the backend for PHP services.');
+  assert.match(next, /^• Led the backend for PHP services\.$/m);
+  assert.equal(next.includes('• •'), false);
+});
+
 test('pageBreaks marks where each page would end on the continuous sheet', async () => {
   const { pageBreaks } = await mod;
   const page = { width: 794, height: 1123, top: 48, bottom: 48, left: 58, right: 58 };
@@ -107,4 +118,21 @@ test('fileNameFrom prefers the UTF-8 name a Cyrillic file needs', async () => {
 test('bytesOf decodes what the route encodes', async () => {
   const { bytesOf } = await mod;
   assert.deepEqual([...bytesOf(Buffer.from([80, 75, 3, 4, 255]).toString('base64'))], [80, 75, 3, 4, 255]);
+});
+
+test('safeLink keeps a web or mail address and nothing a click could run', async () => {
+  const { safeLink } = await mod;
+  assert.equal(safeLink('https://linkedin.com/in/x'), 'https://linkedin.com/in/x');
+  assert.equal(safeLink('mailto:a@b.co'), 'mailto:a@b.co');
+  assert.equal(safeLink('javascript:alert(1)'), null);
+  assert.equal(safeLink(' JavaScript:alert(1)'), null);
+  assert.equal(safeLink('data:text/html,<script>'), null);
+  assert.equal(safeLink(null), null);
+});
+
+test('styleText leaves nothing in a stylesheet that could close its element', async () => {
+  const { styleText } = await mod;
+  const css = '.docx { font-family: "x</style><img src=x onerror=alert(1)>"; }';
+  assert.equal(styleText(css).includes('</'), false);
+  assert.equal(styleText('p { color: red; }'), 'p { color: red; }');
 });

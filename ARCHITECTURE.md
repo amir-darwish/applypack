@@ -367,7 +367,10 @@ src/
     json-resume.ts             ← pure: the JSON Resume subset ApplyPack renders (ADR 0039)
     structure-anchor.ts        ← pure: anchorStructure, every string a verbatim span of the text
     structure-from-text.ts     ← pure: a resume's shape from the extracted text alone
-    style-infer.ts             ← the typeface a resume is set in, read from its own runs (ADR 0039)
+    style-infer.ts             ← the typeface a resume is set in, read from its own runs (ADR 0039); a PDF's layout beside it
+    pdf-geometry.ts            ← a PDF's text items with place, size, weight and per-character colour, and its rules (ADR 0059)
+    pdf-layout.ts              ← pure: columns, a skills table's pairing and a look per kind of line, off that geometry (ADR 0059)
+    draft-document.ts          ← pure: the Tailor page's draft as a file — the user's .docx patched, else the clean version (ADR 0059)
     render/                    ← the clean single-column re-render (ADR 0039)
       sections.ts              ← pure: planRender, one plan drawn twice
       clean-docx.ts            ← renderDocx: the plan as a .docx in the user's font family
@@ -577,6 +580,9 @@ src/
       score.mjs                 ← browser mirror of resume/score.ts (parity-tested, ADR 0012)
       target-page.mjs           ← the targeted view's DOM wiring over target.mjs and score.mjs
       text-edits.mjs            ← apply / remove / add-a-term / undo over the resume text (pure, node-tested)
+      apply-all.mjs             ← every open suggestion in one press, each undoable on its own (pure, node-tested)
+      doc-pane.mjs              ← the Document view: draws the draft with docx-preview, paragraph edits, print (ADR 0059)
+      vendor/                   ← docx-preview + JSZip as npm built them, pinned by hash (vendor/README.md)
       line-diff.mjs             ← LCS line diff of the analysed text vs the editor (pure, node-tested)
       change-sheet.mjs          ← "Copy my changes" as Markdown over line-diff.mjs (pure, node-tested)
       copy.mjs                  ← copy-to-clipboard for every page (delegated, execCommand fallback, aria-live)
@@ -644,6 +650,7 @@ src/
       letter.tsx                ← /letter launcher: job + resume resolve → [extract→classify→match→verify]→letter run
       resumes.tsx               ← upload (5 MB limit) + scan + default + delete + download + draft save + review + profile
       resume-render.tsx         ← /resumes/:id/render: the clean re-render, its preview, the downloads, the shape run
+      resume-document.ts        ← POST /resumes/:id/document: the Tailor page's draft as a .docx (JSON for the pane), a .docx or a .pdf, nothing stored
       applications.tsx          ← board + stage-only quick-move + per-job application form
       companies.tsx             ← list + new (probe-validated) + delete + toggle + re-probe + starter packs + suggested feeds
       watchlist.tsx             ← paste a list → resolve run → preview → add; watch / unwatch / check now
