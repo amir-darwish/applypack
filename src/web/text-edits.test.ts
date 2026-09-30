@@ -326,3 +326,10 @@ test('undoEdit refuses once the user has typed over the edit', async () => {
   // And it still works on the untouched text.
   assert.equal(ok(undoEdit(after, edit)).text, text);
 });
+
+test('cutting the first item after a label takes the separator after it', async () => {
+  const { removeSpan } = await edits;
+  assert.equal(ok(removeSpan('Skills: Go, PHP, JavaScript', 'Go')).text, 'Skills: PHP, JavaScript');
+  assert.equal(ok(removeSpan('Tools — Docker, Git', 'Docker')).text, 'Tools — Git');
+  assert.equal(ok(removeSpan('Skills: Go', 'Go')).text, 'Skills:');
+});
