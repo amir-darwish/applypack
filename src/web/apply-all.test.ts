@@ -123,4 +123,10 @@ test('addKeywords gives terms no list line can take a line of their own', async 
   const b = addKeywords(none, [{ term: 'Kafka' }]);
   assert.match(b.text, /Engineer\.\n\nSKILLS\nKafka\n\nPROFESSIONAL EXPERIENCE/);
   assert.deepEqual(b.failed, []);
+  // A summary sentence that opens with "Experience" is not the work history,
+  // and a title-case "Experience" straight under the skills ends their section.
+  const sentence = 'Alex\nExperience with Laravel and Vue across eight years of product work.\n\nEXPERIENCE\n• Built things.';
+  assert.match(addKeywords(sentence, [{ term: 'Kafka' }]).text, /product work\.\n\nSKILLS\nKafka\n\nEXPERIENCE/);
+  const tight = 'SKILLS\nComfortable across the stack.\nExperience\n• Built things.';
+  assert.match(addKeywords(tight, [{ term: 'Kafka' }]).text, /stack\.\nAlso: Kafka\nExperience\n/);
 });

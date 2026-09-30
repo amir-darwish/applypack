@@ -439,12 +439,12 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
       return;
     }
     const occurrence = occurrenceOf(p);
-    const at = locateParagraph(getText(), p.textContent, occurrence);
-    if (!at) {
+    if (!locateParagraph(getText(), p.textContent, occurrence)) {
       say('This line is drawn from more than one line of your text — edit it in Plain text.');
       return;
     }
-    editing = { p, at, occurrence, words: p.textContent, before: wordsOf(p), html: p.innerHTML };
+    // Escape puts back these very nodes: no round trip through the HTML parser.
+    editing = { p, occurrence, words: p.textContent, before: wordsOf(p), saved: p.cloneNode(true) };
     p.contentEditable = 'plaintext-only';
     if (p.contentEditable !== 'plaintext-only') p.contentEditable = 'true';
     p.classList.add('doc-editing');
@@ -469,13 +469,19 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
 
   function commit() {
     if (!editing) return;
-    const { p, occurrence, words, before, at: clicked } = editing;
+    const { p, occurrence, words, before, saved } = editing;
     const after = wordsOf(p);
     end();
     const same = (s) => s.replace(/\s+/g, ' ').trim();
     if (same(after) === same(before)) return;
-    // Found again now, not trusted from the click: the text may have moved since.
-    const at = locateParagraph(getText(), words, occurrence) ?? clicked;
+    // Found again now: the text may have moved since the click, and a span
+    // from before the move would rewrite someone else's words.
+    const at = locateParagraph(getText(), words, occurrence);
+    if (!at) {
+      p.replaceChildren(...saved.childNodes);
+      say('Your text changed while you were editing, so this paragraph could not be found again — nothing was changed.');
+      return;
+    }
     setText(rewriteSpan(getText(), at, after));
     say(after.trim() ? 'Changed. Undo with reset edits, or edit it again.' : 'Removed that line.');
     draw();
@@ -483,7 +489,7 @@ export function mountDocPane({ pane, notice, resumeId, name, baseText, getText, 
 
   function cancel() {
     if (!editing) return;
-    editing.p.innerHTML = editing.html;
+    editing.p.replaceChildren(...editing.saved.childNodes);
     end();
     say('Put back as it was.');
   }

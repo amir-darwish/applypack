@@ -208,6 +208,8 @@ export function insertIntoSkills(text, term, where) {
 
 /** A work-history heading: where a skills section goes when the resume has none. */
 const WORK_HEADING = /^(?:#{1,6}\s*)?(?:professional\s+)?(?:experience|employment|work history|career)\b/i;
+/** A short line that opens the work history — not a summary sentence that starts with "Experience". */
+const isWorkHeading = (line) => line.trim().length < HEADING_MAX && WORK_HEADING.test(line.trim());
 
 /**
  * Add terms a skills line could not take as a line of their own: after the
@@ -230,14 +232,14 @@ export function appendSkills(text, terms) {
     at = heading;
     for (let i = heading + 1; i < lines.length; i++) {
       const l = lines[i];
-      if (l.trim() === '') break;
+      if (l.trim() === '' || isWorkHeading(l)) break;
       const isLabel = l.trimEnd().endsWith(':');
       if (!termList(l) && !isLabel && l.length < HEADING_MAX && /\p{Lu}/u.test(l) && !/\p{Ll}/u.test(l.replace(/^#+\s*/, ''))) break;
       at = i;
     }
     insert = [`Also: ${clean.join(', ')}`];
   } else {
-    const work = lines.findIndex((l) => WORK_HEADING.test(l.trim()));
+    const work = lines.findIndex(isWorkHeading);
     at = work > 0 ? work - 1 : lines.length - 1;
     // A section of its own, set off by a blank line on either side like the rest.
     insert = [...(lines[at].trim() === '' ? [] : ['']), 'SKILLS', clean.join(', '), ...(work > 0 ? [''] : [])];
