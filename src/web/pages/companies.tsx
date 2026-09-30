@@ -290,7 +290,9 @@ export const CompaniesPage: FC<CompaniesProps> = ({
   const empty = companies.length === 0;
   return (
   <Layout title="Companies" active="companies">
-    <PageHeader title="Companies" meta={`${companies.length} sources`} />
+    <PageHeader title="Companies" meta={`${companies.length} sources`}>
+      The boards and feeds the search reads, and the companies you watch.
+    </PageHeader>
     <Flash flash={flash} />
 
     <WatchlistSection rows={watchlist} />

@@ -312,7 +312,7 @@ const AnswerBlock: FC<{ resumeId: number; advice: ReviewAdvice[]; answers: Revie
                   aria-label={question}
                   class="!w-64 !px-2 !py-1 !text-meta"
                 />
-                <Button size="sm" variant="secondary">
+                <Button variant="secondary">
                   {stored ? 'Update' : 'Save'}
                 </Button>
                 {stored && <Badge tone="ok">answered</Badge>}

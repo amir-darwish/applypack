@@ -290,7 +290,7 @@ const LocalModelCard: FC<{ local: LocalModelView; offerInstall: boolean }> = ({ 
                   </option>
                 ))}
               </Select>
-              <Button size="sm" variant="secondary">
+              <Button variant="secondary">
                 Use it{offerInstall ? '' : ' first'}
               </Button>
             </div>
@@ -374,7 +374,7 @@ const AiStep: FC<WelcomeProps> = ({ ai, steps }) => {
                         mono
                         class="min-w-[12rem] flex-1"
                       />
-                      <Button size="sm" variant="secondary">
+                      <Button variant="secondary">
                         Save
                       </Button>
                     </form>
