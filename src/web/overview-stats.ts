@@ -1,7 +1,7 @@
 import { JobStatus, type Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { funnelView, readCounts, sumDays, type FunnelView } from '../funnel';
-import { KPI_STATUSES, SPARK_DAYS, kpiTrends, topTerms, type KpiStatus, type KpiTrend, type TermCount } from './overview-numbers';
+import { KPI_STATUSES, SPARK_DAYS, kpiTrends, readStackParam, topTerms, type KpiStatus, type KpiTrend, type TermCount } from './overview-numbers';
 import {
   RANGES,
   countByDay,
@@ -61,10 +61,12 @@ export interface OverviewChart {
   stackAllowed: boolean;
 }
 
+/** The last 24 hours in three counts, each with when it last happened — inside the 24 hours or before them. */
 export interface OverviewActivity {
   fetched24h: number;
   lastFetchedAt: Date | null;
   matches24h: number;
+  /** The newest match of the last 30 days; null when there is none in them. */
   lastMatchAt: Date | null;
   alerts24h: number;
   lastAlertAt: Date | null;
@@ -95,7 +97,7 @@ export async function loadOverviewStats(
   const stackAllowed = days <= STACK_DAYS;
   const stack = stackAllowed ? opts.stack : null;
 
-  const [funnelRows, firstFunnelDay, kpiRows, matchRows, fetched, alerts, lastAlert, lastCheck] = await Promise.all([
+  const [funnelRows, firstFunnelDay, kpiRows, matchRows, fetched24h, alerts24h, latest, lastCheck] = await Promise.all([
     prisma.funnelDay.findMany({ where: { day: { gte: dayStart(today - (2 * days - 1)) } } }),
     prisma.funnelDay.findFirst({ orderBy: { day: 'asc' }, select: { day: true } }),
     prisma.job.findMany({
@@ -115,9 +117,10 @@ export async function loadOverviewStats(
       where: { AND: [WAS_MATCH, unmuted], fetchedAt: { gte: sinceStack } },
       select: { fetchedAt: true, techMatch: true },
     }),
-    prisma.job.aggregate({ where: { fetchedAt: { gte: since24h }, ...unmuted }, _count: { _all: true }, _max: { fetchedAt: true } }),
+    prisma.job.count({ where: { fetchedAt: { gte: since24h }, ...unmuted } }),
     prisma.job.count({ where: { alertedAt: { gte: since24h }, ...unmuted } }),
-    prisma.job.aggregate({ where: unmuted, _max: { alertedAt: true } }),
+    // "Latest 2d ago" under a zero: when it last happened at all, not only inside the 24 hours.
+    prisma.job.aggregate({ where: unmuted, _max: { fetchedAt: true, alertedAt: true } }),
     prisma.cronRun.findFirst({
       where: { name: { in: ['fetch', 'fetch-now'] } },
       orderBy: { startedAt: 'desc' },
@@ -126,7 +129,9 @@ export async function loadOverviewStats(
   ]);
 
   const funnelDays = funnelRows.map((r) => ({ day: r.day, counts: readCounts(r.counts) }));
-  const options = topTerms(matchRows, STACK_OPTIONS);
+  // Only what `?stack=` can carry is offered: a tag the classifier wrote with stray
+  // punctuation would be a bar that narrows nothing.
+  const options = topTerms(matchRows, STACK_OPTIONS).filter((o) => readStackParam(o.term) === o.term);
   // A filter nothing in the window names would draw a flat line and explain nothing.
   const term = stack && options.some((o) => o.term === stack) ? stack : null;
 
@@ -145,7 +150,7 @@ export async function loadOverviewStats(
   const recentMatches = matchRows.filter((r) => r.fetchedAt.getTime() >= since24h.getTime());
 
   return {
-    kpi: kpiTrends(kpiRows as Parameters<typeof kpiTrends>[0], now),
+    kpi: kpiTrends(kpiRows, now),
     chart: {
       range,
       stack: term,
@@ -159,12 +164,12 @@ export async function loadOverviewStats(
     funnel: funnelView(sumDays(funnelDays, days, now)),
     stack: { terms: options.slice(0, STACK_BARS), matches: matchRows.length },
     activity: {
-      fetched24h: fetched._count._all,
-      lastFetchedAt: fetched._max.fetchedAt,
+      fetched24h,
+      lastFetchedAt: latest._max.fetchedAt,
       matches24h: recentMatches.length,
-      lastMatchAt: matchRows.reduce<Date | null>((latest, r) => (latest === null || r.fetchedAt > latest ? r.fetchedAt : latest), null),
-      alerts24h: alerts,
-      lastAlertAt: lastAlert._max.alertedAt,
+      lastMatchAt: matchRows.reduce<Date | null>((last, r) => (last === null || r.fetchedAt > last ? r.fetchedAt : last), null),
+      alerts24h,
+      lastAlertAt: latest._max.alertedAt,
     },
     lastCheckedAt: lastCheck?.startedAt ?? null,
   };

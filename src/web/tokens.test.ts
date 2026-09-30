@@ -80,7 +80,7 @@ describe('the :root block', () => {
 
   it('writes a hex for the places a CSS variable cannot reach', () => {
     assert.equal(hex(TOKENS['ink-faint']), '#566173');
-    assert.equal(hex(TOKENS.warn), '#B54708');
+    assert.equal(hex(TOKENS.warn), '#A8470A');
     assert.equal(hex(TOKENS.danger), '#B42318');
   });
 });

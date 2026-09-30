@@ -22,7 +22,7 @@ export const TOKENS = {
   'accent-strong': [4, 116, 85], // text, links, primary button
   'accent-deep': [6, 95, 70], // hover
   ok: [4, 116, 85],
-  warn: [181, 71, 8],
+  warn: [168, 71, 10],
   danger: [180, 35, 24],
   info: [29, 78, 216],
   violet: [109, 40, 217],

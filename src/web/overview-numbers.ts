@@ -16,7 +16,8 @@ export const SPARK_DAYS = 14;
 const DAY_MS = 86_400_000;
 
 export interface KpiRow {
-  status: KpiStatus;
+  /** A job's status as the database writes it; the four the cards show are the ones counted. */
+  status: string;
   fetchedAt: Date;
   alertedAt: Date | null;
   appliedAt: Date | null;

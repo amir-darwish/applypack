@@ -371,7 +371,9 @@ export const JobsListPage: FC<JobsListProps> = ({
                       <span class="block text-right">Fetched</span>,
                     ]}
                   >
-                    {jobs.map((j) => (
+                    {jobs.map((j) => {
+                      const place = placeLine(j, searchPlaces);
+                      return (
                       <Tr>
                         <Td>
                           <a
@@ -407,8 +409,8 @@ export const JobsListPage: FC<JobsListProps> = ({
                         </Td>
                         <Td class="text-ink-muted">
                           {/* The place in a few words — "Remote · USA, Canada +3" — never a row of flags; the tooltip has every country. */}
-                          <div class="truncate" title={placeLine(j, searchPlaces).title}>
-                            {placeLine(j, searchPlaces).text}
+                          <div class="truncate" title={place.title}>
+                            {place.text}
                           </div>
                         </Td>
                         <Td class="whitespace-nowrap">
@@ -443,7 +445,8 @@ export const JobsListPage: FC<JobsListProps> = ({
                           <When at={j.fetchedAt} />
                         </Td>
                       </Tr>
-                    ))}
+                      );
+                    })}
                   </Table>
                 </div>
               </div>

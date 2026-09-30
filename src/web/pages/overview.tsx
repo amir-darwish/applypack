@@ -49,7 +49,6 @@ import type { Tone } from '../format';
 interface JobRow {
   id: number;
   title: string;
-  url: string;
   location: string;
   workplace: WorkplaceCode;
   countries: string[];
@@ -268,7 +267,9 @@ export const OverviewPage: FC<OverviewProps> = ({
           </Card>
 
           <Card>
-            <CardHeader title="Recent activity" info="What the search did in the last 24 hours." />
+            <CardHeader title="Recent activity" info="What the search did in the last 24 hours, and when each last happened.">
+              <span class="shrink-0 text-note text-ink-faint">24 hours</span>
+            </CardHeader>
             <ul class="divide-y divide-line">
               <ActivityRow
                 icon="download"
@@ -279,6 +280,7 @@ export const OverviewPage: FC<OverviewProps> = ({
                 icon="search"
                 title={stats.activity.matches24h > 0 ? `${plural(stats.activity.matches24h, 'match', 'matches')} found` : 'No matches found'}
                 at={stats.activity.lastMatchAt}
+                none="None in the last 30 days"
               />
               <ActivityRow
                 icon="bell"
@@ -439,11 +441,12 @@ const RecentAlerts: FC<{ jobs: JobRow[]; places: string[] }> = ({ jobs, places }
   </Card>
 );
 
-/** One line of what happened: its picture, the count in words, and when it last did. */
-const ActivityRow: FC<{ icon: IconName; title: string; at?: Date | null; detail?: Child; tone?: Tone }> = ({
+/** One line of what happened: its picture, the count in words, and when it last did — or that it never has. */
+const ActivityRow: FC<{ icon: IconName; title: string; at?: Date | null; none?: string; detail?: Child; tone?: Tone }> = ({
   icon,
   title,
   at,
+  none = 'None yet',
   detail,
   tone = 'ok',
 }) => (
@@ -452,7 +455,7 @@ const ActivityRow: FC<{ icon: IconName; title: string; at?: Date | null; detail?
     <div class="min-w-0 flex-1">
       <div class="truncate text-sm font-medium text-ink">{title}</div>
       <div class="mt-0.5 truncate text-note text-ink-faint">
-        {detail ?? (at ? <>Latest <When at={at} /></> : 'Nothing yet')}
+        {detail ?? (at ? <>Latest <When at={at} /></> : none)}
       </div>
     </div>
   </li>

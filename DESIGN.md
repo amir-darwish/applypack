@@ -15,7 +15,7 @@ colors:
   accent-strong: "#047455"
   accent-deep: "#065F46"
   ok: "#047455"
-  warn: "#B54708"
+  warn: "#A8470A"
   danger: "#B42318"
   info: "#1D4ED8"
   violet: "#6D28D9"
@@ -205,10 +205,10 @@ surface it can sit on; a value that fails does not ship.
 - **OK Green** (#047455): Applied status, enabled toggles, healthy runs, fit
   scores ≥ 85, a rising trend.
 - **Info Blue** (#1D4ED8): New status, fit scores 70–84.
-- **Warn Orange** (#B54708): Alerted status, mid fit scores (50–69), warn
-  flashes. Warmer since 2.40.0 (it was the browner #A24F0A), and still 4.56:1
-  on its own pill. The solid `warn` button variant is defined in `ui.tsx` and
-  no page uses it.
+- **Warn Orange** (#A8470A): Alerted status, mid fit scores (50–69), warn
+  flashes. A shade warmer since 2.40.0 (it was the browner #A24F0A), and
+  4.9:1 on its own pill. The solid `warn` button variant is defined in
+  `ui.tsx` and no page uses it.
 - **AI Violet** (#6D28D9): the Saved status and AI-spend actions only — see the
   named rule below.
 - **Danger Red** (#B42318): destructive actions and error flashes; the word is
@@ -415,7 +415,7 @@ decisions live there and in the token layer, not in page files.
 - **Danger:** the word in danger red on the secondary button's outline; hover
   tints the fill 5% and the border 40% danger. Never solid red, and never a
   red outline at rest — a column of Deletes must not shout.
-- **Warn:** solid orange (#B54708), white text. Defined, unused: the pause
+- **Warn:** solid orange (#A8470A), white text. Defined, unused: the pause
   acts use the secondary button.
 - **Ghost:** borderless muted-ink text; hover subtle fill + ink text. For
   tertiary row actions.

@@ -3,9 +3,10 @@ import type { FC } from 'hono/jsx';
 
 /*
  * One icon family for every page (DESIGN.md, the Drawn-Icon Rule): Lucide's
- * paths (ISC licence, https://lucide.dev), drawn on the 24px grid as strokes
- * in the text colour. Inline SVG, so no page fetches an icon and no client
- * runtime draws one. A new icon is a new row here, never a second family.
+ * paths (ISC licence — LICENSE-lucide.txt beside this file), drawn on the
+ * 24px grid as strokes in the text colour. Inline SVG, so no page fetches an
+ * icon and no client runtime draws one. A new icon is a new row here, never a
+ * second family.
  */
 const PATHS = {
   activity:

@@ -59,7 +59,23 @@ overviewRoute.get('/', async (c) => {
       where: { status: { in: [JobStatus.ALERTED, JobStatus.NEW] }, ...unmuted },
       orderBy: [{ alertedAt: 'desc' }, { fetchedAt: 'desc' }],
       take: RECENT_LIMIT,
-      include: { company: { select: { name: true } } },
+      // The columns a row draws and no more: the page refreshes every 30 seconds,
+      // and `include` carried eight descriptions with it each time.
+      select: {
+        id: true,
+        title: true,
+        location: true,
+        workplace: true,
+        countries: true,
+        regions: true,
+        techMatch: true,
+        fitScore: true,
+        fetchedAt: true,
+        alertedAt: true,
+        status: true,
+        employer: true,
+        company: { select: { name: true } },
+      },
     }),
     Promise.all(
       CRON_NAMES.map((name) =>
