@@ -1,4 +1,5 @@
 import { DEFAULT_RANGE, countByDay, dailySeries, type RangeKey } from './stats-series';
+import { techKey } from './tech-label';
 
 /*
  * The Overview's numbers, shaped for the page (pure): the four status cards
@@ -73,7 +74,7 @@ export interface TermCount {
 export function topTerms(rows: readonly { techMatch: readonly string[] }[], max: number): TermCount[] {
   const counts = new Map<string, number>();
   for (const row of rows) {
-    for (const term of new Set(row.techMatch.map((t) => t.trim().toLowerCase()).filter((t) => t.length > 0))) {
+    for (const term of new Set(row.techMatch.filter((t) => t.trim().length > 0).map(techKey))) {
       counts.set(term, (counts.get(term) ?? 0) + 1);
     }
   }

@@ -130,3 +130,64 @@ test('addKeywords gives terms no list line can take a line of their own', async 
   const tight = 'SKILLS\nComfortable across the stack.\nExperience\n• Built things.';
   assert.match(addKeywords(tight, [{ term: 'Kafka' }]).text, /stack\.\nAlso: Kafka\nExperience\n/);
 });
+
+// Found by the 2026-09-30 review: a bullet or a title with "stack" in it opened a
+// "skills section", and the keyword went into a job's stack line or its dates line.
+const WORK_STACK = [
+  'Jane Doe',
+  'jane@example.com | +1 555 0100',
+  '',
+  'SKILLS',
+  'Languages: PHP, JavaScript, TypeScript',
+  'Frameworks: Laravel, Vue.js',
+  '',
+  'EXPERIENCE',
+  'Senior Full-Stack Engineer',
+  'Acme Corp | Berlin | 2020 – Present',
+  '- Built full-stack checkout features',
+  'Technology Stack: PHP, Laravel, MySQL, Redis',
+].join('\n');
+
+test('a keyword never lands on a job’s stack line or its dates line', async () => {
+  const { addKeywords } = await mod;
+  const r = addKeywords(WORK_STACK, [{ term: 'Kafka' }]);
+  assert.deepEqual(r.failed, []);
+  assert.equal(r.text.split('\n').find((l) => l.includes('Kafka')), 'Frameworks: Laravel, Vue.js, Kafka');
+});
+
+test('a role dated any of the usual ways closes the skills section', async () => {
+  const { addKeywords } = await mod;
+  for (const dates of ['Jan 2020 – Mar 2022', '03/2020 - 05/2022', '2019-Present']) {
+    const text = ['Jane Doe', '', 'SKILLS', 'Languages: PHP, Go', 'Where I worked', `Acme Corp, ${dates}`, 'Stack: MySQL, Redis'].join('\n');
+    const line = addKeywords(text, [{ term: 'Kafka' }]).text.split('\n').find((l) => l.includes('Kafka'));
+    assert.equal(line, 'Languages: PHP, Go, Kafka', dates);
+  }
+});
+
+test('with no skills section the keywords get one of their own, never a line inside a role', async () => {
+  const { addKeywords } = await mod;
+  const text = 'Jane Doe\n\nEXPERIENCE\nAcme Corp — Senior Engineer, 2020 – Present\n- Built full-stack checkout features\n- Led migration to AWS';
+  const lines = addKeywords(text, [{ term: 'Kafka' }, { term: 'Redis' }]).text.split('\n');
+  assert.deepEqual(lines.slice(0, 5), ['Jane Doe', '', 'SKILLS', 'Kafka, Redis', '']);
+});
+
+test('two last lines cut in a row come back in their own order, whichever is undone first', async () => {
+  const { applyAll, addKeywords } = await mod;
+  const { undoEdit } = await edits;
+  const text = 'Jane Doe\nSKILLS\nLanguages: PHP, Go\nEXPERIENCE\nAcme | 2020 – Present\n• Built the API\nInterests: chess, hiking\nReferences available on request';
+  const cards = applyAll(text, [
+    { key: 'refs', kind: 'remove', quote: 'References available on request' },
+    { key: 'int', kind: 'remove', quote: 'Interests: chess, hiking' },
+  ]);
+  const words = addKeywords(cards.text, [{ term: 'Kafka', where: 'Skills' }]);
+  const done = [...cards.done, ...words.done];
+  for (const order of [['refs', 'int', 'kw:Kafka'], ['int', 'refs', 'kw:Kafka'], ['kw:Kafka', 'refs', 'int']]) {
+    let t = words.text;
+    for (const key of order) {
+      const back = undoEdit(t, done.find((d) => d.key === key)!.edit);
+      assert.ok(!('error' in back), `${order.join(' → ')}: ${key}`);
+      t = back.text;
+    }
+    assert.equal(t, text, order.join(' → '));
+  }
+});

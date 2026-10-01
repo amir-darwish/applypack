@@ -126,7 +126,7 @@
 - `src/screening/` is employer mode (TASKS §19, ADR 0047–0052): `rubric.ts`,
   `redact.ts`, `dates.ts`, `prompts.ts`, `anchor.ts`, `score.ts`,
   `trajectory.ts`, `comparison.ts`, `calibration.ts`, `bench.ts`,
-  `intake.ts`, `export.ts`, `notice.ts` are pure (tested); `store.ts` is
+  `intake.ts`, `export.ts`, `notice.ts`, `sectors.ts` are pure (tested); `store.ts` is
   the only file in the module that touches Prisma (the worker's
   `cleanup-job.ts` deletes expired screenings with its own query, because
   the worker may not import this module); `batch.ts` and `compare.ts` run the
@@ -637,7 +637,7 @@ prompt at 8 searches (~2100) stays under it, and the `claude_code` CLI sets no
 model's floor and reading `usage.cache_read_input_tokens` back.
 
 ### 4. RemoteOK puts a meta object at `array[0]`
-Their `/api` returns `[{legal: "…", last_updated: …}, …jobs]`. **`.slice(1)` is mandatory** before zod-validating jobs. See [remoteok.ts:46-48](src/fetchers/remoteok.ts#L46-L48).
+Their `/api` returns `[{legal: "…", last_updated: …}, …jobs]`. **`.slice(1)` is mandatory** before zod-validating jobs. See [remoteok.ts:52-53](src/fetchers/remoteok.ts#L52-L53).
 
 ### 5. `stripHtml` had to learn numeric entities
 HN comments use `&#x2F;` (`/`), `&#x27;` / `&#39;` (`'`), `&#x26;` (`&`). The first version of `stripHtml` only knew named entities (`&amp;`, `&lt;` …) and let numeric ones leak into title/location. We now decode `&#xHH;` and `&#NN;` patterns generically — see [http.ts:stripHtml](src/http.ts).
@@ -648,7 +648,7 @@ The "Company is hiring …" pattern initially captured "Sumble is the newco from
 - Pronoun blocklist on captured value (`We`, `I`, `Our`, …)
 - `/\.\s/` post-check rejects captures spanning a sentence
 
-See [hn-parser.ts:32-44](src/fetchers/hn-parser.ts#L32-L44).
+See [hn-parser.ts:27-40](src/fetchers/hn-parser.ts#L27-L40) and the sentence check at [hn-parser.ts:78](src/fetchers/hn-parser.ts#L78).
 
 ### 7. Prisma migrations baseline isn't automatic
 When the project switched from `db push` to real migrations in phase-3.0, we couldn't just run `prisma migrate dev --name baseline` — it would have wiped the database. The procedure was:
@@ -672,7 +672,7 @@ Greenhouse / Lever / Ashby / Workable / SmartRecruiters are **HR vendors, not jo
 Coverage is therefore **two-tier**:
 
 1. **Direct boards** (per-company, narrow but precise) — `Company` rows with `atsType ∈ {GREENHOUSE, LEVER, ASHBY, WORKABLE, SMARTRECRUITERS, RECRUITEE, BREEZY, BAMBOOHR, PINPOINT, RIPPLING, PERSONIO, TEAMTAILOR}`. Curated by the user via `/companies` (paste a board URL → manual probe → save) or seeded in `src/seed.ts`. Catches every job at the companies you've added; misses everything else.
-2. **Cross-company aggregators** (broad but noisy) — `LARAJOBS_RSS`, `REMOTEOK`, `REMOTIVE`, `JOBICY`, `WEWORKREMOTELY`, `HN_HIRING`, `HN_JOBS`, `ARBEITNOW`, `GOLANGPROJECTS`, `WORKINGNOMADS`, `HIMALAYAS`, `FOURDAYWEEK`, `SOLIDJOBS`, `DEVITJOBS`, `LANDINGJOBS`, `JOBTECH`, `ADZUNA`, `FRANCETRAVAIL` (both need the user's key). Each is a single synthetic Company row that ingests jobs from many employers we'd never seed individually (PSI CRO, ManTech, DoorDash, Lemon.io, …). Catches the long tail; lets `passesBaseFilter` + Claude cull the noise.
+2. **Cross-company aggregators** (broad but noisy) — `LARAJOBS_RSS`, `REMOTEOK`, `REMOTIVE`, `JOBICY`, `WEWORKREMOTELY`, `HN_HIRING`, `HN_JOBS`, `ARBEITNOW`, `GOLANGPROJECTS`, `WORKINGNOMADS`, `HIMALAYAS`, `FOURDAYWEEK`, `SOLIDJOBS`, `DEVITJOBS`, `LANDINGJOBS`, `JOBTECH`, `DOU`, `DJINNI`, `ADZUNA`, `FRANCETRAVAIL` (the last two need the user's key). Each is a single synthetic Company row that ingests jobs from many employers we'd never seed individually (PSI CRO, ManTech, DoorDash, Lemon.io, …). Catches the long tail; lets `passesBaseFilter` + Claude cull the noise.
 
 Common user trap: disabling all aggregators in `/settings → Job sources` because "I want only Greenhouse" produces near-zero new jobs (a fresh install has no employer board switched on — they arrive as starter packs, and most post a matching role rarely; ADR 0040). The cure is to **leave aggregators enabled** and let the profile filter narrow scope. Document this in any user-facing copy that talks about "monitoring".
 
@@ -897,7 +897,7 @@ Three lessons paid for with one broken evening (2026-08-30):
 
 ## ATS templates (when adding a new source)
 
-Three reference patterns, copy whichever fits the new source:
+Reference patterns, one per feed shape — copy whichever fits the new source:
 
 | Shape of the new ATS | Reference file | Examples |
 | --- | --- | --- |

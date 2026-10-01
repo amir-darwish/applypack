@@ -238,3 +238,21 @@ test('a name that opens lowercase on purpose keeps its own spelling', () => {
 test('a clean report says nothing — the ready line already covers it', () => {
   assert.equal(advice({ keywords: [kw({ term: 'PHP', primary: true, evidence: 'measured' })] }), null);
 });
+
+test('a must in an either/or group another member answers asks for nothing (Fernway, 2026-09-30)', () => {
+  const group = 'Node.js framework';
+  const keywords = [
+    kw({ term: 'TypeScript', primary: true, evidence: 'measured' }),
+    kw({ term: 'Express', group, evidence: 'described' }),
+    kw({ term: 'Fastify', group, evidence: 'measured' }),
+    kw({ term: 'NestJS', group, status: 'cannot_claim', evidence: 'absent' }),
+  ];
+  assert.equal(advice({ keywords }), null);
+  // The group still speaks when nobody in it is written: the first member is asked about.
+  const none = keywords.map((k) => (k.group ? { ...k, status: 'cannot_claim' as const, evidence: 'absent' as const } : k));
+  assert.equal(advice({ keywords: none }), 'Express is a must here and nothing backs it yet — confirm it where it is true.');
+  // And a member shown at work covers one only named in a list.
+  const listed = [keywords[0]!, kw({ term: 'Express', group, evidence: 'listed' }), kw({ term: 'Fastify', group, evidence: 'measured' })];
+  assert.equal(advice({ keywords: listed }), null);
+  assert.equal(readyToApply({ ...input({ keywords: listed }), score: 95, threshold: 85, edits: 0 }), true);
+});

@@ -108,7 +108,7 @@ install, unchanged.
   drag and drop, the resume each application went out with, and a nudge
   when one goes quiet for two weeks.
 
-Underneath: a five-step first run that ends with your first matches, five
+Underneath: a five-step first run that ends with your first matches, six
 AI engines with automatic failover, untrusted-text markers around every
 posting a model reads (a test fails the build without them), board
 discovery from HN comments, an alert when a board goes quiet, and an
@@ -175,7 +175,7 @@ counts which engine served your calls in the last seven days.
 
 ## Bring your own AI
 
-Five backends, and you can attach every subscription and key you own:
+Six backends, and you can attach every subscription and key you own:
 
 | Engine | What it is | Billing |
 | --- | --- | --- |
@@ -260,7 +260,7 @@ Postgres 16
 
 ```bash
 npm run lint:types   # tsc --noEmit
-npm test             # 2,300+ unit tests on the pure modules, in three seconds
+npm test             # 2,700+ unit tests on the pure modules, in a few seconds
 ```
 
 > **Docs map:** [docs/install.md](./docs/install.md) — installing, per
@@ -280,7 +280,7 @@ Ideas are as welcome as patches, and the roadmap is the
 entry points:
 
 - **Add a job source.** The highest-value contribution and close to a
-  one-file change: CLAUDE.md ships three copy-paste fetcher templates.
+  one-file change: CLAUDE.md ships copy-paste fetcher templates, one per feed shape.
   Unsure it fits the sourcing policy? Open a
   [source proposal](https://github.com/applypack/applypack/issues/new?template=new_source.yml)
   first.

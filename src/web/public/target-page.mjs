@@ -294,7 +294,13 @@ export function init(data) {
     const lines = editor.value.split('\n');
     let offset = 0;
     for (const line of lines) {
-      if (wanted && line.toLowerCase().includes(wanted) && line.length < 60) { select(offset, offset + line.length); return; }
+      if (wanted && line.toLowerCase().includes(wanted) && line.length < 60) {
+        // The document is the default view, and the textarea behind it is hidden:
+        // outline the heading there, or open the text where the caret can land.
+        if (resumeView === 'doc' && docPane?.locate(line.trim())) return;
+        select(offset, offset + line.length);
+        return;
+      }
       offset += line.length + 1;
     }
   }
@@ -308,6 +314,7 @@ export function init(data) {
   }
 
   function select(start, end) {
+    if (resumeView !== 'text') showView('text');
     editor.focus();
     editor.setSelectionRange(start, end);
     scrollEditorTo(start);
@@ -772,6 +779,8 @@ export function init(data) {
         if (card) say(card, REASON['not-found'], true);
         return;
       }
+      // The document could not outline it (a line it draws differently): the text can.
+      if (resumeView !== 'text') showView('text');
       located = loc;
       render();
       const line = editor.value.slice(0, loc.start).split('\n').length;

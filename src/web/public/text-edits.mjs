@@ -114,7 +114,7 @@ export function removeSpan(text, quote) {
     // The last item of a list takes the separator before it: after it there is none.
     if (after.trim() === '' && !bareBefore) {
       while (from > start && SEPARATOR_CHAR.test(text[from - 1])) from--;
-    } else if (bareBefore || SEPARATOR_AT.test(text.slice(from - 2, from))) {
+    } else if (bareBefore || SEPARATOR_AT.test(text.slice(from - 2, from)) || LABEL_AT.test(before)) {
       while (to < end && SEPARATOR_CHAR.test(text[to])) to++;
     }
   }
@@ -130,6 +130,8 @@ export function removeSpan(text, quote) {
 /** What stands between two items of a line — a cut takes one side's with it. */
 const SEPARATOR_CHAR = /[\s,;·∙•|]/;
 const SEPARATOR_AT = /[,;·∙•|]\s?$/;
+/** A label before the cut ("Skills: ", "Tools — "): the first item goes with the separator after it. */
+const LABEL_AT = /(?::|\s[–—])\s*$/;
 
 /** The separators a skills line uses between terms, most specific first. */
 const SEPARATORS = [' | ', ' · ', ' • ', '; ', ', '];
@@ -155,6 +157,24 @@ function termList(line) {
 
 const SKILLS_HEADING = /skills|technolog|stack|competenc/i;
 const HEADING_MAX = 60;
+/** The section names a resume writes in ordinary case ("Technical Skills", "Experience:"). */
+const HEADING_WORDS =
+  /^(?:(?:key|core|technical|professional|relevant|work|career|employment)\s+)?(?:skills?(?:\s+(?:and|&)\s+tools)?|technologies|tech(?:nology)?\s+stack|competencies|expertise|summary|profile|experience|employment|history|education|projects|certifications?|languages|interests|awards|publications|references)$/i;
+/** A role's dates ("2020 – Present"): a line carrying them is work history, never a skills line. */
+const DATE_RANGE = /\b(?:19|20)\d{2}\s*[–—-]\s*(?:(?:[a-z]{3,9}\.?\s+|\d{1,2}[/.])?(?:19|20)\d{2}|present|current|now)\b/i;
+
+/**
+ * A line that opens a section: `## Skills`, a shouted line, or the whole line one
+ * of the usual names. A bullet ("- Built full-stack checkout"), a job title
+ * ("Senior Full-Stack Engineer") or a list is not one — the first walk read each
+ * of those as a skills heading and wrote the keyword into a job's stack line.
+ */
+function isSectionHeading(line) {
+  if (line.trim() === '' || line.length >= HEADING_MAX || BULLET.test(line) || termList(line)) return false;
+  if (/^\s*#{1,6}\s/.test(line)) return true;
+  const t = line.trim().replace(/\s*:$/, '');
+  return (/\p{Lu}/u.test(t) && !/\p{Ll}/u.test(t)) || HEADING_WORDS.test(t);
+}
 
 /**
  * Add `term` to a skills line. Only ever writes inside a skills section: a term
@@ -175,12 +195,10 @@ export function insertIntoSkills(text, term, where) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const list = termList(line);
-    // A bare label ("Programming:") belongs to the section it sits in and must
-    // not close it — every stored resume stacks its labels that way.
-    const isLabel = line.trimEnd().endsWith(':');
-    if (!list && !isLabel && line.trim() !== '' && line.length < HEADING_MAX) {
-      underHeading = SKILLS_HEADING.test(line);
-    }
+    // A bare label ("Programming:") is no heading and leaves the section open —
+    // every stored resume stacks its labels that way; a role's dates close it.
+    if (isSectionHeading(line)) underHeading = SKILLS_HEADING.test(line);
+    else if (DATE_RANGE.test(line)) underHeading = false;
     if (list && underHeading && !isContactLine(line)) lists.push({ i, ...list });
   }
   if (lists.length === 0) return { error: 'no-skills-list' };
@@ -224,7 +242,7 @@ export function appendSkills(text, terms) {
   );
   if (clean.length === 0) return { error: 'already-present' };
   const lines = text.split('\n');
-  const heading = lines.findIndex((l) => l.trim().length < HEADING_MAX && SKILLS_HEADING.test(l) && !termList(l));
+  const heading = lines.findIndex((l) => isSectionHeading(l) && SKILLS_HEADING.test(l));
   let at;
   let insert;
   if (heading >= 0) {
@@ -364,10 +382,6 @@ function locateEdit(text, edit) {
   const leadAt = lead.length > 0 && at >= lead.length && text.slice(at - lead.length, at) === lead;
   const trailAt = trail.length > 0 && text.slice(at + ins.length, at + ins.length + trail.length) === trail;
   if (insertedAt && (leadAt || trailAt || (lead.length === 0 && trail.length === 0))) return at;
-  // No trail means the edit ended the text, no lead that it opened it — the
-  // ends of the text are anchors of their own, whatever changed next to them.
-  if (trail.length === 0 && text.endsWith(ins)) return text.length - ins.length;
-  if (lead.length === 0 && text.startsWith(ins)) return 0;
   const sides = [[lead, trail]];
   if (edit.leadUnique !== false) sides.push([lead, '']);
   if (edit.trailUnique !== false) sides.push(['', trail]);
@@ -377,5 +391,12 @@ function locateEdit(text, edit) {
     const first = text.indexOf(needle);
     if (first !== -1 && text.indexOf(needle, first + 1) === -1) return first + before.length;
   }
+  // No trail means the edit ended the text, no lead that it opened it — the
+  // ends of the text are anchors of their own, but only once the context found
+  // nothing: two last lines cut in a row and undone out of order came back
+  // swapped when the end was asked first (a removal inserts '', which every
+  // text ends with).
+  if (trail.length === 0 && text.endsWith(ins)) return text.length - ins.length;
+  if (lead.length === 0 && text.startsWith(ins)) return 0;
   return null;
 }

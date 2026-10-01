@@ -190,3 +190,30 @@ test('joinWrapped keeps a finished sentence apart and joins a broken one', () =>
   assert.deepEqual(joinWrapped(['• First bullet', '• Second bullet']), ['• First bullet', '• Second bullet']);
   assert.deepEqual(joinWrapped(['Company,', 'Somewhere']), ['Company, Somewhere']);
 });
+
+test('a heading in ordinary case is a section when the whole line is one', () => {
+  const r = structureFromText(
+    'Dana Ruiz\nLisbon, Portugal | dana@example.com\n\nSummary\nFull-stack engineer.\n\nWork experience:\nSenior Developer - Harborline, 2022-present\n- Built the dispatch API\n\nEducation\nBSc Computer Science, 2019\n\nSkills & Tools\nTypeScript, React, PostgreSQL\n',
+  );
+  assert.deepEqual(r.headings, { summary: 'Summary', work: 'Work experience', education: 'Education', skills: 'Skills & Tools' });
+  assert.equal(r.basics.summary, 'Full-stack engineer.');
+  assert.equal(r.work.length, 1);
+  assert.deepEqual(r.basics.lines, []);
+});
+
+test('a wrapped line that opens with a section word stays content', () => {
+  const r = structureFromText('Alex\n\nSUMMARY\nTen years of backend work, with\nExperience in payments\nand logistics.\n');
+  assert.equal(Object.keys(r.headings).length, 1);
+  assert.match(r.basics.summary ?? '', /Experience in payments/);
+});
+
+test('a contact line that opens with the title gives the label, and a date takes its comma with it', () => {
+  const r = structureFromText(
+    'Dana Ruiz\nSenior Full-Stack Developer | dana@example.com | github.com/dana | Lisbon, Portugal\n\nExperience\nSenior Developer - Harborline (remote), 2022-present\n- Built the dispatch API\n',
+  );
+  assert.equal(r.basics.label, 'Senior Full-Stack Developer');
+  assert.deepEqual(r.basics.lines, []);
+  assert.equal(r.basics.location, 'Lisbon, Portugal');
+  assert.equal(r.work[0]?.position, 'Senior Developer - Harborline (remote)');
+  assert.equal(r.work[0]?.startDate, '2022');
+});

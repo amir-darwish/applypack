@@ -82,6 +82,10 @@ test('documentFileName keeps the resume’s own name and nothing a file system r
   assert.equal(documentFileName('cv: final/v2 "real".docx', 'docx'), 'cv final v2 real.docx');
   assert.equal(documentFileName('   ', 'docx'), 'Resume.docx');
   assert.equal(documentFileName('x'.repeat(200), 'pdf').length, 84);
+  // An emoji astride the cut is kept whole or left out, never halved: half of one broke the download.
+  const name = documentFileName(`${'x'.repeat(79)}🚀 resume`, 'pdf');
+  assert.equal(name, `${'x'.repeat(79)}🚀.pdf`);
+  assert.doesNotThrow(() => contentDisposition(name));
 });
 
 test('contentDisposition carries a Cyrillic name without breaking the header', () => {
