@@ -24,7 +24,7 @@ Five presets bend the draft (Standard, Junior hire, Senior / lead,
 Regulated, Agency work); a criterion naming age, gender, family, origin or
 health is refused with the lawful criterion offered instead.
 
-<img src="./screenshots/screening-criteria.png" alt="A screening: the position card, and the criteria card showing every criterion as a chip — gates, skills with stars, level, sector, impact — with a button that opens the editor" width="900">
+<img src="./screenshots/employer-criteria.png" alt="A screening: the position card, the criteria card with every criterion as a chip — four gates, skills with stars, level, sector — and the applicants card that takes files, a zip or a folder" width="900">
 
 **Blind by construction.** Resumes go in as files, a zip or a whole folder
 with its subfolders; a second document of someone already in the list is
@@ -53,7 +53,7 @@ beside the score sit the facts the criteria did not ask for ("stands out",
 each with its line), the career read off the dates, and your own ±30
 adjustment with its reason, which the export carries.
 
-<img src="./screenshots/screening-scorecard.png" alt="A scorecard: who / did / verdict, the stands-out facts with their quotes, and one row per criterion with the answer, the line from the resume and the points" width="900">
+<img src="./screenshots/employer-scorecard.png" alt="Applicant №1's scorecard: who, did and verdict, three facts that stand out with their lines, a row per criterion with the answer and the quote, and how the score of 53 was made" width="900">
 
 **The shortlist, argued on one page.** Tick two to five applicants →
 Compare: one column each, one row per criterion with the quotes, no new
@@ -64,7 +64,7 @@ first two — and where the two readings disagree, which is information,
 not a bug. Never a score; the table keeps its order. Copy as Markdown for
 the meeting.
 
-<img src="./screenshots/screening-compare.png" alt="Compare with AI: three applicants read head to head, the order to talk to from two readings, where they agree and differ per criterion" width="900">
+<img src="./screenshots/employer-compare.png" alt="Compare with AI: three applicants read head to head twice, the two readings agree on the order, the questions that would decide between the first two, and per criterion who is ahead and whether the readings agree" width="900">
 
 **Does it rank the way you do?** The decision column is yours alone; the
 tool never writes it. Once three decisions with a To interview and a
@@ -76,7 +76,7 @@ tell your picks from the rest. It never re-weights a criterion by itself —
 that is the editor, and yours. `npm run bench:screen` does the same over a
 ranked gold folder, writing nothing.
 
-<img src="./screenshots/screening-calibration.png" alt="Calibration: one of two interview picks in the table's top two, three quarters of the decided pairs ordered the way you did, the one surprise with the gates behind it, and the per-criterion gaps between the interviewed and the declined" width="900">
+<img src="./screenshots/employer-calibration.png" alt="Calibration: one of two interview picks in the table's top two, 82 percent of the decided pairs (9 of 11) ordered the way you decided, the surprise and why, and per-criterion gaps between the interviewed and the declined" width="900">
 
 CSV and Markdown carry the whole table; the screening is deleted with its
 files on its retention date (90 days by default) or at once from its page,

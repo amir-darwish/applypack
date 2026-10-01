@@ -7,8 +7,10 @@ Static landing for the project. Zero build step, zero dependencies —
   landing embeds the same demo in its hero (both pages load
   `demo/demo.mjs`). `employers/` is employer mode's own page; the landing
   keeps a short section that links to it. `sitemap.xml` lists the three.
-- `tour.webm` is the README's tour as a 20-second video for the launch
-  posts (the recipe is in `docs/screenshots/README.md`).
+- `tour.webm` (VP9) and `tour.mp4` (H.264, for Safari) are the README's
+  tour as a 25-second video, shown in the landing's Tour section with
+  `img/tour-poster.webp` as its poster, and linked from the launch posts
+  (the recipe is in `docs/screenshots/README.md`).
 - `demo/score.mjs`, `demo/target.mjs` and `demo/evidence.mjs` are byte copies of
   `src/web/public/` (enforced by `src/web/site-vendor.test.ts` — re-copy
   when they change); `demo/fixture.json` is the synthetic Fernway /
@@ -18,11 +20,10 @@ Static landing for the project. Zero build step, zero dependencies —
   so the page does not block on a third-party stylesheet.
 - `img/*.webp` are crops of `docs/screenshots/` (`cwebp -q 82`, plus a
   `-720` copy of each; re-make them when those regenerate): `jobs.webp`
-  from `jobs-list.png`, `resume-score.webp` from `tailor-resume.png`, and
-  each `screening-*.webp` from the `.png` of the same name;
-  `resume-score.webp` is the content column of `tailor-resume.png`
-  (`cwebp -q 82 -crop 256 0 1168 656`); `img/og-employers.png` is the top
-  of `screening-scorecard.png` at 1280×640 (a PNG, which every preview
+  is `jobs-ranked.png` whole, `resume-score.webp` is the score card of
+  `tailor-score.png` (`cwebp -q 82 -crop 256 16 1168 610`), and each
+  `screening-<name>.webp` is `employer-<name>.png`; `img/og-employers.png` is the
+  top of `employer-scorecard.png` (its content column, x 240–1440, y 0–600) at 1280×640 (a PNG, which every preview
   reads). `img/og.png` is a copy of
   `docs/brand/social-card.png`, and `img/apple-touch-icon.png` is
   `favicon.svg` rendered at 180 px.

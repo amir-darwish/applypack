@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Drives headless Chrome over the DevTools protocol against the scratch ApplyPack:
-//   node record.js shots <outdir>   → 1440×900 fold screenshots (jobs-list.png, tailor-resume.png)
-//   node record.js gif <outdir>     → screencast frames + list.txt for ffmpeg (1200×760)
+//   node record.js shots <outdir>   → 1440×900 fold screenshots (overview-dashboard, jobs-ranked, tailor-score, tailor-document)
+//   node record.js screening <outdir> → the four employer-mode stills (employer-*.png)
+//   node record.js gif <outdir>     → screencast frames + captions.json for build-gif.py (1440×900)
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -11,6 +12,10 @@ const CHROME = process.env.CHROME_BIN || '/Applications/Google Chrome.app/Conten
 const BASE = process.env.BASE || 'http://127.0.0.1:4949';
 const JOB = process.env.JOB || '14';
 const MATCH = process.env.MATCH || '1';
+const RESUME = process.env.RESUME || '1';
+const SCREEN = process.env.SCREEN || '1';
+const APPLICANT = process.env.APPLICANT || '1';
+const COMPARE = process.env.COMPARE || '1,3,2';
 const mode = process.argv[2];
 const OUT = path.resolve(process.argv[3] || 'out');
 fs.mkdirSync(OUT, { recursive: true });
@@ -121,14 +126,43 @@ async function main() {
   const loaded = () => new Promise((res) => { const off = cdp.on('Page.loadEventFired', () => { off(); res(); }); });
   const goto = async (url) => { const p = loaded(); await cdp.send('Page.navigate', { url: BASE + url }); await p; await sleep(450); };
 
+  // Scroll the dashboard's own scroller (#main) so `sel` (optionally starting with `text`) sits `top` px from the viewport top.
+  const scrollTo = async (sel, text, top = 24) => {
+    await evalJs(`(() => {
+      const el = [...document.querySelectorAll(${JSON.stringify(sel)})].find((e) => !${JSON.stringify(text || '')} || e.textContent.trim().startsWith(${JSON.stringify(text || '')}));
+      const main = document.getElementById('main');
+      if (el && main) main.scrollBy({ top: el.getBoundingClientRect().top - ${top}, behavior: 'instant' });
+      return 'ok';
+    })()`);
+    await sleep(250);
+  };
+  const applyAll = () => evalJs(`(() => { document.querySelector('button[data-apply-all][data-goto-tab]').click(); return 'ok'; })()`);
+
   try {
-    if (mode === 'shots') {
+    if (mode === 'shots' || mode === 'screening') {
       await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-      const shots = [['jobs-list', '/jobs?sort=fitScore_desc'], ['tailor-resume', `/jobs/${JOB}/target?match=${MATCH}`]];
-      for (const [name, url] of shots) {
+      const shots = [
+        ['overview-dashboard', '/'],
+        ['jobs-ranked', '/jobs?sort=fitScore_desc'],
+        ['tailor-score', `/jobs/${JOB}/target?match=${MATCH}`],
+        // After Apply all: the suggestion cards marked Applied beside the resume drawn as a document, the changes in green.
+        ['tailor-document', `/jobs/${JOB}/target?match=${MATCH}`, async () => { await applyAll(); await sleep(2500); await scrollTo('#panes', '', 12); await sleep(800); }],
+      ];
+      if (mode === 'screening') {
+        // docs/employer-mode.md and the site's employers/ page: the screening built in the README's §5.
+        shots.length = 0;
+        shots.push(
+          ['employer-criteria', `/screen/${SCREEN}`],
+          ['employer-scorecard', `/screen/${SCREEN}/applicants/${APPLICANT}`],
+          ['employer-compare', `/screen/${SCREEN}/compare?ids=${COMPARE}`, async () => { await scrollTo('h2', 'Compare with AI', 24); }],
+          ['employer-calibration', `/screen/${SCREEN}`, async () => { await scrollTo('p', '1 of your', 520); }],
+        );
+      }
+      for (const [name, url, prep] of shots) {
         await goto(url);
         await evalJs(`document.getElementById('__cur').remove(); document.getElementById('__cap').remove(); 'ok'`);
-        await sleep(350);
+        if (prep) await prep();
+        await sleep(600);
         const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: 1440, height: 900, scale: 1 } });
         fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(data, 'base64'));
         console.log('shot', name);
@@ -166,79 +200,61 @@ async function main() {
       await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
     };
     const clickAndLoad = async (rect) => { const p = loaded(); await click(rect); await p; await sleep(450); };
-
-    const typeText = async (text, ms = 85) => {
-      for (const ch of text) {
-        await evalJs(`(() => { const ed = document.getElementById('editor'); ed.focus(); ed.value += ${JSON.stringify(ch)}; ed.setSelectionRange(ed.value.length, ed.value.length); ed.scrollTop = ed.scrollHeight; ed.dispatchEvent(new Event('input', { bubbles: true })); return 'ok'; })()`);
-        await sleep(ms);
-      }
-      console.log('editor ends with:', await evalJs(`document.getElementById('editor').value.slice(-40)`));
+    const moveAndClick = async (sel, text, load = true) => {
+      const r = await find(sel, text);
+      await cursorTo(r.x, r.y);
+      await sleep(300);
+      if (load) await clickAndLoad(r); else await click(r);
+      return r;
     };
 
-    await goto('/jobs?sort=fitScore_desc');
+    await goto('/');
     await cdp.send('Page.startScreencast', { format: 'png', everyNthFrame: 1, maxWidth: W, maxHeight: H });
     await sleep(300);
 
-    // 1 — the list
-    await caption('It watches 33 kinds of job board every hour and scores each posting against your search');
+    // 1 — the Overview
+    await caption('Your search at a glance: what matched each day, and what the pipeline did');
+    await cursorTo(700, 520, 300);
+    await sleep(2300);
+    await moveAndClick('a[href="/jobs"]', 'Jobs');
+
+    // 2 — the list
+    await caption('It reads 33 kinds of job board every hour and ranks each posting against your search');
     await cursorTo(820, 600, 300);
-    await sleep(1500);
-    let r = await find(`a[href="/jobs/${JOB}"]`, 'Senior Full-Stack Engineer');
+    await sleep(1600);
+    const r = await find(`a[href="/jobs/${JOB}"]`, 'Senior Full-Stack Engineer');
     await cursorTo(r.x - r.w / 2 + 70, r.y);
-    await sleep(350);
+    await sleep(300);
     await clickAndLoad({ x: r.x - r.w / 2 + 70, y: r.y });
 
-    // 2 — the posting with its verdict
+    // 3 — the posting with its verdict
     await caption('The verdict in words: what fits, what it pays, where you can live');
     await cursorTo(700, 640, 400);
-    await sleep(1800);
-    r = await find('a[href*="tab=match"]');
-    await cursorTo(r.x, r.y);
-    await sleep(350);
-    await clickAndLoad(r);
+    await sleep(1700);
+    await moveAndClick('a[href*="tab=match"]');
 
-    // 3 — the comparison
+    // 4 — the comparison
     await caption('Your resume against the posting: every keyword graded, the score computed in code');
     await cursorTo(700, 700, 400);
-    await sleep(2000);
-    r = await find(`a[href^="/jobs/${JOB}/target"]`, 'Tailor resume');
-    await cursorTo(r.x, r.y);
-    await sleep(350);
-    await clickAndLoad(r);
+    await sleep(1900);
+    await moveAndClick(`a[href^="/jobs/${JOB}/target"]`, 'Tailor resume');
 
-    // 4 — the editor: one press adds a missing keyword, then typing moves the score too
-    await caption('Fix it in place: one press adds a missing keyword and the score moves, no AI call');
-    await cursorTo(900, 560, 400);
-    await sleep(700);
-    await evalJs(`document.getElementById('main').scrollBy({ top: 130, behavior: 'instant' }); 'ok'`);
-    await sleep(300);
-    r = await find('button', '+ add', 0);
-    await cursorTo(r.x, r.y);
-    await sleep(400);
-    await click(r);
-    await sleep(1600);
-    await caption('Type a word you can honestly claim: the score moves on the next keystroke');
-    const ed = JSON.parse(await evalJs(`(() => {
-      const ed = document.getElementById('editor');
-      ed.scrollIntoView({ block: 'center', behavior: 'instant' });
-      ed.scrollTop = ed.scrollHeight;
-      const b = ed.getBoundingClientRect();
-      return JSON.stringify({ x: Math.round(b.left + b.width * 0.55), y: Math.round(b.bottom - 34) });
-    })()`));
-    await sleep(300);
-    await cursorTo(ed.x, ed.y);
-    await sleep(300);
-    await click(ed);
-    await evalJs(`(() => { const ed = document.getElementById('editor'); ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length); ed.scrollTop = ed.scrollHeight; return 'ok'; })()`);
-    await sleep(500);
-    await typeText(', Redis');
-    await sleep(1100);
-    await evalJs(`document.getElementById('main').scrollTo({ top: 0, behavior: 'smooth' }); 'ok'`);
+    // 5 — Apply all: every checked edit in one press, the score moves, no AI call
+    await caption('One press applies every suggestion the fact check let through. No AI call');
+    await cursorTo(900, 420, 400);
     await sleep(900);
-    await cursorTo(900, 520, 300);
-    await sleep(1500);
+    await moveAndClick('button[data-apply-all][data-goto-tab]', 'Apply all suggestions', false);
+    await sleep(2200);
 
-    // 5 — the letter
+    // 6 — the resume as the document it is, the changes marked
+    await caption('Your own .docx with the edits in it, each marked; download it or save it as v2');
+    await evalJs(`document.getElementById('main').scrollBy({ top: document.getElementById('panes').getBoundingClientRect().top - 12, behavior: 'smooth' }); 'ok'`);
+    await sleep(900);
+    const doc = await find('#doc-pane');
+    await cursorTo(doc.x, Math.min(doc.y, 380), 400);
+    await sleep(2600);
+
+    // 7 — the letter
     await goto(`/jobs/${JOB}?tab=letter`);
     await caption('A cover letter from your resume and your confirmed facts. Nothing invented');
     try {
@@ -247,7 +263,14 @@ async function main() {
       await sleep(250);
       await cursorTo(b.x + 60, 420, 300);
     } catch { await cursorTo(760, 640, 300); }
-    await sleep(2500);
+    await sleep(2400);
+
+    // 8 — one resume against every posting it met
+    await goto(`/resumes/${RESUME}`);
+    await scrollTo('div.text-entity', 'Comparisons', 200);
+    await caption('One resume, every posting: 90 and 85 where it fits, a straight 0 where the stack is PHP');
+    await cursorTo(1100, 470, 400);
+    await sleep(2800);
     await caption('');
     await sleep(400);
 
@@ -268,8 +291,11 @@ async function main() {
     console.log(`frames ${frames.length}, ${total.toFixed(1)} s`);
   } finally {
     cdp.close();
+    // Chrome writes into its profile while it dies: wait for the exit, and retry the removal.
+    const exited = new Promise((res) => chrome.once('exit', res));
     chrome.kill('SIGKILL');
-    fs.rmSync(profileDir, { recursive: true, force: true });
+    await exited;
+    fs.rmSync(profileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 }
 

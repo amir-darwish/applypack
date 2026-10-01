@@ -23,11 +23,13 @@ ads.
 [What it does](#what-it-does) · [What it costs](#what-it-costs) ·
 [Bring your own AI](#bring-your-own-ai) · [Employer mode](#employer-mode-screening-a-folder-of-resumes)
 
-<img src="docs/screenshots/tour.gif" alt="A 25-second tour: the job list with fit scores, one posting's verdict, the resume compared with it, the editor where one press adds a keyword and the score moves, and the fact-checked cover letter" width="900">
+<img src="docs/screenshots/applypack-tour.gif" alt="A 33-second tour: the Overview with matches per day, the job list ranked by fit, one posting's verdict, the resume compared with it, Apply all taking the score from 85 to 88, the resume drawn as the document with the changes marked, the fact-checked cover letter, and one resume against three postings scored 90, 85 and 0" width="900">
 
-<sub>Twenty-five seconds, no cuts: the jobs it found and scored, one
-posting's verdict, your resume against it, an edit that moves the score
-with no AI call, and the letter. Synthetic resume and companies.</sub>
+<sub>Thirty-three seconds, no cuts: what matched this month, the jobs it
+ranked, one posting's verdict, your resume against it, every suggestion
+applied in one press with no AI call, your own .docx with the edits
+marked, the letter, and one resume against three postings. Synthetic
+resume and companies, real AI calls.</sub>
 
 </div>
 
@@ -73,7 +75,7 @@ install, unchanged.
   watched for changes.
 
 <div align="center">
-<img src="docs/screenshots/jobs-list.png" alt="Jobs: a table of postings with fit scores, companies, locations with country flags, salaries and statuses" width="900">
+<img src="docs/screenshots/jobs-ranked.png" alt="Jobs: fourteen postings ranked by fit from 92 down, each with its stack, company, place, salary, status and when it was fetched" width="900">
 </div>
 
 **Fix the resume for this posting**
@@ -83,19 +85,22 @@ install, unchanged.
   30, Vue is not React, and an unknown becomes a question instead of a
   guess. Score v2 and the "+16 vs v1" is real.
   [Try it in your browser →](https://applypack.dev/demo/)
-- **✍️ Edit in place with the score live.** Posting and resume side by
-  side, every keyword weighted and highlighted, coverage recomputed on each
-  keystroke without an AI call. Apply a suggested edit with one press or
-  write your own; disagree with a keyword and re-level, ignore or add it.
-- **💾 Save into your own .docx.** The accepted edits are written back into
-  your file with the formatting intact. A PDF, or a layout that cannot be
-  patched, can be re-typeset as a clean single-column `.docx` in your own
-  font, and as a `.pdf`
+- **✍️ Apply every suggestion in one press.** Each rewrite the fact check
+  let through, and every missing keyword your resume backs, lands in one
+  press; the score moves without an AI call, and each edit keeps its own
+  Undo. Or edit side by side, coverage recomputed on each keystroke;
+  disagree with a keyword and re-level, ignore or add it.
+- **💾 Your own .docx, as the document it is.** The resume is drawn as
+  your file with the edits written into it and marked; download it as
+  `.docx` or `.pdf`, or save it as v2 with the formatting intact. A PDF,
+  or a layout that cannot be patched, is re-typeset as a clean
+  single-column `.docx` in your own font
   ([ADR 0038](./docs/adr/0038-save-patches-the-users-docx-in-place.md),
-  [0039](./docs/adr/0039-clean-render-from-json-resume.md)).
+  [0039](./docs/adr/0039-clean-render-from-json-resume.md),
+  [0059](./docs/adr/0059-the-tailor-page-edits-the-resume-as-a-document.md)).
 
 <div align="center">
-<img src="docs/screenshots/tailor-resume.png" alt="Tailor resume: an 84/100 score with the primary stack 3/3, the one edit to make first, what the posting is about, the hard requirements, and the posting beside the resume with every keyword marked" width="900">
+<img src="docs/screenshots/tailor-document.png" alt="Tailor resume after Apply all: the suggestion cards marked Applied on the left, and on the right the resume drawn as its own .docx with the new title, summary and two bullets highlighted, the missing keywords above it" width="900">
 </div>
 
 **Send it and track it**
@@ -107,6 +112,14 @@ install, unchanged.
 - **🗂 One board for the applications.** A kanban with columns you name,
   drag and drop, the resume each application went out with, and a nudge
   when one goes quiet for two weeks.
+- **📈 The whole search on one page.** How many postings matched each
+  day, over a week to six months or for one technology; where the rest of
+  the funnel went; what ran and whether it failed. No AI, no telemetry:
+  the numbers come from your own database.
+
+<div align="center">
+<img src="docs/screenshots/overview-dashboard.png" alt="The Overview: four status cards with their last two weeks, a chart of 138 matches over 30 days up 45 percent, the search funnel from 11,813 read to 138 alerted, pipeline health, recent activity and jobs by stack" width="900">
+</div>
 
 Underneath: a five-step first run that ends with your first matches, six
 AI engines with automatic failover, untrusted-text markers around every
