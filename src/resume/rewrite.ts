@@ -12,9 +12,10 @@ import {
   readKeywords,
   RESUME_TIMEOUT_MS,
   REWRITE_MAX_TOKENS,
+  type MatchAction,
   type MatchJobInput,
 } from './prompts';
-import { gateActions } from './replacement-gate';
+import { gateActions, splitRefusal } from './replacement-gate';
 import { listFacts, updateMatchActions } from './store';
 
 /*
@@ -39,6 +40,8 @@ export async function rewriteAction(
   if (!action) return null;
 
   const keywords = readKeywords(match.keywords);
+  // A refused wording comes back with its reason as its own line, not as the tail of "why".
+  const { why, refusal } = splitRefusal(action);
   // A comparison judged on its text alone keeps its rewrites to it too (TASKS R1).
   const [facts, briefed] = await Promise.all([
     readMatchEvidence(match.breakdown) === 'own' ? listFacts() : [],
@@ -48,7 +51,8 @@ export async function rewriteAction(
     await getAiRuntime(),
     {
       ...buildRewritePrompt(match.resumeText, job, {
-        action,
+        action: { ...action, why },
+        refusal,
         keywords,
         confirmedFacts: facts.filter((f) => f.status === 'confirmed').map((f) => ({ term: f.term, note: f.note })),
         deniedTerms: facts.filter((f) => f.status === 'denied').map((f) => f.term),
@@ -91,5 +95,30 @@ export async function rewriteAction(
     },
     'resume: suggestion rewritten',
   );
+  return row;
+}
+
+/** What REQUIRED COVERAGE owes a complete wording (suggestion-floor.ts) — the two lines read first. */
+const OWED_WORDING: ReadonlySet<MatchAction['section']> = new Set(['title', 'summary']);
+
+/**
+ * The gate refuses a wording whole, and on the title or the summary that left
+ * the edit that matters most with nothing to apply: the live case mirrored the
+ * posting's "PHP and/or Java" into a PHP resume's summary, and the card said
+ * only "Rewrite summary to lead with PHP/Symfony". So each refused lead gets
+ * one more call with the reason in sight; the new wording passes the same gate,
+ * and a second refusal stays on the card for the user's own Rewrite.
+ */
+export async function rewriteRefusedLeads(match: ResumeMatch, job: MatchJobInput & { id: number }): Promise<ResumeMatch> {
+  const refused = readActions(match.actions).flatMap((a, index) =>
+    OWED_WORDING.has(a.section) && splitRefusal(a).refusal !== null ? [index] : [],
+  );
+  let row = match;
+  // One at a time: each call stores the whole action list it was given.
+  for (const index of refused) row = (await rewriteAction(row, job, index)) ?? row;
+  if (refused.length > 0) {
+    const still = readActions(row.actions).filter((a) => OWED_WORDING.has(a.section) && splitRefusal(a).refusal !== null);
+    logger.info({ matchId: match.id, jobId: match.jobId, refused: refused.length, stillRefused: still.length }, 'resume: refused lead wording written again');
+  }
   return row;
 }

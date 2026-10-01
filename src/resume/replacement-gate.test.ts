@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { gateActions, gateRemovals, type GateSources } from './replacement-gate';
+import { gateActions, gateRemovals, splitRefusal, type GateSources } from './replacement-gate';
 import { readKeywords, readRemovals, type MatchAction, type MatchKeyword, type MatchRemoval } from './prompts';
 
 const RESUME = [
@@ -225,4 +225,24 @@ test('the posted title may be written on the headline and in the summary, nowher
   const inABullet = gateActions([action({ section: 'experience', ...retitle })], src);
   assert.equal(inABullet.blocked, 1, 'claiming the title inside a role is a different thing');
   assert.match(inABullet.actions[0]!.why, /claims "Web Developer"/);
+});
+
+test('a refusal is read back off why, and only off a refused wording', async () => {
+  const src = await sources({
+    keywords: [keyword({ term: 'PHP' }), keyword({ term: 'Java', requirement: 'context', status: 'cannot_claim' })],
+  });
+  // The live case: the posting's "PHP and/or Java" mirrored into a PHP resume's summary.
+  const [refused] = gateActions(
+    [action({ section: 'summary', why: 'summary graded partial', quote: 'Senior Backend Engineer', replacement: 'Senior PHP/Java engineer building payment workflows.' })],
+    src,
+  ).actions;
+  assert.deepEqual(splitRefusal(refused!), {
+    why: 'summary graded partial',
+    refusal: 'claims "Java", which this resume has no evidence for',
+  });
+  // A warning keeps its wording, so there is nothing to write again.
+  const warned = action({ why: 'serves the posting · check: drops "SQL"', replacement: 'Kept wording.' });
+  assert.deepEqual(splitRefusal(warned), { why: warned.why, refusal: null });
+  // An instruction with no wording was never refused.
+  assert.equal(splitRefusal(action({ why: 'reorder the bullets' })).refusal, null);
 });
