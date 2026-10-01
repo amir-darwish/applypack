@@ -46,6 +46,8 @@ import { readyToApply, scoreLines, type ScoreLine } from '../score-lines';
 import { diffMatches } from '../../resume/diff';
 import { earlierLabel, previousFor } from '../../resume/match-name';
 import { jobHref } from '../job-tabs';
+import type { SummaryGuide } from '../../resume/summary-guide';
+import { SummaryGuideBlock } from './summary-guide';
 
 export interface ResumeMatchCardProps {
   jobId: number;
@@ -57,6 +59,8 @@ export interface ResumeMatchCardProps {
   selected: MatchWithResume | null;
   /** The selected comparison's keywords, ordered and counted by the matcher. */
   selectedKeywords: CountedKeyword[];
+  /** What the first reader looks for in a summary, against the selected comparison's text (summary-guide.ts). */
+  selectedSummaryGuide: SummaryGuide | null;
   /** Names the change sheet the Copy button hands over. */
   job: { title: string; companyName: string };
   /** The latest "Is this job real?" verdict, read for one line and the cautions — never scored (#162). */
@@ -136,6 +140,7 @@ export const ResumeMatchCard: FC<ResumeMatchCardProps> = ({
   matches,
   selected,
   selectedKeywords,
+  selectedSummaryGuide,
   job,
   verification,
   costHint,
@@ -202,6 +207,7 @@ export const ResumeMatchCard: FC<ResumeMatchCardProps> = ({
           match={selected}
           previous={previousFor(selected, matches)}
           keywords={selectedKeywords}
+          summaryGuide={selectedSummaryGuide}
           factsBack={`/jobs/${jobId}?match=${selected.id}#resume-match`}
           job={job}
           verification={verification}
@@ -442,7 +448,8 @@ const MatchReport: FC<{
   job: { title: string; companyName: string };
   /** The latest verdict's findings ride along the cautions (#162). */
   verification: VerificationForHint | null;
-}> = ({ match, previous, keywords, factsBack, job, verification }) => {
+  summaryGuide: SummaryGuide | null;
+}> = ({ match, previous, keywords, summaryGuide, factsBack, job, verification }) => {
   const bd = readBreakdown(match.breakdown);
   // A re-extracted frame counts different terms, so the older number is not a
   // baseline for this one (keyword-frame.ts). DeltaBox says so in words.
@@ -507,7 +514,7 @@ const MatchReport: FC<{
             />
             <Hint class="!mt-0">as Markdown, for the document your resume really lives in</Hint>
           </div>
-          <ActionsBlock actions={readActions(match.actions)} reach={reachOf(bd, match.matchScore)} />
+          <ActionsBlock actions={readActions(match.actions)} reach={reachOf(bd, match.matchScore)} summaryGuide={summaryGuide} />
           <RemovalsBlock removals={readRemovals(match.removals)} />
         </>
       )}
@@ -859,34 +866,40 @@ export const ActionsBlock: FC<{
   rewrite?: { jobId: number; matchId: number; next?: 'target' };
   /** The score and its ceiling — what an empty list is allowed to say about itself. */
   reach?: Reach | null;
-}> = ({ actions, interactive = false, rewrite, reach = null }) => {
+  /** What the first reader looks for in a summary (summary-guide.ts) — it keeps the summary section open with no card in it. */
+  summaryGuide?: SummaryGuide | null;
+}> = ({ actions, interactive = false, rewrite, reach = null, summaryGuide = null }) => {
   // The index is taken before the per-section filter: it addresses the action
   // in the stored row, which is what the rewrite route updates.
   const numbered = actions.map((a, index) => ({ a, index }));
-  const sections = ACTION_SECTIONS.filter((s) => actions.some((a) => a.section === s));
+  const sections = ACTION_SECTIONS.filter(
+    (s) => actions.some((a) => a.section === s) || (s === 'summary' && summaryGuide !== null),
+  );
   return (
     <div>
       <div class={SUBHEAD}>What to change — {actions.length} edits</div>
-      {actions.length === 0 ? (
-        <NoEdits reach={reach} />
-      ) : (
-        <div class="space-y-4">
+      {actions.length === 0 && <NoEdits reach={reach} />}
+      {sections.length > 0 && (
+        <div class={`space-y-4 ${actions.length === 0 ? 'mt-3' : ''}`}>
           {sections.map((section) => (
             <div>
               <div class="mb-1.5 text-meta font-semibold text-ink">{section}</div>
-              <ol class="divide-y divide-line rounded-md border border-line">
-                {numbered
-                  .filter(({ a }) => a.section === section)
-                  .map(({ a, index }) => (
-                    <SuggestionCard
-                      item={a}
-                      badge={<Badge tone={PRIORITY_TONE[a.priority]}>{a.priority}</Badge>}
-                      proposal={proposalOf(a)}
-                      interactive={interactive}
-                      rewrite={rewrite ? { ...rewrite, index } : undefined}
-                    />
-                  ))}
-              </ol>
+              {section === 'summary' && summaryGuide && <SummaryGuideBlock guide={summaryGuide} />}
+              {actions.some((a) => a.section === section) && (
+                <ol class="divide-y divide-line rounded-md border border-line">
+                  {numbered
+                    .filter(({ a }) => a.section === section)
+                    .map(({ a, index }) => (
+                      <SuggestionCard
+                        item={a}
+                        badge={<Badge tone={PRIORITY_TONE[a.priority]}>{a.priority}</Badge>}
+                        proposal={proposalOf(a)}
+                        interactive={interactive}
+                        rewrite={rewrite ? { ...rewrite, index } : undefined}
+                      />
+                    ))}
+                </ol>
+              )}
             </div>
           ))}
         </div>

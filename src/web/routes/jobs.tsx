@@ -79,7 +79,9 @@ import {
   readKeywords,
   type CoverTone,
   type MatchJobInput,
+  type PostingBrief,
 } from '../../resume/prompts';
+import { summaryGuide, type SummaryGuide } from '../../resume/summary-guide';
 import { withTableAliases } from '../../resume/keyword-aliases';
 import { loadKeywordMatcher, type CountedKeyword } from '../../resume/keyword-matcher';
 import { termUsage, type TermUsage } from '../../resume/usage';
@@ -370,6 +372,27 @@ async function orderedKeywords(
   return ordered.map((k) => (usage.has(k.term) ? { ...k, usage: usage.get(k.term) } : k));
 }
 
+/**
+ * What the first reader looks for in a summary, held against the text this
+ * comparison read (summary-guide.ts) — stored rows only, no AI. A quick check
+ * shows no edit list to put it in.
+ */
+async function summaryGuideFor(
+  match: { actions: unknown; keywords: unknown; resumeText: string; breakdown: unknown } | null,
+  brief: PostingBrief | null,
+  jobTitle: string,
+): Promise<SummaryGuide | null> {
+  if (!match || readMatchMode(match.breakdown) === 'fast') return null;
+  return summaryGuide({
+    resumeText: match.resumeText,
+    actions: readActions(match.actions),
+    keywords: readKeywords(match.keywords),
+    brief,
+    jobTitle,
+    matcher: await loadKeywordMatcher(),
+  });
+}
+
 jobsRoute.get('/jobs/:id', async (c) => {
   const id = idParam(c.req.param('id'));
   if (!Number.isFinite(id)) return c.text('Bad id', 400);
@@ -459,6 +482,13 @@ jobsRoute.get('/jobs/:id', async (c) => {
 
   const flashCookie = parseFlashCookie(c.req.header('cookie'));
   const selectedKeywords = await orderedKeywords(selected, job.description);
+  const selectedSummaryGuide = selected
+    ? await summaryGuideFor(
+        selected,
+        await storedBriefFor({ id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description }),
+        job.title,
+      )
+    : null;
   return c.html(
     <JobDetailPage
       tab={resolveJobTab({ tab: c.req.query('tab'), match: c.req.query('match'), letter: c.req.query('letter') })}
@@ -501,6 +531,7 @@ jobsRoute.get('/jobs/:id', async (c) => {
         matches,
         selected,
         selectedKeywords,
+        selectedSummaryGuide,
         job: { title: job.title, companyName: job.employer ?? job.company.name },
         verification: verifications[0] ?? null,
         costHint: costHintText(matchCost),
@@ -1073,6 +1104,7 @@ jobsRoute.get('/jobs/:id/target', async (c) => {
       postingNotice={depth.notice}
       domainNotice={domain}
       orientation={postingOrientation(storedBrief)}
+      summaryGuide={await summaryGuideFor(match, storedBrief, job.title)}
       verification={verifications[0] ?? null}
       fileVerdict={fileVerdict}
       cleanHref={file.clean ? `/resumes/${resume.id}/render` : null}

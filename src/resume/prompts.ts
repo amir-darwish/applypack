@@ -77,8 +77,12 @@ const KEYWORDS_MAX = 80;
  * v15: KEYWORDS IN THE WORDING — every bullet or summary rewrite carries a
  *     keyword the resume does not yet show in a sentence ("add" first, then
  *     "listed"); asked for after rewrites came back with none (ADR 0059).
+ * v16: SUMMARY RULES — what a summary is for, its length and its three
+ *     sentences; the bullet rules never governed it. A resume with no summary
+ *     gets one as an addition, and a posting's "X and/or Y" names only the one
+ *     this resume has (a summary that mirrored "PHP/Java" was refused whole).
  */
-export const PROMPT_VERSION = 15;
+export const PROMPT_VERSION = 16;
 
 /**
  * The posting brief's own version (ADR 0044). Separate from PROMPT_VERSION so
@@ -369,6 +373,8 @@ export function parseRewriteResponse(text: string): ParseResult<ActionRewrite> {
 export interface RewriteInput extends Pick<MatchContext, 'confirmedFacts' | 'deniedTerms' | 'brief'> {
   action: MatchAction;
   keywords: Pick<MatchKeyword, 'term' | 'requirement' | 'primary' | 'status'>[];
+  /** Why the application refused the last wording (replacement-gate.ts:splitRefusal); `action.why` then carries the clean reason. */
+  refusal?: string | null;
 }
 
 export function buildRewritePrompt(resumeText: string, job: MatchJobInput, input: RewriteInput): Prompt {
@@ -380,7 +386,9 @@ export function buildRewritePrompt(resumeText: string, job: MatchJobInput, input
     `What it says to do: ${a.what}`,
     `Why: ${a.why}`,
     a.quote ? `Resume text it replaces: ${a.quote}` : `Adds a new line after: ${a.insert_after ?? '(the section it names)'}`,
-    `Wording the user rejected: ${a.replacement ?? '(none was written)'}`,
+    input.refusal
+      ? `The application REFUSED the last wording: ${input.refusal}`
+      : `Wording the user rejected: ${a.replacement ?? '(none was written)'}`,
   ].join('\n');
   return {
     system: REWRITE_SYSTEM,
@@ -609,7 +617,7 @@ const RULE_PRIMARY = `${PRIMARY_DEF} Only "present" primary items count as cover
 
 const RULE_ALIGNMENT = `"alignment" — grade each strong | partial | off by OBJECTIVE criteria, not by feel:
    - "title": strong when the title line names the posting's role or its primary stack; partial when related; off when it targets a different role.
-   - "summary": strong when the summary names at least two of the posting's must requirements; partial when it covers one or speaks generally; off when it points elsewhere.
+   - "summary": strong when the summary names at least two of the posting's must requirements; partial when it covers one or speaks generally; off when it points elsewhere or the resume has none.
    - "recent_role": strong when the most recent role's bullets demonstrate the posting's core work in the primary stack; partial when adjacent; off when unrelated.
    When a criterion is met, grade strong — do not hedge to partial "to leave room". In their 6-10 seconds recruiters read only these three places, so the grades carry 40% of the score.`;
 
@@ -637,13 +645,45 @@ const RULE_BULLET_STYLE = bulletRules(
   'end "why" with "ask the candidate for the real number"',
 );
 
+/**
+ * The summary is not a bullet, and the bullet rules ("verb first, past tense,
+ * ~28 words") never fit it — before v16 it had no wording rule at all. What it
+ * is for, and the numbers behind its length: the first reader spends 6-10
+ * seconds on a resume and the headline and summary take about a quarter of
+ * that; the guides recruiters write agree on 2-4 sentences (three is the norm,
+ * about five lines), the role in the posting's words, the years, the core
+ * stack, ONE proven result, no pronouns and no adjectives without proof
+ * (docs/resume-summary.md). summary-guide.ts checks the same list in code.
+ */
+/** Adjectives with nothing behind them: banned in a summary here, flagged in one by summary-guide.ts. */
+export const SUMMARY_FILLER = [
+  'passionate',
+  'results-driven',
+  'hard-working',
+  'dynamic',
+  'seasoned',
+  'proven track record',
+  'detail-oriented',
+  'team player',
+] as const;
+
+const RULE_SUMMARY_STYLE = `SUMMARY RULES — a summary wording follows all of them (it is not a bullet: the BULLET RULES do not apply to it):
+   - What it is for: the first reader's ten-second answer to "is this the person for THIS role?". It sits right under the headline, in the top third the ATS weighs most. It is a pitch for this posting — not a career history and not an objective.
+   - Length: 2-4 sentences, three is the norm, at most ~75 words (about five lines on the page). It may be shorter than the summary it replaces, never longer by more than one sentence.
+   - Shape, one sentence each: WHO — the posting's role in its own words (or the closest honest one), the years of experience exactly as the resume states them (none when it states none), and the primary-stack items this resume has; PROOF — the strongest result in this resume for what the first reader scans for, with a number that already exists in the resume or a candidate-confirmed fact; FIT — what the candidate brings to this role's main responsibilities, in the posting's words.
+   - Name two to four of the posting's must requirements this resume backs ("present" or "add"). Never a "cannot_claim" term — and where the posting offers alternatives ("PHP and/or Java", "React or Vue"), name only the one this resume has: the other is not owed, and naming it is a claim.
+   - Plain words, read in one pass: a technology is named as the posting spells it, never dressed up ("Laravel and Symfony", not "Symfony-pattern frameworks including Symfony itself").
+   - Implied first person, present tense: no "I", "my", "me", no name; past tense only for a finished result.
+   - Never an objective ("seeking a role…"), what the candidate wants, a list of more than five technologies, the years stated twice, an adjective with no proof behind it (${SUMMARY_FILLER.join(', ')}), a placeholder, or a figure the resume does not hold.
+   - Keep what already works: a real number or a distinctive fact of the current summary that serves this posting stays, re-aimed rather than lost.`;
+
 const RULE_APPLIED = `APPLIED FROM THE LAST RUN. When the user prompt carries this block, each line is wording the candidate took from the previous report and put into the resume. It is DONE: do not quote any part of it for a rewrite, a reorder or a trim, and do not propose it again — unless it now fails a keyword verdict, a gate or a line of the brief's screening block, and then "why" names which. Spend the list on what is still uncovered. When nothing is, return fewer actions, not new words for the same lines: a short list is the right report for a resume that already says what the posting screens for.`;
 
 const RULE_ACTIONS = `"actions" is the to-do list of ADDITIONS and CHANGES: concrete edits, each pointing at one place ("where") with the exact change ("what") and the posting requirement it serves ("why"). When the edit changes existing text, put that text in "quote" — copied VERBATIM from the resume, at most ~200 characters, so it can be highlighted; "quote" is null for additions. Put the COMPLETE new text in "replacement", ready to paste in place of "quote"; for an addition put the resume line it follows in "insert_after" (copied VERBATIM) and the new text in "replacement"; "what" says what changes in one clause. "replacement" is null only for an instruction with no wording (a reorder, a cut). Concentrate on the title, summary, skills and the most recent role: the title and the top required skills must be visible in the top third of page one, and the current role must open with its strongest, most relevant accomplishment — when it already does, leave that bullet alone. Bullets of the two most recent roles may be reworded or reordered; older roles get trims only. Max 4 bullets per role. Priority "high" = a must-requirement keyword, the title, or the first bullet of the current role; "medium" = preferred keywords or another recent-role bullet; "low" = polish.
    EVERY ACTION EARNS ITS PLACE: an edit must flip a keyword status, raise an alignment grade, resolve a gate, answer something the first reader scans for, or remove a caution. Never re-suggest what the resume already does, and never add polish to make the list look longer.
    REQUIRED COVERAGE — a resume that needs one of these and gets none is a failed report:
    - "title" graded below strong → ONE high-priority action on the title line WITH a replacement: the headline this recruiter should read, in the posting's own words. Writing the role being applied for on one's own headline is ordinary tailoring, not a claim of past employment.
-   - "summary" graded below strong → ONE high-priority action rewriting the summary WITH a replacement, naming at least two of the posting's must requirements this resume can honestly support.
+   - "summary" graded below strong → ONE high-priority action rewriting the summary WITH a replacement that follows the SUMMARY RULES. A resume with no summary gets one as an addition: "quote" null, "insert_after" the headline line (the contact line when there is no headline).
    - "recent_role" graded below strong → rewrite the most recent role's leading bullets, up to 4, one action each WITH a replacement, so each opens with an outcome this employer scans for, in this posting's vocabulary.
    - a must-level or primary keyword whose evidence is "listed" → one action putting it inside a bullet where the work is described. "listed" is measured, not guessed: the term is named on a line of terms and shown nowhere else, which proves nothing to a human reader. A term already "described" or "measured" needs no such action.
    - a must-level keyword marked "add" → one action writing it into the text whose facts already evidence it.
@@ -652,7 +692,8 @@ const RULE_ACTIONS = `"actions" is the to-do list of ADDITIONS and CHANGES: conc
    THE ONE EXEMPTION is a different PROFESSION — a backend engineer against a paid-media role, a product manager against a principal engineer, a software engineer against clinical trial management. No wording bridges those: write NO actions and say plainly in "summary" and "cautions" what the resume is and what the posting wants.
    THE TEST FOR IT, so it is not a feeling: the exemption applies only when NOT ONE item of the posting's primary stack is "present" or "add" (and, for a posting with no primary stack, when fewer than two of its must-level keywords are). If even one is, this candidate already has part of the core of this job, and the actions above are owed however wide the rest of the gap looks.
    It is about professions, NOT about stacks or levels. A PHP engineer against a Java posting, a front-end engineer against a full-stack posting, a mid engineer against a senior one: same profession, and REQUIRED COVERAGE applies in full. Those are exactly the resumes tailoring helps most — a front-end resume with React and TypeScript already present, judged against a full-stack React posting, and given no actions at all, is a failed report.
-   ${RULE_BULLET_STYLE}`;
+   ${RULE_BULLET_STYLE}
+   ${RULE_SUMMARY_STYLE}`;
 
 const RULE_REMOVALS = `"removals" is the list of what to DELETE or SHORTEN so the resume reads cleaner for this posting: skills listed but never evidenced in a role; bullets with no number or no relevance to this posting (especially in roles older than two years); roles older than ~10 years condensed to one line — but age alone is not a reason, and an old role holding this posting's most relevant evidence (its own discipline, its CMS, its industry, the volume of work it names) is the LAST line to cut: condense the rest of that role around it; duplicated tech lists; filler sentences; anything a US recruiter does not want (photo, age, marital status, street-level home address); sections that add nothing (objective, references available on request). Each item: section, where, what to remove, why, and "quote" — the exact text to delete, copied verbatim (at most ~200 characters). Two hard rules:
    - PROTECTED: never remove the contact line or anything in it — name, email, phone, city/state/country, LinkedIn or GitHub links. Only a street-level home address may be trimmed, and then "quote" covers ONLY the street address and "what" says explicitly to keep email and phone.
@@ -888,13 +929,18 @@ ${RENDERING_NOTE}
 WHAT IS FIXED. "section" and "where" name the place; do not move the edit somewhere else. "why" may be re-worded but must still name the same requirement of this posting. If the CURRENT SUGGESTION quotes resume text, your "replacement" replaces exactly that span; if it quotes nothing, your "replacement" is a new line to add after the anchor the current suggestion names.
 
 WHAT MUST CHANGE. The new wording must be materially different from the current one — a different verb, a different angle on the same fact, a different order — not the same sentence with a synonym swapped. The user asked for another version because the one they have does not work for them.
+When the CURRENT SUGGESTION says the application REFUSED the last wording, that reason names what to leave out: write a wording that avoids it, and keep everything else about the target.
 
 WHAT YOU MAY NOT DO. Never claim work this resume does not show, and never invent a number: every figure must already exist in the resume or in a candidate-confirmed fact. The application re-checks the new wording against both and refuses it otherwise, so an invented one costs the user their rewrite.
 
 ${RULE_AUDIENCE}
 
+WHICH RULES: a "summary" suggestion follows the SUMMARY RULES; a "title" suggestion is the headline alone — the posting's role in its own words, at most three primary-stack items the resume has after it, no sentence; every other suggestion follows the BULLET RULES.
+
+${RULE_SUMMARY_STYLE}
+
 ${bulletRules(
-  'the wording you return',
+  'every other wording you return',
   '("why" names it).',
   'end "why" with "ask the candidate for the real number"',
 )}
