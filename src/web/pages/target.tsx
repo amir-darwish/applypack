@@ -15,6 +15,7 @@ import { notEnglishNotice } from '../../text-language';
 import { readBreakdown } from '../../resume/score';
 import { mainAdvice, readyToApply } from '../score-lines';
 import type { OrientationRow } from '../../resume/posting-orientation';
+import type { SummaryGuide } from '../../resume/summary-guide';
 import {
   ActionsBlock,
   ChangeSheetButton,
@@ -66,6 +67,8 @@ export interface TargetPageProps {
   domainNotice?: string | null;
   /** What this posting is, from its own stored reading (posting-orientation.ts) — empty when it said nothing. */
   orientation?: OrientationRow[];
+  /** What the first reader looks for in a summary, against the analysed text (summary-guide.ts). */
+  summaryGuide?: SummaryGuide | null;
   /** The latest "Is this job real?" verdict — one line under the title, findings among the cautions (#162). */
   verification: VerificationForHint | null;
   flash?: FlashMessage | null;
@@ -114,6 +117,7 @@ export const TargetPage: FC<TargetPageProps> = ({
   postingNotice,
   domainNotice,
   orientation,
+  summaryGuide = null,
   verification,
   fileVerdict,
   cleanHref,
@@ -757,6 +761,7 @@ export const TargetPage: FC<TargetPageProps> = ({
                     interactive
                     rewrite={{ jobId: job.id, matchId: match.id, next: 'target' }}
                     reach={reachOf(breakdown, match.matchScore)}
+                    summaryGuide={summaryGuide}
                   />
                   <RemovalsBlock removals={removals} interactive />
                 </>

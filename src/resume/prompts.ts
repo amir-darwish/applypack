@@ -655,13 +655,26 @@ const RULE_BULLET_STYLE = bulletRules(
  * stack, ONE proven result, no pronouns and no adjectives without proof
  * (docs/resume-summary.md). summary-guide.ts checks the same list in code.
  */
+/** Adjectives with nothing behind them: banned in a summary here, flagged in one by summary-guide.ts. */
+export const SUMMARY_FILLER = [
+  'passionate',
+  'results-driven',
+  'hard-working',
+  'dynamic',
+  'seasoned',
+  'proven track record',
+  'detail-oriented',
+  'team player',
+] as const;
+
 const RULE_SUMMARY_STYLE = `SUMMARY RULES — a summary wording follows all of them (it is not a bullet: the BULLET RULES do not apply to it):
    - What it is for: the first reader's ten-second answer to "is this the person for THIS role?". It sits right under the headline, in the top third the ATS weighs most. It is a pitch for this posting — not a career history and not an objective.
    - Length: 2-4 sentences, three is the norm, at most ~75 words (about five lines on the page). It may be shorter than the summary it replaces, never longer by more than one sentence.
    - Shape, one sentence each: WHO — the posting's role in its own words (or the closest honest one), the years of experience exactly as the resume states them (none when it states none), and the primary-stack items this resume has; PROOF — the strongest result in this resume for what the first reader scans for, with a number that already exists in the resume or a candidate-confirmed fact; FIT — what the candidate brings to this role's main responsibilities, in the posting's words.
    - Name two to four of the posting's must requirements this resume backs ("present" or "add"). Never a "cannot_claim" term — and where the posting offers alternatives ("PHP and/or Java", "React or Vue"), name only the one this resume has: the other is not owed, and naming it is a claim.
+   - Plain words, read in one pass: a technology is named as the posting spells it, never dressed up ("Laravel and Symfony", not "Symfony-pattern frameworks including Symfony itself").
    - Implied first person, present tense: no "I", "my", "me", no name; past tense only for a finished result.
-   - Never an objective ("seeking a role…"), what the candidate wants, a list of more than five technologies, the years stated twice, an adjective with no proof behind it (passionate, results-driven, hard-working, dynamic, seasoned, proven track record, detail-oriented, team player), a placeholder, or a figure the resume does not hold.
+   - Never an objective ("seeking a role…"), what the candidate wants, a list of more than five technologies, the years stated twice, an adjective with no proof behind it (${SUMMARY_FILLER.join(', ')}), a placeholder, or a figure the resume does not hold.
    - Keep what already works: a real number or a distinctive fact of the current summary that serves this posting stays, re-aimed rather than lost.`;
 
 const RULE_APPLIED = `APPLIED FROM THE LAST RUN. When the user prompt carries this block, each line is wording the candidate took from the previous report and put into the resume. It is DONE: do not quote any part of it for a rewrite, a reorder or a trim, and do not propose it again — unless it now fails a keyword verdict, a gate or a line of the brief's screening block, and then "why" names which. Spend the list on what is still uncovered. When nothing is, return fewer actions, not new words for the same lines: a short list is the right report for a resume that already says what the posting screens for.`;
