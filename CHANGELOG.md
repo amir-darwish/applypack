@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.42.0] — 2026-10-01
+
+### Added
+- **What this reader looks for in a summary.** The summary section of every
+  comparison (the job's Resume match tab and Tailor resume) opens with a
+  checklist, read off the text with no AI: the role in the posting's words,
+  your years, the core stack you have, two of its must-haves, one result
+  with a number, 2–4 sentences under 80 words, no "I" and no filler, and the
+  terms your resume cannot back. Above it, who reads the resume first and
+  what they scan for. The same checks run on the suggested summary, so the
+  card says "yours: 5 of 8 · the suggestion below: 8 of 8".
+
+### Changed
+- **Suggested summaries follow the rules recruiters write.** Three
+  sentences (who you are for this role, one proven result, what you bring),
+  at most about 75 words, the posting's own words, your years exactly as the
+  resume states them. A resume with no summary is offered one under the
+  headline. Where a posting says "PHP and/or Java", the summary names only
+  the one you have. The research and its sources are in
+  `docs/resume-summary.md`.
+- **A refused title or summary is written again.** When the fact check
+  refused the suggested wording (the live case claimed Java for a PHP
+  resume), the card used to say "Rewrite summary to lead with PHP/Symfony"
+  with nothing to apply. The comparison now asks once more with the reason
+  in sight, and **Rewrite** on such a card does the same.
+- Comparisons stored before this release are re-run instead of reused
+  (prompt v16).
+
 ## [2.41.2] — 2026-10-01
 
 ### Fixed
@@ -4642,6 +4670,8 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.42.0]: https://github.com/applypack/applypack/compare/v2.41.2...v2.42.0
+[2.41.2]: https://github.com/applypack/applypack/compare/v2.41.1...v2.41.2
 [2.41.1]: https://github.com/applypack/applypack/compare/v2.41.0...v2.41.1
 [2.41.0]: https://github.com/applypack/applypack/compare/v2.40.0...v2.41.0
 [2.40.0]: https://github.com/applypack/applypack/compare/v2.39.0...v2.40.0
