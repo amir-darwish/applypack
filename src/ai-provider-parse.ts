@@ -319,14 +319,7 @@ export const CLI_PROVIDER_ENV_KEYS: Partial<Record<AiProviderId, readonly string
     'GOOGLE_CLOUD_PROJECT',
     'GOOGLE_CLOUD_LOCATION',
   ],
-  agy_cli: [
-    'GEMINI_API_KEY',
-    'GOOGLE_GENAI_USE_VERTEXAI',
-    'GOOGLE_GENAI_USE_GCA',
-    'GOOGLE_APPLICATION_CREDENTIALS',
-    'GOOGLE_CLOUD_PROJECT',
-    'GOOGLE_CLOUD_LOCATION',
-  ],
+  agy_cli: [],
   codex_cli: ['OPENAI_API_KEY', 'CODEX_HOME'],
 };
 
@@ -567,8 +560,8 @@ export function parseAgyCliOutput(raw: string): CliOutcome {
 }
 
 /**
- * Argument list for `agy -p`. Headless default disables slash commands and auto-approves
- * permissions without prompting. Empty model = CLI's configured default.
+ * Argument list for `agy -p`. Headless default disables slash commands.
+ * Empty model = CLI's configured default.
  */
 export function buildAgyCliArgs(req: {
   system: string;
@@ -579,7 +572,6 @@ export function buildAgyCliArgs(req: {
   return [
     '--output-format', 'json',
     '--disable-slash-commands',
-    ...(req.webTools ? ['--dangerously-skip-permissions'] : []),
     ...(req.model ? ['--model', req.model] : []),
     `--prompt=${req.system}\n\n${req.user}`,
   ];

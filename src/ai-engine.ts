@@ -33,7 +33,7 @@ export const PROVIDER_WEB_TOOLS: Record<AiProviderId, boolean> = {
   anthropic_api: true,
   claude_code: true,
   gemini_cli: true,
-  agy_cli: true,
+  agy_cli: false,
   openai_api: false,
   codex_cli: true,
   local_api: false,
@@ -226,7 +226,6 @@ export interface AiEngineEnv {
   openAiLocal: boolean;
   /** CLI auth is file/env detectable — false means calls cannot work yet. */
   geminiUsable: boolean;
-  agyUsable: boolean;
   codexUsable: boolean;
   classifierModel: string;
   /** CLAUDE_MODEL_RESUME / CLAUDE_MODEL_COVER from .env; '' = the backend's default for the role. */
@@ -261,11 +260,10 @@ export function providerUnusable(id: AiProviderId, env: AiEngineEnv): boolean {
     case 'gemini_cli':
       return !env.geminiUsable;
     case 'agy_cli':
-      return !env.agyUsable;
-    case 'codex_cli':
-      return !env.codexUsable;
     case 'claude_code':
       return false; // keychain auth is not detectable — let the call decide
+    case 'codex_cli':
+      return !env.codexUsable;
     case 'local_api':
       return false; // no key; a server that is not running fails at once and the chain moves on
   }

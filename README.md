@@ -175,7 +175,7 @@ counts which engine served your calls in the last seven days.
 
 ## Bring your own AI
 
-Five backends, and you can attach every subscription and key you own:
+Seven backends, and you can attach every subscription and key you own:
 
 | Engine | What it is | Billing |
 | --- | --- | --- |

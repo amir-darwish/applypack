@@ -16,7 +16,6 @@ const ENV: AiEngineEnv = {
   hasOpenAiKey: true,
   openAiLocal: false,
   geminiUsable: true,
-  agyUsable: true,
   codexUsable: true,
   classifierModel: 'claude-haiku-4-5-20251001',
   resumeModel: 'claude-opus-5',

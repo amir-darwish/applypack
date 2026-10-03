@@ -1,6 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { execFile, type ChildProcess } from 'node:child_process';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { config } from './config';
 import { logger } from './logger';
@@ -628,7 +630,8 @@ export function getAiProviderById(id: AiProviderId): AiProvider {
         parse: parseAgyCliOutput,
         defaultModel: 'gemini-3.8-flash-high',
         envKeys: CLI_PROVIDER_ENV_KEYS.agy_cli ?? [],
-        cwd: tmpdir(),
+        // Keep the CLI away from workspace and OS temp files with a dedicated empty directory.
+        cwd: mkdtempSync(join(tmpdir(), 'applypack-agy-')),
       });
       break;
     case 'openai_api':

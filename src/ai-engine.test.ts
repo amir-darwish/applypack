@@ -21,7 +21,6 @@ const ENV: AiEngineEnv = {
   hasOpenAiKey: false,
   openAiLocal: false,
   geminiUsable: true,
-  agyUsable: true,
   codexUsable: false,
   classifierModel: 'claude-haiku-4-5-20251001',
   resumeModel: 'claude-opus-5',
@@ -183,7 +182,6 @@ describe('providerUnusable / isAiProviderId', () => {
     assert.equal(providerUnusable('openai_api', ENV), true);
     assert.equal(providerUnusable('gemini_cli', ENV), false);
     assert.equal(providerUnusable('agy_cli', ENV), false);
-    assert.equal(providerUnusable('agy_cli', { ...ENV, agyUsable: false }), true);
     assert.equal(providerUnusable('codex_cli', ENV), true);
     assert.equal(providerUnusable('claude_code', ENV), false);
   });
@@ -193,7 +191,7 @@ describe('providerUnusable / isAiProviderId', () => {
     assert.equal(providerUnusable('openai_api', { ...ENV, hasOpenAiKey: true }), false);
   });
 
-  it('accepts the five known ids and nothing else', () => {
+  it('accepts the known provider ids and nothing else', () => {
     assert.equal(isAiProviderId('codex_cli'), true);
     assert.equal(isAiProviderId('agy_cli'), true);
     assert.equal(isAiProviderId('openai_api'), true);
@@ -209,7 +207,6 @@ describe('cover role', () => {
     hasOpenAiKey: false,
     openAiLocal: false,
     geminiUsable: true,
-    agyUsable: true,
     codexUsable: false,
     classifierModel: 'claude-haiku-4-5-20251001',
     resumeModel: 'claude-opus-5',

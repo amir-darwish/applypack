@@ -42,7 +42,6 @@ export function getAiEngineEnv(keys: AiKeys = {}, openAiBaseUrl: string | null =
     hasOpenAiKey: Boolean(resolveAiKey('openai_api', keys)),
     openAiLocal: isLocalUrl(openAiBase(openAiBaseUrl)),
     geminiUsable: Boolean(keys.gemini_cli) || geminiAuthConfigured(),
-    agyUsable: agyAuthConfigured(),
     codexUsable: codexAuthConfigured(),
     classifierModel: config.CLAUDE_MODEL,
     resumeModel: config.CLAUDE_MODEL_RESUME,
@@ -201,7 +200,7 @@ export async function probeAiProviders(
         : { ok: true, detail: `API key ${keyOrigin(from('anthropic_api'))}` },
     claude_code: withClaudeAuth(claude, from('claude_code')),
     gemini_cli: withGeminiAuth(gemini, from('gemini_cli')),
-    agy_cli: withAgyAuth(agy),
+    agy_cli: agy,
     openai_api: isLocalUrl(openAi)
       ? await localServerStatus(openAi, resolveAiKey('openai_api', keys))
       : from('openai_api') === 'none'
@@ -343,30 +342,6 @@ function withCodexAuth(bin: AiProviderStatus): AiProviderStatus {
 
 function codexAuthConfigured(): boolean {
   return existsSync(join(homedir(), '.codex', 'auth.json'));
-}
-
-function withAgyAuth(bin: AiProviderStatus): AiProviderStatus {
-  if (!bin.ok || agyAuthConfigured()) return bin;
-  return {
-    ok: false,
-    detail: `${bin.detail} installed — log in with \`agy\` once (mount ~/.gemini in Docker)`,
-  };
-}
-
-function agyAuthConfigured(): boolean {
-  if (
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_GENAI_USE_VERTEXAI ||
-    process.env.GOOGLE_GENAI_USE_GCA
-  ) {
-    return true;
-  }
-  const dir = join(homedir(), '.gemini');
-  return (
-    existsSync(join(dir, 'oauth_creds.json')) ||
-    existsSync(join(dir, 'google_accounts.json')) ||
-    existsSync(join(dir, 'antigravity-cli'))
-  );
 }
 
 /**

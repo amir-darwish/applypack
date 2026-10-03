@@ -1,6 +1,6 @@
 # AI engines — setup guide
 
-The pipeline can run on any mix of five AI backends. You enable the ones you
+The pipeline can run on any mix of seven AI backends. You enable the ones you
 have, put them in priority order on **`/settings` → AI engine**, and the app
 does the rest:
 
@@ -131,15 +131,11 @@ for the classifier.
 
 ## Antigravity CLI (agy)
 
-Runs `agy -p` per call on your Google account / Antigravity workspace. Fast, headless agent with zero per-token cost on supported accounts.
+Runs `agy -p` per call on your Google account / Antigravity workspace. Fast, headless agent with zero per-token cost on supported accounts. Local only (keyring authentication is not containerised).
 
-**Local:**
 1. Install Antigravity CLI (`agy`).
 2. Run `agy` once to log in with your Google account.
 3. Enable + **Test** on `/settings`.
-
-**Docker:**
-Mount `~/.gemini` into the containers (uncomment `volumes: - ~/.gemini:/home/node/.gemini` in `docker-compose.yml`).
 
 ## OpenAI-compatible API (OpenAI, OpenRouter, Groq, local models)
 
