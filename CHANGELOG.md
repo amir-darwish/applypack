@@ -4,6 +4,178 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.42.0] — 2026-10-01
+
+### Added
+- **What this reader looks for in a summary.** The summary section of every
+  comparison (the job's Resume match tab and Tailor resume) opens with a
+  checklist, read off the text with no AI: the role in the posting's words,
+  your years, the core stack you have, two of its must-haves, one result
+  with a number, 2–4 sentences under 80 words, no "I" and no filler, and the
+  terms your resume cannot back. Above it, who reads the resume first and
+  what they scan for. The same checks run on the suggested summary, so the
+  card says "yours: 5 of 8 · the suggestion below: 8 of 8".
+
+### Changed
+- **Suggested summaries follow the rules recruiters write.** Three
+  sentences (who you are for this role, one proven result, what you bring),
+  at most about 75 words, the posting's own words, your years exactly as the
+  resume states them. A resume with no summary is offered one under the
+  headline. Where a posting says "PHP and/or Java", the summary names only
+  the one you have. The research and its sources are in
+  `docs/resume-summary.md`.
+- **A refused title or summary is written again.** When the fact check
+  refused the suggested wording (the live case claimed Java for a PHP
+  resume), the card used to say "Rewrite summary to lead with PHP/Symfony"
+  with nothing to apply. The comparison now asks once more with the reason
+  in sight, and **Rewrite** on such a card does the same.
+- Comparisons stored before this release are re-run instead of reused
+  (prompt v16).
+
+## [2.41.2] — 2026-10-01
+
+### Fixed
+- **The Claude Code CLI read the project's instructions into every call.**
+  Under `npm start` it ran in the ApplyPack folder and loaded its
+  `CLAUDE.md` and memory: about 53 000 extra tokens on every classification,
+  scan and comparison, taken from your plan, and a resume scan that reported
+  those instructions as an injection in the resume. It now runs in the
+  temporary folder, as the Gemini and Codex CLIs already did, with its
+  CLAUDE.md and memory reading switched off. Docker was not affected.
+- **No cover letter could be written** when your own Claude Code settings
+  ask for `xhigh` or `max` effort: with thinking off, Opus 5 refuses an
+  effort above `high`, and every letter failed. Calls without thinking now
+  ask for `high`.
+- **A keyword added from Tailor resume could land inside a job.** A bullet
+  or a title with "stack" in it ("Built full-stack checkout features",
+  "Senior Full-Stack Engineer") was read as the skills heading, so **+ add**,
+  **Apply all** and **Add missing keywords** wrote the term into a role's
+  "Technology Stack" line, its dates line, or an "Also:" line between its
+  bullets. Only a real heading opens a skills section now.
+- Two last lines removed in a row and undone out of order came back swapped.
+- Removing the first item after a label left "Skills: , PHP".
+- In the Document view, a missing keyword's chip and **Locate** did nothing
+  when the document could not outline the line: they open Plain text there.
+- **"NestJS is a must here and nothing backs it yet"** beside Express and
+  Fastify: a must in an either/or group the resume already answers asks for
+  nothing more, as the score already counted it.
+- A plain-text or PDF resume whose headings are not in capitals
+  ("Experience", "Skills") was read as one header block: the clean version,
+  What the ATS sees and the years-at-work line came out empty. A title that
+  opens the contact line is the title, and a role keeps no comma where its
+  dates were.
+- The Text / Document switch showed no pressed state (its classes were
+  missing from the stylesheet); CI now fails a stylesheet that is out of
+  date.
+- The Overview counted "node", "nodejs" and "node.js" as three bars, and
+  compared a new install's week with a week it never lived through.
+- A resume whose name ran past 80 characters with an emoji at the cut could
+  not be downloaded.
+
+## [2.41.1] — 2026-09-30
+
+### Added
+- **Add every missing keyword in one press.** On Tailor resume, **Add missing
+  keywords to your skills** lists every keyword the text does not spell,
+  ticked where your resume already backs it; an unticked one has nothing
+  behind it yet — tick it only if it is true. Each goes on the skills line it
+  belongs to, and what no line can take gets a line of its own. **Apply all**
+  now adds every keyword your resume backs, not only the ones a skills line
+  could take.
+
+### Changed
+- **Suggestions carry the posting's missing keywords.** Every bullet or
+  summary rewrite names a keyword the resume does not yet show in a sentence
+  (prompt v15), and a must-have one that no rewrite carries is asked for
+  again. The next comparison of each posting reads its keywords afresh.
+- A keyword with no hint of its own goes on the last skills line (usually
+  "Others"), not among the programming languages of the first.
+
+### Fixed
+- **A title printed twice.** A headline with its own "|" was also read as an
+  extra header line, so the Document view — and a file downloaded from it —
+  showed it twice after Apply all.
+- A suggestion whose wording brought its own "- " left "• -" in the resume.
+- **Every paragraph of the Document view can be edited:** a company and its
+  place, a title and its dates (the two columns stay), a skills-table cell,
+  and a paragraph the text broke over lines. Only a formula still goes to
+  Plain text.
+
+## [2.41.0] — 2026-09-30
+
+### Added
+- **Apply all suggestions in one press.** On Tailor resume, **Apply all
+  suggestions (N)** under the score writes every wording the check let
+  through, the removals and the missing keywords a skills line can take into
+  your resume at once, and says what landed. **Undo all** takes them back;
+  every card keeps its own Undo. No AI call, nothing saved.
+- **Your resume as the document it is, beside the suggestions.** The resume
+  card opens on **Document**: your own `.docx` with the edits written into it,
+  or — for a PDF — the same text re-set in the look read off its page. Changed
+  paragraphs are marked, and a dashed line shows where a page would end.
+  **Plain text** is the editor as before.
+- **Edit a paragraph in the document.** Click it, change the words, Enter
+  keeps it, Escape puts it back; emptying it removes the line. The score and
+  the suggestions follow, as they do for typing.
+- **Download .docx / .pdf** of the document as it stands, without saving a
+  version. The PDF of your own `.docx` opens the print dialog at the file's
+  own page size — choose Save as PDF.
+
+### Changed
+- **A PDF's clean version looks like the PDF.** Its skills table stays a
+  table, places and links keep their colour, titles and dates their grey and
+  weight, the header its rule and the body its justified edge — read off the
+  page itself, with no AI. The clean-version page (`/resumes/:id/render`)
+  prefills the accent colour from a PDF too.
+- **A save is always a document.** When your `.docx` cannot take an edit, or
+  the resume is a PDF, Save keeps the clean `.docx` the Document view showed —
+  no more Markdown versions; the next save edits that file in place.
+- The clean version never drops a line: it keeps your own section headings,
+  a second contact line and the "Technology Stack" line after the bullets, and
+  a skills line in capitals is no longer mistaken for a heading.
+- Save writes into a skills table cell by cell, so adding a keyword to a
+  table row no longer turns the save into another file.
+- Removing a bullet's words takes the whole bullet, and a cut from a list
+  takes one separator with it.
+
+## [2.40.0] — 2026-09-30
+
+### Added
+- **The Overview is a dashboard.** Four status cards — New, Alerted, Applied,
+  Saved — each with what moved in the last 24 hours and the last fortnight as
+  bars. Under them, **Jobs matching your searches**: matches per day over 7,
+  30, 90 or 180 days, the total, and the change against the range before;
+  point at the chart for a day's number. **All stack** narrows it to one
+  technology (7 and 30 days), and so does a bar of **Jobs by stack** — what
+  the last 30 days' matches ask for. The search funnel for the same range
+  stands under the chart; beside it, pipeline health and what the search did
+  in the last 24 hours. None of it spends an AI call.
+- **Recent alerts read like an inbox:** who hires, where ("Remote · USA,
+  Canada +3"), the technologies, the fit and how long ago.
+
+### Changed
+- **A crisper look on every page.** Darker text and clearer card edges
+  (helper text now holds 5:1 contrast on every surface), a larger page title
+  with one sentence under it, rounder cards, a white menu with a clearer "you
+  are here", and one height for a field and the button beside it.
+- **Fit is a number in a coloured tile** instead of a number beside a small
+  meter, and a status pill no longer repeats itself with a dot.
+- **Places read as words, technologies by their names.** Jobs shows "Remote ·
+  USA, UK +1" instead of a row of flags — the places your searches name come
+  first, every country is in the tooltip — and TypeScript, Node.js, AWS
+  instead of lowercase tags.
+- **Settings → Schedule says which hours belong to what.** The alert window
+  (its hours and days) shows only under "Only during these hours".
+  **Scheduled messages** is its own block: the hours of the daily recap and,
+  once a day at the first of them, the stale-application reminder.
+- **"+1 in the last 24h" counts what happened today.** On Applied it is an
+  application sent in the last 24 hours, on Alerted an alert sent — before,
+  both counted jobs that happened to be found today.
+- A Delete button is quiet until you point at it: the word is red, the
+  outline is any button's.
+- DESIGN.md describes the new system: the colours and their tested contrast,
+  the type ladder, the cards, and the rules a chart follows.
+
 ## [2.39.0] — 2026-09-28
 
 ### Changed
@@ -4498,6 +4670,29 @@ commit history.
 | 2026-08-30 | AI engine chain, settings tabs, profile fill — **v0.2.0**; readable descriptions + full-width dashboard — **v0.2.1** |
 | 2026-08-31 | Liveness ladder — **v0.3.0**; fetchers wave 1 — **v0.4.0**; starter packs — **v0.5.0**; cross-source dedup — **v0.6.0**; source health — **v0.7.0**; cover letters + fact gate — **v0.8.0**; untrusted-content fences — **v0.9.0**; safe local defaults — **v0.10.0** |
 
+[2.42.0]: https://github.com/applypack/applypack/compare/v2.41.2...v2.42.0
+[2.41.2]: https://github.com/applypack/applypack/compare/v2.41.1...v2.41.2
+[2.41.1]: https://github.com/applypack/applypack/compare/v2.41.0...v2.41.1
+[2.41.0]: https://github.com/applypack/applypack/compare/v2.40.0...v2.41.0
+[2.40.0]: https://github.com/applypack/applypack/compare/v2.39.0...v2.40.0
+[2.39.0]: https://github.com/applypack/applypack/compare/v2.38.0...v2.39.0
+[2.38.0]: https://github.com/applypack/applypack/compare/v2.37.0...v2.38.0
+[2.37.0]: https://github.com/applypack/applypack/compare/v2.36.0...v2.37.0
+[2.36.0]: https://github.com/applypack/applypack/compare/v2.35.0...v2.36.0
+[2.35.0]: https://github.com/applypack/applypack/compare/v2.34.0...v2.35.0
+[2.34.0]: https://github.com/applypack/applypack/compare/v2.33.0...v2.34.0
+[2.33.0]: https://github.com/applypack/applypack/compare/v2.32.0...v2.33.0
+[2.32.0]: https://github.com/applypack/applypack/compare/v2.31.0...v2.32.0
+[2.31.0]: https://github.com/applypack/applypack/compare/v2.30.0...v2.31.0
+[2.30.0]: https://github.com/applypack/applypack/compare/v2.29.0...v2.30.0
+[2.29.0]: https://github.com/applypack/applypack/compare/v2.28.1...v2.29.0
+[2.28.1]: https://github.com/applypack/applypack/compare/v2.28.0...v2.28.1
+[2.28.0]: https://github.com/applypack/applypack/compare/v2.27.0...v2.28.0
+[2.27.0]: https://github.com/applypack/applypack/compare/v2.26.0...v2.27.0
+[2.26.0]: https://github.com/applypack/applypack/compare/v2.25.0...v2.26.0
+[2.25.0]: https://github.com/applypack/applypack/compare/v2.24.0...v2.25.0
+[2.24.0]: https://github.com/applypack/applypack/compare/v2.23.0...v2.24.0
+[2.23.0]: https://github.com/applypack/applypack/compare/v2.22.0...v2.23.0
 [2.22.0]: https://github.com/applypack/applypack/compare/v2.21.0...v2.22.0
 [2.21.0]: https://github.com/applypack/applypack/compare/v2.20.0...v2.21.0
 [2.20.0]: https://github.com/applypack/applypack/compare/v2.19.1...v2.20.0

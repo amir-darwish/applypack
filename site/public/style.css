@@ -252,6 +252,8 @@ section.raised { background: var(--surface); border-top: 1px solid var(--line); 
 .row-text li b { color: var(--ink); font-weight: 600; }
 .shot { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); box-shadow: var(--shadow-1); }
 .shot img { width: 100%; }
+.shot video { display: block; width: 100%; height: auto; background: var(--surface); }
+.shot.tour { margin-top: var(--s-5); }
 .fig figcaption { margin-top: var(--s-2); font-size: 13px; color: var(--ink-3); }
 .fig { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-1); padding: var(--s-5); }
 .gate { display: grid; gap: var(--s-3); font-size: 14.5px; }

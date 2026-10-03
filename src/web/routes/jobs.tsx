@@ -79,7 +79,9 @@ import {
   readKeywords,
   type CoverTone,
   type MatchJobInput,
+  type PostingBrief,
 } from '../../resume/prompts';
+import { summaryGuide, type SummaryGuide } from '../../resume/summary-guide';
 import { withTableAliases } from '../../resume/keyword-aliases';
 import { loadKeywordMatcher, type CountedKeyword } from '../../resume/keyword-matcher';
 import { termUsage, type TermUsage } from '../../resume/usage';
@@ -90,6 +92,7 @@ import { setCoverAngles } from '../../settings';
 import { stageChangeEvent, type StageEventData } from '../stage-events';
 import { findMute, mutedKeys } from '../../jobs/employer-store';
 import { employerKey, hiringName, withoutMuted } from '../../employer';
+import { preferredPlaces } from '../place-line';
 
 const PAGE_SIZE = 50;
 
@@ -252,6 +255,8 @@ jobsRoute.get('/jobs', async (c) => {
         url: true,
         location: true,
         countries: true,
+        regions: true,
+        workplace: true,
         fitScore: true,
         salaryMin: true,
         salaryMax: true,
@@ -314,6 +319,7 @@ jobsRoute.get('/jobs', async (c) => {
       statusCounts={statusCounts}
       facets={tallyFacets(facetRows, { places: country, workplaces: workplace, posted }, now)}
       profiles={activeProfiles.map((p) => ({ id: p.id, name: p.name }))}
+      searchPlaces={preferredPlaces(activeProfiles)}
       blankProfileBanner={activeProfile !== null && isBlankProfile(activeProfile)}
       mutedHidden={mutedHidden}
     />,
@@ -364,6 +370,27 @@ async function orderedKeywords(
   // How long and how lately the judged text shows each term at work (TASKS R8) — read on every view, never stored.
   const usage = termUsage(ordered, match.resumeText, matcher, new Date());
   return ordered.map((k) => (usage.has(k.term) ? { ...k, usage: usage.get(k.term) } : k));
+}
+
+/**
+ * What the first reader looks for in a summary, held against the text this
+ * comparison read (summary-guide.ts) — stored rows only, no AI. A quick check
+ * shows no edit list to put it in.
+ */
+async function summaryGuideFor(
+  match: { actions: unknown; keywords: unknown; resumeText: string; breakdown: unknown } | null,
+  brief: PostingBrief | null,
+  jobTitle: string,
+): Promise<SummaryGuide | null> {
+  if (!match || readMatchMode(match.breakdown) === 'fast') return null;
+  return summaryGuide({
+    resumeText: match.resumeText,
+    actions: readActions(match.actions),
+    keywords: readKeywords(match.keywords),
+    brief,
+    jobTitle,
+    matcher: await loadKeywordMatcher(),
+  });
 }
 
 jobsRoute.get('/jobs/:id', async (c) => {
@@ -455,6 +482,13 @@ jobsRoute.get('/jobs/:id', async (c) => {
 
   const flashCookie = parseFlashCookie(c.req.header('cookie'));
   const selectedKeywords = await orderedKeywords(selected, job.description);
+  const selectedSummaryGuide = selected
+    ? await summaryGuideFor(
+        selected,
+        await storedBriefFor({ id: job.id, title: job.title, companyName: job.employer ?? job.company.name, location: job.location, description: job.description }),
+        job.title,
+      )
+    : null;
   return c.html(
     <JobDetailPage
       tab={resolveJobTab({ tab: c.req.query('tab'), match: c.req.query('match'), letter: c.req.query('letter') })}
@@ -497,6 +531,7 @@ jobsRoute.get('/jobs/:id', async (c) => {
         matches,
         selected,
         selectedKeywords,
+        selectedSummaryGuide,
         job: { title: job.title, companyName: job.employer ?? job.company.name },
         verification: verifications[0] ?? null,
         costHint: costHintText(matchCost),
@@ -1069,6 +1104,7 @@ jobsRoute.get('/jobs/:id/target', async (c) => {
       postingNotice={depth.notice}
       domainNotice={domain}
       orientation={postingOrientation(storedBrief)}
+      summaryGuide={await summaryGuideFor(match, storedBrief, job.title)}
       verification={verifications[0] ?? null}
       fileVerdict={fileVerdict}
       cleanHref={file.clean ? `/resumes/${resume.id}/render` : null}
@@ -1147,8 +1183,8 @@ function sortToOrderBy(sort: string): Prisma.JobOrderByWithRelationInput[] {
  * One sentence on what a Save can do with the resume's own file (ADR 0038),
  * and whether the clean re-render is worth offering beside it (ADR 0039).
  * Only a .docx is read from the database. `clean` is true exactly when Save
- * cannot write the whole file — a PDF, a text version, or a layout the
- * patcher only partly reaches.
+ * cannot write the whole file — a PDF, plain text, or a layout the patcher
+ * only partly reaches; such a save keeps the clean version (ADR 0059).
  */
 async function describeResumeFile(resume: { id: number; sourceFilename: string; hidden: boolean }): Promise<{ verdict: string; clean: boolean }> {
   // A one-off check has no Save, so it is not told what one would keep: the
@@ -1165,9 +1201,9 @@ async function describeResumeFile(resume: { id: number; sourceFilename: string; 
   }
   if (/\.pdf$/i.test(resume.sourceFilename)) {
     return {
-      verdict: 'This file is a PDF: Save keeps a text version; upload the .docx it was printed from to get a styled file back.',
+      verdict: 'This file is a PDF: Document shows the clean version in its look, and Save keeps it as a .docx the next save can edit in place.',
       clean: true,
     };
   }
-  return { verdict: 'This file is plain text: Save keeps a text version.', clean: true };
+  return { verdict: 'This file is plain text: Save keeps the clean version as a .docx.', clean: true };
 }

@@ -29,6 +29,7 @@ import { createApplicants, createScreening } from '../screening/store';
 import { draftRubric } from '../screening/rubric';
 import { fingerprintText } from '../screening/intake';
 import { tryFetchLock } from '../jobs/fetch-lock';
+import { addToFunnel } from '../jobs/funnel-store';
 import { getFetchRun } from '../web/fetch-runs';
 
 /** What a page may answer: itself, or a redirect to where the state lives. */
@@ -57,6 +58,15 @@ const QUERY_VARIANTS = [
   '/settings?tab=ai&spend=nonsense',
   // Step 1 asks the default local addresses for a model server (TASKS S1); nothing answering is the usual case.
   '/welcome?step=ai',
+];
+/** The Overview under its chart's parameters; asked last, once setup is skipped (a fresh database redirects `/`). */
+const OVERVIEW_VARIANTS = [
+  '/',
+  '/?range=7d&stack=node.js',
+  '/?range=90d',
+  // A technology on a range the jobs no longer cover, and values nobody offers: both fall back, neither fails.
+  '/?range=180d&stack=node.js',
+  '/?range=nonsense&stack=%3Cscript%3E',
 ];
 // app.request() builds no Host header of its own, and the origin guard
 // compares Origin's host with it (same-origin.ts) — so the request says both.
@@ -408,6 +418,22 @@ async function main(): Promise<void> {
       init: form({ mode: 'pdf' }),
       expect: (res) => res.status === 200 && res.headers.get('content-type') === 'application/pdf',
     },
+    {
+      // The Tailor page's document pane: the draft drawn as a file, nothing stored.
+      name: 'POST /resumes/:id/document (the draft as a document)',
+      init: form({ text: `${RESUME}\n- Shipped a notification service.`, baseText: RESUME }),
+      expect: (res) => res.status === 200 && (res.headers.get('content-type') ?? '').startsWith('application/json'),
+    },
+    {
+      name: 'POST /resumes/:id/document as=docx (the download)',
+      init: form({ text: RESUME, baseText: RESUME, as: 'docx' }),
+      expect: (res) => res.status === 200 && /attachment; filename=/.test(res.headers.get('content-disposition') ?? ''),
+    },
+    {
+      name: 'POST /resumes/:id/document as=pdf (the clean PDF of the draft)',
+      init: form({ text: RESUME, baseText: RESUME, as: 'pdf' }),
+      expect: (res) => res.status === 200 && res.headers.get('content-type') === 'application/pdf',
+    },
   ];
   const postPaths = [
     '/jobs/new',
@@ -435,6 +461,9 @@ async function main(): Promise<void> {
     '/settings/ai/local',
     '/settings/ai/openai-base',
     `/resumes/${f.resumeId}/render`,
+    `/resumes/${f.resumeId}/document`,
+    `/resumes/${f.resumeId}/document`,
+    `/resumes/${f.resumeId}/document`,
   ];
   for (const [i, p] of posts.entries()) {
     const res = await app.request(postPaths[i]!, p.init);
@@ -521,6 +550,46 @@ async function main(): Promise<void> {
     });
   } finally {
     await held.release();
+  }
+
+  // The Overview itself. A fresh database sends `/` to /welcome, so until here
+  // the dashboard was never drawn: setup is skipped, a scored match and a day
+  // of the funnel are put in place, and the page is asked under every range of
+  // its chart, under a technology, and under values nobody offers.
+  await prisma.company.create({
+    data: {
+      name: 'Smoke Stats',
+      atsType: 'MANUAL',
+      atsToken: 'smoke-stats',
+      active: false,
+      jobs: {
+        create: {
+          externalId: 'smoke-match',
+          title: 'Node Engineer',
+          url: '',
+          location: 'Remote',
+          description: POSTING,
+          postedAt: new Date(),
+          status: 'ALERTED',
+          fitScore: 88,
+          alertedAt: new Date(),
+          techMatch: ['node.js', 'typescript'],
+        },
+      },
+    },
+  });
+  await addToFunnel(new Date(), { fetched: 40, filterRejected: 30, duplicate: 2, classified: 8, matched: 1, alerted: 1 });
+  const skipped = await app.request('/welcome/skip', form({}));
+  rows.push({ route: 'POST /welcome/skip (setup skipped)', url: '/welcome/skip', status: skipped.status, ok: skipped.status === 303 });
+  for (const url of OVERVIEW_VARIANTS) {
+    const res = await app.request(url, { headers: ORIGIN });
+    const html = res.status === 200 ? await res.text() : '';
+    rows.push({
+      route: `GET ${url} (the Overview, with its chart)`,
+      url,
+      status: res.status,
+      ok: res.status === 200 && html.includes('data-plot') && html.includes('Node.js'),
+    });
   }
 
   const failed = rows.filter((r) => !r.ok);

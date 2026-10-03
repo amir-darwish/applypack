@@ -183,7 +183,9 @@ export const ApplicationsPage: FC<ApplicationsProps> = ({
             </div>
           ) : undefined
         }
-      />
+      >
+        {applicationTrackingEnabled && 'Where each application stands. Drag a card to move it.'}
+      </PageHeader>
       <Flash flash={flash} />
 
       {!applicationTrackingEnabled ? (

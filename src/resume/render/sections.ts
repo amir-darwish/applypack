@@ -1,4 +1,5 @@
 import type { JsonResume } from '../json-resume';
+import type { LookRole } from '../pdf-layout';
 import { drawable, undrawable } from './drawable';
 import { SECTION_LABELS, type RenderKnobs, type SectionKey } from './knobs';
 
@@ -38,18 +39,33 @@ export interface GapBlock {
   kind: 'gap';
 }
 
-export type RenderBlock = HeadingBlock | LineBlock | BulletBlock | ParagraphBlock | GapBlock;
+/** A skills-table row: the label in its own column, the values beside it (drawn only when the file had such a table). */
+export interface PairBlock {
+  kind: 'pair';
+  label: string;
+  values: string;
+}
+
+export type RenderBlock = HeadingBlock | LineBlock | BulletBlock | ParagraphBlock | GapBlock | PairBlock;
 
 export interface Run {
   text: string;
   bold?: boolean;
   muted?: boolean;
+  /** Set in the resume's accent colour, when it has one; otherwise in the body colour. */
+  accent?: boolean;
+  /** Which kind of line this is, for a file whose page said how each kind looks (knobs.looks). */
+  role?: LookRole;
 }
 
 export interface RenderedHeader {
   name: string | null;
   label: string | null;
   contact: string | null;
+  /** The same contact line in runs, its links apart — they carry their own colour on a page that gave them one. */
+  contactRuns: Run[];
+  /** Header lines under the contact line, as the resume writes them. */
+  extra: string[];
 }
 
 export interface RenderPlan {
@@ -74,10 +90,60 @@ function unique(parts: Array<string | null>): string[] {
 const DOT = ' · ';
 const DASH = ' – ';
 
-export function planRender(resume: JsonResume, knobs: RenderKnobs): RenderPlan {
+/**
+ * `fold: false` is for a writer that names the user's own font rather than
+ * embedding ours — the .docx: Word draws the ₴ and the ✓ the bundled face
+ * cannot, and folding them there would drop them from the saved file.
+ */
+export interface PlanOptions {
+  fold?: boolean;
+}
+
+export function planRender(resume: JsonResume, knobs: RenderKnobs, opts: PlanOptions = {}): RenderPlan {
   // Folded here, once, rather than at each of the dozen places a string is
   // put into a block: a construction site added later cannot forget it.
-  return fold(rawPlan(resume, knobs));
+  const plan = rawPlan(resume, knobs);
+  return opts.fold === false ? plan : fold(plan);
+}
+
+/** A line the text marks as a heading: `## Skills`, or a short line in capitals with nothing after it. */
+const MD_HEADING = /^#{1,6}\s+(.+)$/;
+const BULLET_LINE = /^\s*[-•*·‣▪]\s+(.*)$/;
+const LINE_HEADING_MAX = 44;
+
+function lineHeading(line: string): string | null {
+  const md = MD_HEADING.exec(line);
+  if (md) return md[1]!.trim();
+  const t = line.trim();
+  if (t.length === 0 || t.length > LINE_HEADING_MAX || /[.:;]$/.test(t) || /,.*,/.test(t)) return null;
+  return /\p{Lu}/u.test(t) && !/\p{Ll}/u.test(t) ? t : null;
+}
+
+/**
+ * Every line of the text as a block of its own, in order — the plan that
+ * cannot lose a word. The structured plan reads a resume into sections and
+ * roles, which is what makes it look like one; when that reading would drop
+ * a line (a run-on table row, a heading that is really content), the clean
+ * version is drawn from this instead, plainer and complete.
+ */
+export function planLines(text: string, opts: PlanOptions = {}): RenderPlan {
+  const lines = text.replace(/\r\n/g, '\n').split('\n').map((l) => l.trimEnd());
+  const first = lines.findIndex((l) => l.trim().length > 0);
+  const name = first >= 0 ? lines[first]!.trim().replace(MD_HEADING, '$1') : null;
+  const blocks: RenderBlock[] = [];
+  for (const line of lines.slice(first + 1)) {
+    if (line.trim().length === 0) {
+      if (blocks.length > 0 && blocks[blocks.length - 1]!.kind !== 'gap') blocks.push({ kind: 'gap' });
+      continue;
+    }
+    const heading = lineHeading(line);
+    const bullet = BULLET_LINE.exec(line);
+    if (heading !== null) blocks.push({ kind: 'heading', text: heading });
+    else if (bullet) blocks.push({ kind: 'bullet', text: bullet[1]!.trim() });
+    else blocks.push({ kind: 'paragraph', text: line.trim() });
+  }
+  const plan: RenderPlan = { header: { name, label: null, contact: null, contactRuns: [], extra: [] }, blocks };
+  return opts.fold === false ? plan : fold(plan);
 }
 
 /**
@@ -102,23 +168,30 @@ function rawPlan(resume: JsonResume, knobs: RenderKnobs): RenderPlan {
   // A model reading a one-link contact line often fills BOTH `url` and
   // `profiles` with it, and the line then says linkedin.com twice (measured on
   // the first live scan). Same link, once.
-  const contact = unique([b.location, b.email, b.phone, b.url, ...b.profiles]).join(DOT);
+  const parts = unique([b.location, b.email, b.phone, b.url, ...b.profiles]);
+  const contact = parts.join(DOT);
+  const links = new Set([b.email, b.url, ...b.profiles].filter(Boolean));
+  const contactRuns: Run[] = parts.flatMap((text, i) => [
+    ...(i > 0 ? [{ text: DOT, role: 'contact' as const }] : []),
+    { text, role: links.has(text) ? ('link' as const) : ('contact' as const) },
+  ]);
   const blocks: RenderBlock[] = [];
-  for (const key of knobs.sectionOrder) blocks.push(...section(key, resume));
+  for (const key of knobs.sectionOrder) blocks.push(...section(key, resume, knobs));
   return {
-    header: { name: b.name, label: b.label, contact: contact.length > 0 ? contact : null },
+    header: { name: b.name, label: b.label, contact: contact.length > 0 ? contact : null, contactRuns, extra: b.lines },
     blocks,
   };
 }
 
 /** Every string a plan would draw, header included. */
 function planStrings(plan: RenderPlan): string[] {
-  const out: string[] = [plan.header.name, plan.header.label, plan.header.contact].filter(
+  const out: string[] = [plan.header.name, plan.header.label, plan.header.contact, ...plan.header.extra].filter(
     (v): v is string => v !== null,
   );
   for (const b of plan.blocks) {
     if (b.kind === 'gap') continue;
     if (b.kind === 'line') out.push(...[...b.left, ...b.right].map((r) => r.text));
+    else if (b.kind === 'pair') out.push(b.label, b.values);
     else out.push(b.text);
   }
   return out;
@@ -129,36 +202,52 @@ function fold(plan: RenderPlan): RenderPlan {
   const text = (v: string | null) => (v === null ? null : drawable(v));
   const runs = (rs: Run[]) => rs.map((r) => ({ ...r, text: drawable(r.text) }));
   return {
-    header: { name: text(plan.header.name), label: text(plan.header.label), contact: text(plan.header.contact) },
+    header: {
+      name: text(plan.header.name),
+      label: text(plan.header.label),
+      contact: text(plan.header.contact),
+      contactRuns: runs(plan.header.contactRuns),
+      extra: plan.header.extra.map(drawable),
+    },
     blocks: plan.blocks.map((b) =>
       b.kind === 'line' ? { ...b, left: runs(b.left), right: runs(b.right) }
       : b.kind === 'gap' ? b
+      : b.kind === 'pair' ? { ...b, label: drawable(b.label), values: drawable(b.values) }
       : { ...b, text: drawable(b.text) },
     ),
   };
 }
 
-function section(key: SectionKey, resume: JsonResume): RenderBlock[] {
+function section(key: SectionKey, resume: JsonResume, knobs: RenderKnobs): RenderBlock[] {
   switch (key) {
     case 'summary':
-      return resume.basics.summary ? headed(key, [{ kind: 'paragraph', text: resume.basics.summary }]) : [];
+      return resume.basics.summary ? headed(key, resume, [{ kind: 'paragraph', text: resume.basics.summary }]) : [];
     case 'skills':
       return headed(
         key,
-        resume.skills.map((s) => ({
-          kind: 'line' as const,
-          left: [
-            ...(s.name ? [{ text: `${s.name.replace(/:\s*$/, '')}: `, bold: true }] : []),
-            ...(s.keywords.length > 0 ? [{ text: s.keywords.join(', ') }] : []),
-          ],
-          right: [],
-        })).filter((l) => l.left.length > 0),
+        resume,
+        resume.skills
+          .map((s): RenderBlock => {
+            const values = s.keywords.join(', ');
+            // The file set its skills as a table: the label in a column of its own.
+            if (s.name && values && knobs.looks?.labelColumnPt) return { kind: 'pair', label: `${s.name.replace(/:\s*$/, '')}:`, values };
+            return {
+              kind: 'line',
+              left: [
+                ...(s.name ? [{ text: `${s.name.replace(/:\s*$/, '')}: `, bold: true, role: 'skillLabel' as const }] : []),
+                ...(values ? [{ text: values, role: 'skillValues' as const }] : []),
+              ],
+              right: [],
+            };
+          })
+          .filter((b) => b.kind !== 'line' || b.left.length > 0),
       );
     case 'work':
-      return headed(key, resume.work.flatMap(role));
+      return headed(key, resume, resume.work.flatMap(role));
     case 'projects':
       return headed(
         key,
+        resume,
         resume.projects.flatMap((p) => [
           { kind: 'line' as const, left: bolded(p.name), right: muted(p.url) },
           ...(p.description ? [{ kind: 'paragraph' as const, text: p.description }] : []),
@@ -168,6 +257,7 @@ function section(key: SectionKey, resume: JsonResume): RenderBlock[] {
     case 'education':
       return headed(
         key,
+        resume,
         resume.education.map((e) => ({
           kind: 'line' as const,
           left: [
@@ -180,6 +270,7 @@ function section(key: SectionKey, resume: JsonResume): RenderBlock[] {
     case 'certificates':
       return headed(
         key,
+        resume,
         resume.certificates.map((c) => ({
           kind: 'line' as const,
           left: [...bolded(c.name), ...(c.issuer ? [{ text: `  ${c.issuer}` }] : [])],
@@ -191,7 +282,7 @@ function section(key: SectionKey, resume: JsonResume): RenderBlock[] {
         .map((l) => (l.fluency ? `${l.language} (${l.fluency})` : l.language))
         .filter(Boolean)
         .join(DOT);
-      return line.length > 0 ? headed(key, [{ kind: 'paragraph', text: line }]) : [];
+      return line.length > 0 ? headed(key, resume, [{ kind: 'paragraph', text: line }]) : [];
     }
     case 'extras':
       return resume.extras.flatMap((x) => [
@@ -207,18 +298,35 @@ function role(w: JsonResume['work'][number]): RenderBlock[] {
   const dateRange = dates(w.startDate, w.endDate);
   // Company and place on the first line, title and dates on the second: the
   // shape every resume in the corpus already uses.
-  if (w.name || w.location) out.push({ kind: 'line', left: bolded(w.name), right: muted(w.location) });
-  if (w.position || dateRange) out.push({ kind: 'line', left: bolded(w.position), right: muted(dateRange) });
+  if (w.name || w.location) out.push({ kind: 'line', left: as(bolded(w.name), 'company'), right: as(muted(w.location), 'place') });
+  if (w.position || dateRange) out.push({ kind: 'line', left: as(bolded(w.position), 'position'), right: as(muted(dateRange), 'dates') });
   if (w.summary) out.push({ kind: 'paragraph', text: w.summary });
   for (const text of w.highlights) out.push({ kind: 'bullet', text });
+  if (w.after) out.push(labelled(w.after));
   if (out.length > 0) out.push({ kind: 'gap' });
   return out;
 }
 
-/** A section is drawn only when it has something in it — no empty headings. */
-function headed(key: SectionKey, blocks: RenderBlock[]): RenderBlock[] {
+/** "Technology Stack: PHP, Laravel" as its label in the accent and the list muted; a plain sentence as a paragraph. */
+const LABEL = /^([^:]{2,40}:)\s+(.+)$/;
+function labelled(text: string): RenderBlock {
+  const m = LABEL.exec(text);
+  if (!m) return { kind: 'paragraph', text };
+  return {
+    kind: 'line',
+    left: [{ text: `${m[1]} `, accent: true, role: 'stackLabel' }, { text: m[2]!, muted: true, role: 'stackValues' }],
+    right: [],
+  };
+}
+
+function as(runs: Run[], role: LookRole): Run[] {
+  return runs.map((r) => ({ ...r, role }));
+}
+
+/** A section is drawn only when it has something in it — no empty headings — under the resume's own heading when it has one. */
+function headed(key: SectionKey, resume: JsonResume, blocks: RenderBlock[]): RenderBlock[] {
   if (blocks.length === 0) return [];
-  const label = SECTION_LABELS[key];
+  const label = resume.headings[key] ?? SECTION_LABELS[key];
   const body: RenderBlock[] = [...blocks, { kind: 'gap' }];
   return label ? [{ kind: 'heading', text: label }, ...body] : body;
 }
@@ -242,7 +350,7 @@ function dates(start: string | null, end: string | null): string | null {
  */
 export function planToText(plan: RenderPlan): string {
   const lines: string[] = [];
-  for (const value of [plan.header.name, plan.header.label, plan.header.contact]) if (value) lines.push(value);
+  for (const value of [plan.header.name, plan.header.label, plan.header.contact, ...plan.header.extra]) if (value) lines.push(value);
   for (const block of plan.blocks) {
     switch (block.kind) {
       case 'heading':
@@ -259,6 +367,9 @@ export function planToText(plan: RenderPlan): string {
         break;
       case 'paragraph':
         lines.push(block.text);
+        break;
+      case 'pair':
+        lines.push(`${block.label} ${block.values}`);
         break;
       case 'gap':
         lines.push('');

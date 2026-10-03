@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { floorDemand, floorGaps, hasCore } from './suggestion-floor';
+import { floorDemand, floorGaps, hasCore, unwrittenMusts } from './suggestion-floor';
 import { readActions, readKeywords, type MatchAction, type MatchKeyword } from './prompts';
 import type { MatchAlignment } from './score';
 
@@ -73,4 +73,18 @@ test('hasCore falls back to must-level coverage when the posting names no primar
   const two = [kw({ term: 'SEO' }), kw({ term: 'Figma', status: 'add' })];
   assert.equal(hasCore({ keywords: two, breakdown: bd({ primaryTotal: 0, primaryPresent: 0 }) }), true);
   assert.equal(hasCore({ keywords: two.slice(0, 1), breakdown: bd({ primaryTotal: 0, primaryPresent: 0 }) }), false);
+});
+
+test('a must-level term the resume backs but no rewrite writes in is owed, by name', () => {
+  const keywords = [kw({ term: 'React' }), kw({ term: 'Kafka', status: 'add', aliases: ['apache kafka'] })];
+  const none = floorGaps({ keywords, alignment: STRONG, actions: [action({ section: 'experience', replacement: 'Built the payments backend.' })], breakdown: bd() });
+  assert.deepEqual(none, ['keywords']);
+  assert.deepEqual(unwrittenMusts({ keywords, actions: [] }), ['Kafka']);
+  assert.match(floorDemand(none, ['Kafka']), /\(Kafka\)/);
+  // Written in, by its own name or an alias, the gap closes; a word inside another word does not count.
+  const byAlias = [action({ section: 'experience', replacement: 'Moved the event bus to Apache Kafka.' })];
+  assert.deepEqual(floorGaps({ keywords, alignment: STRONG, actions: byAlias, breakdown: bd() }), []);
+  assert.deepEqual(unwrittenMusts({ keywords, actions: [action({ replacement: 'Kafkaesque paperwork.' })] }), ['Kafka']);
+  // A preferred term is the prompt's to ask for, not the floor's.
+  assert.deepEqual(unwrittenMusts({ keywords: [kw({ term: 'Redis', status: 'add', requirement: 'preferred' })], actions: [] }), []);
 });

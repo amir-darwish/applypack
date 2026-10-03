@@ -63,6 +63,8 @@ export interface Block {
   kind: BlockKind;
   node: Element;
   lines: string[];
+  /** The marker the reader wrote before line 0 ("- ", "## ", "# "), '' when none — never text the file itself holds. */
+  marker: string;
   table?: { row: number; cell: number };
 }
 
@@ -106,7 +108,7 @@ function walkTable(table: Element, blocks: Block[]): void {
     row++;
   }
   // A table ends with a blank line, as the regex reader wrote one after every table.
-  blocks.push({ kind: 'body', node: table, lines: [''], table: { row: -1, cell: -1 } });
+  blocks.push({ kind: 'body', node: table, lines: [''], marker: '', table: { row: -1, cell: -1 } });
 }
 
 /** Elements named `name` under `root`, not descending into a nested `stop` element (a table inside a cell is its own table). */
@@ -122,11 +124,28 @@ function descendantsUntil(root: Element, name: string, stop: string): Element[] 
   return out;
 }
 
-function paragraphBlock(p: Element): Block {
+/**
+ * The marker the reader writes before a paragraph's text: "- " for a list
+ * item, "# " for the Title style, "## " for a heading style or a line that
+ * looks like one, nothing otherwise. The patcher asks the same question of a
+ * line it writes, so its read-back gate expects what the reader will say.
+ */
+export function markerFor(p: Element, text: string): string {
+  return styleMarker(p) || (looksLikeHeading(text) ? '## ' : '');
+}
+
+/** The marker a paragraph earns by its properties alone — a list item, the Title style, a heading style. */
+export function styleMarker(p: Element): string {
   const props = children(p).find((c) => isW(c, 'pPr'));
   const isListItem = props ? descendantsUntil(props, 'numPr', 'p').length > 0 : false;
   const style = props ? (descendantsUntil(props, 'pStyle', 'p')[0]?.getAttribute('w:val') ?? '') : '';
+  if (isListItem) return '- ';
+  if (/^Title$/i.test(style)) return '# ';
+  if (/^Heading/i.test(style)) return '## ';
+  return '';
+}
 
+function paragraphBlock(p: Element): Block {
   let raw = '';
   let tabbed = false;
   const visit = (n: Node) => {
@@ -145,15 +164,12 @@ function paragraphBlock(p: Element): Block {
     .split('\n')
     .map((line) => line.replace(/[ \t]*\t[ \t]*/g, ' | ').replace(/ {2,}/g, ' ').trim())
     .filter((line) => line.length > 0);
-  if (lines.length === 0) return { kind: 'body', node: p, lines: [''] };
+  if (lines.length === 0) return { kind: 'body', node: p, lines: [''], marker: '' };
 
   const text = lines.join('\n');
-  let kind: BlockKind = tabbed ? 'tabbed' : 'body';
-  let rendered = text;
-  if (isListItem) { kind = 'bullet'; rendered = `- ${text}`; }
-  else if (/^Title$/i.test(style)) { kind = 'heading'; rendered = `# ${text}`; }
-  else if (/^Heading/i.test(style) || looksLikeHeading(text)) { kind = 'heading'; rendered = `## ${text}`; }
-  return { kind, node: p, lines: rendered.split('\n') };
+  const marker = markerFor(p, text);
+  const kind: BlockKind = marker === '- ' ? 'bullet' : marker ? 'heading' : tabbed ? 'tabbed' : 'body';
+  return { kind, node: p, lines: `${marker}${text}`.split('\n'), marker };
 }
 
 /**

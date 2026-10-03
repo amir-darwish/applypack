@@ -18,8 +18,9 @@ import { briefForPosting, type BriefResult } from './brief';
 import { annotateElsewhere, applyFacts } from './facts';
 import { countableFlags } from './red-flags';
 import { gateActions, gateRemovals } from './replacement-gate';
-import { floorDemand, floorGaps } from './suggestion-floor';
+import { floorDemand, floorGaps, unwrittenMusts } from './suggestion-floor';
 import { suggestForMatch } from './suggestions';
+import { rewriteRefusedLeads } from './rewrite';
 import { withTableAliases } from './keyword-aliases';
 import { carryOverrides, effectiveKeywords } from './keyword-overrides';
 import { annotateAliasOnly, anchorKeywords, anchorStatuses, elsewhereForPosting } from './keyword-anchor';
@@ -231,7 +232,11 @@ export async function matchResumeToJob(
     const gaps = floorGaps({ keywords, alignment: reply.alignment, actions: gate.actions, breakdown });
     if (gaps.length > 0) {
       logger.info({ matchId: row.id, jobId: job.id, gaps }, 'resume: suggestions missed the floor, asking again');
-      filled = (await suggestForMatch(row, job, undefined, floorDemand(gaps))) ?? row;
+      filled = (await suggestForMatch(row, job, undefined, floorDemand(gaps, unwrittenMusts({ keywords, actions: gate.actions })))) ?? row;
+    } else {
+      // The floor's own call does this at its end; without it, a refused title
+      // or summary wording is written again here (rewrite.ts).
+      filled = await rewriteRefusedLeads(row, job);
     }
   }
 

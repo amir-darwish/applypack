@@ -25,7 +25,7 @@ import type { MatchAction, MatchKeyword } from './prompts';
 /** A ceiling below this is not worth chasing: no wording reaches an application from here. */
 const WORTH_CHASING = 50;
 
-export type FloorSection = 'title' | 'summary' | 'experience' | 'skills';
+export type FloorSection = 'title' | 'summary' | 'experience' | 'skills' | 'keywords';
 
 export interface FloorInput {
   keywords: MatchKeyword[];
@@ -65,16 +65,37 @@ export function floorGaps(input: FloorInput): FloorSection[] {
     (k) => k.requirement === 'must' && k.status === 'present' && k.evidence === 'listed',
   );
   if (buried && !actions.some((a) => a.section === 'experience' || a.section === 'skills')) gaps.push('skills');
+  // A must-level term the resume's facts back but no rewrite writes in: the
+  // rule asks for it, and a list of bullet rewrites with none of the posting's
+  // missing words was the complaint (2026-09-30).
+  if (unwrittenMusts(input).length > 0) gaps.push('keywords');
   return gaps;
 }
 
+/** Must-level terms marked "add" that no action's wording carries, by their own spelling or an alias. */
+export function unwrittenMusts(input: Pick<FloorInput, 'keywords' | 'actions'>): string[] {
+  const wording = input.actions.map((a) => a.replacement ?? '').join('\n');
+  return input.keywords
+    .filter((k) => k.requirement === 'must' && k.status === 'add')
+    .filter((k) => ![k.term, ...(k.aliases ?? [])].some((t) => wordIn(wording, t)))
+    .map((k) => k.term);
+}
+
+function wordIn(text: string, term: string): boolean {
+  const t = term.trim();
+  if (!t) return false;
+  const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'iu').test(text);
+}
+
 /** The line the retry prompt carries — what was owed, in the words the rules use. */
-export function floorDemand(gaps: FloorSection[]): string {
+export function floorDemand(gaps: FloorSection[], terms: string[] = []): string {
   const what: Record<FloorSection, string> = {
     title: 'the title line graded below strong and got no high-priority action with wording',
     summary: 'the summary graded below strong and got no high-priority action with wording',
     experience: "the most recent role graded below strong and got no high-priority action rewriting its leading bullets",
     skills: 'a must-level term the resume names only on a skills line got no action putting it inside a bullet',
+    keywords: `must-level keywords marked "add" appear in no replacement (${terms.join(', ') || 'see the table'}) — write each into the bullet or summary rewrite whose facts back it`,
   };
   return (
     'THE LAST REPLY MISSED REQUIRED COVERAGE. ' +

@@ -2819,8 +2819,11 @@ it moves. Stage 0 carries no tag; the others are a minor each.
 
 ### 22.3 Later, each with its trigger (plan §6)
 
-- Charts as server-rendered SVG from a pure function — with §20's
-  `search-funnel`.
+- ~~Charts as server-rendered SVG from a pure function — with §20's
+  `search-funnel`.~~ Shipped in v2.40.0 with the Overview's statistics
+  (`web/chart-svg.ts`, `web/overview-stats.ts`); the same release replaced
+  stage 4's metric strip with four status cards and refreshed the tokens,
+  the type ladder and the shapes (DESIGN.md).
 - Dark theme as a second value set in `tokens.ts` — when the owner asks.
 - A drawer, a richer combobox — when a page, a `?tab=`, a `<details>` or a
   native `<dialog>` cannot do the job.

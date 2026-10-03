@@ -304,13 +304,34 @@ const CLI_BASE_ENV_KEYS = [
  * the CLI's default, it reasons over search results.
  */
 export const CLI_THINKING_CAP_ENV = 'MAX_THINKING_TOKENS';
+/**
+ * With thinking off, Opus 5 refuses an effort above `high` (400: "effort 'xhigh'
+ * is not supported when thinking is disabled"), and the CLI reads the effort
+ * from the user's own ~/.claude/settings.json — which a local install shares.
+ * Found 2026-09-30: every cover letter failed on an owner's `effortLevel: xhigh`.
+ * An older CLI ignores the variable; a flag would stop it with "unknown option".
+ */
+export const CLI_EFFORT_ENV = 'CLAUDE_CODE_EFFORT_LEVEL';
+const CAPPED_EFFORT = 'high';
 
 export function cliThinkingCap(webTools: boolean | undefined): Record<string, string> {
-  return webTools ? {} : { [CLI_THINKING_CAP_ENV]: '0' };
+  return webTools ? {} : { [CLI_THINKING_CAP_ENV]: '0', [CLI_EFFORT_ENV]: CAPPED_EFFORT };
 }
 
+/**
+ * Every claude_code call reads no CLAUDE.md and no auto-memory. Started in the
+ * checkout (npm start), the CLI read the repo's CLAUDE.md and the project's
+ * memory into every call: +53 000 tokens each, measured 2026-09-30, and a
+ * resume scan that reported those instructions as an injection. The provider
+ * also runs it in the temp folder; these close the folders above that one too.
+ */
+export const CLAUDE_CODE_ISOLATION_ENV: Readonly<Record<string, string>> = {
+  CLAUDE_CODE_DISABLE_CLAUDE_MDS: '1',
+  CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
+};
+
 export const CLI_PROVIDER_ENV_KEYS: Partial<Record<AiProviderId, readonly string[]>> = {
-  claude_code: ['CLAUDE_CODE_OAUTH_TOKEN', 'CLAUDE_CONFIG_DIR', CLI_THINKING_CAP_ENV],
+  claude_code: ['CLAUDE_CODE_OAUTH_TOKEN', 'CLAUDE_CONFIG_DIR', CLI_THINKING_CAP_ENV, CLI_EFFORT_ENV, ...Object.keys(CLAUDE_CODE_ISOLATION_ENV)],
   gemini_cli: [
     'GEMINI_API_KEY',
     'GOOGLE_GENAI_USE_VERTEXAI',

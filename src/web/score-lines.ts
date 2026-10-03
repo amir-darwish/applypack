@@ -172,8 +172,25 @@ export function readyToApply(input: LinesInput & { score: number; threshold: num
   if (input.score < input.threshold) return false;
   if (input.edits > 0) return false;
   if (input.hard.some((h) => h.status !== 'pass')) return false;
-  return !input.keywords.some((k) => k.status === 'present' && k.evidence === 'listed' && effectiveRequirement(k) === 'must');
+  return !input.keywords.some(
+    (k) => k.status === 'present' && k.evidence === 'listed' && effectiveRequirement(k) === 'must' && !groupMet(input.keywords, k, shownAtWork),
+  );
 }
+
+/**
+ * An either/or group ("Express, Fastify or NestJS") is ONE requirement (ADR 0044):
+ * once another member answers it, this one asks for nothing. `foldGroups` scores
+ * it so; the advice named NestJS "a must nothing backs" beside Express and
+ * Fastify, a gap the number did not have (found 2026-09-30).
+ */
+function groupMet(keywords: MatchKeyword[], k: MatchKeyword, answers: (other: MatchKeyword) => boolean): boolean {
+  const group = k.group?.trim().toLowerCase();
+  return !!group && keywords.some((o) => o !== k && o.group?.trim().toLowerCase() === group && answers(o));
+}
+
+const written = (k: MatchKeyword): boolean => k.status === 'present';
+const claimable = (k: MatchKeyword): boolean => k.status === 'present' || k.status === 'add';
+const shownAtWork = (k: MatchKeyword): boolean => k.status === 'present' && (k.evidence === 'described' || k.evidence === 'measured');
 
 /*
  * The one thing to do next, in a sentence.
@@ -265,17 +282,17 @@ export function mainAdvice({ breakdown, keywords, hard, actions }: AdviceInput):
   // "add" means the resume's own facts already evidence the term and the word
   // itself is missing — the cheapest points on the page, and the only rung
   // that asks for nothing but typing.
-  const unwritten = musts.find((k) => k.status === 'add');
+  const unwritten = musts.find((k) => k.status === 'add' && !groupMet(keywords, k, written));
   if (unwritten) {
     return `Write ${unwritten.term} into the text — your own experience evidences it and the word is not there.`;
   }
 
-  const unbacked = musts.find((k) => k.status === 'ask_user' || k.status === 'cannot_claim');
+  const unbacked = musts.find((k) => (k.status === 'ask_user' || k.status === 'cannot_claim') && !groupMet(keywords, k, claimable));
   if (unbacked) return `${unbacked.term} is a must here and nothing backs it yet — confirm it where it is true.`;
 
   // Named on a skills line and never shown at work: the score discounts it a
   // little (v6), a human reads it as a claim with nothing behind it (evidence.ts).
-  const listed = musts.filter((k) => k.status === 'present' && k.evidence === 'listed');
+  const listed = musts.filter((k) => k.status === 'present' && k.evidence === 'listed' && !groupMet(keywords, k, shownAtWork));
   const first = listed[0];
   if (first) {
     const tail =

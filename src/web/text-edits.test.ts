@@ -11,6 +11,9 @@ const edits = import('./public/text-edits.mjs') as Promise<{
   insertAfterLine: (text: string, anchor: string, wording: string) => Edit;
   inverseEdit: (before: string, after: string) => { start: number; removed: string; inserted: string };
   undoEdit: (text: string, edit: { start: number; removed: string; inserted: string }) => Edit;
+  withContext: (after: string, edit: { start: number; removed: string; inserted: string }) => {
+    start: number; removed: string; inserted: string; lead: string; trail: string;
+  };
 }>;
 
 const ok = (r: Edit) => {
@@ -77,6 +80,19 @@ test('applyReplacement refuses a quote it cannot find or an empty wording', asyn
   assert.equal(err(applyReplacement(RESUME, 'Senior Full-Stack Engineer', '   ')), 'no-replacement');
 });
 
+test('a wording that brings its own "- " takes the resume’s bullet instead of doubling it', async () => {
+  const { applyReplacement, insertAfterLine } = await edits;
+  const changed = ok(applyReplacement(RESUME, '• Led backend architecture for PHP services processing payments.', '- Owned the payments backend.'));
+  assert.match(changed.text, /^• Owned the payments backend\.$/m);
+  assert.equal(changed.text.includes('• -'), false);
+  const inner = ok(applyReplacement(RESUME, 'Led backend architecture for PHP services processing payments.', '- Owned the payments backend.'));
+  assert.match(inner.text, /^• Owned the payments backend\.$/m, 'a quote that starts after the marker too');
+  const added = ok(insertAfterLine(RESUME, 'Built a multi-gateway payment platform from scratch in Laravel.', '- Cut checkout failures 18%.'));
+  assert.match(added.text, /^• Cut checkout failures 18%\.$/m);
+  // Off a bullet, the wording is left as written.
+  assert.match(ok(applyReplacement(RESUME, 'Senior Full-Stack Engineer', 'Senior PHP Engineer')).text, /^Senior PHP Engineer$/m);
+});
+
 test('removeSpan takes the whole line and its newline when the quote is the line', async () => {
   const { removeSpan } = await edits;
   const r = ok(removeSpan(RESUME, '• Improved SEO rankings for marketing pages.'));
@@ -90,6 +106,36 @@ test('removeSpan cuts only the span when the quote is part of a line', async () 
   const r = ok(removeSpan(RESUME, 'shipping production systems end-to-end.'));
   assert.match(r.text, /^Senior engineer \(10\+ years\)\s*$/m, 'the rest of the line survives');
   assert.equal(r.text.split('\n').length, RESUME.split('\n').length, 'no line was removed');
+});
+
+test('removeSpan takes a bullet whole when the quote is its words without the marker', async () => {
+  const { removeSpan } = await edits;
+  const r = ok(removeSpan(RESUME, 'Improved SEO rankings for marketing pages.'));
+  assert.equal(r.text.includes('•  '), false);
+  assert.equal(/^•\s*$/m.test(r.text), false, 'no bare marker left');
+  assert.equal(r.text.split('\n').length, RESUME.split('\n').length - 1);
+});
+
+test('removeSpan takes a separator with a cut from a list, on the side that is open', async () => {
+  const { removeSpan } = await edits;
+  const text = 'SKILLS\nBlade, Twig, Jira, AWS, S3, OWASP\nGo, PHP, JavaScript';
+  assert.match(ok(removeSpan(text, 'Blade, Twig, Jira,')).text, /^AWS, S3, OWASP$/m, 'no space left in front');
+  assert.match(ok(removeSpan(text, 'PHP')).text, /^Go, JavaScript$/m, 'no double comma');
+  assert.match(ok(removeSpan(text, ', JavaScript')).text, /^Go, PHP$/m);
+  assert.match(ok(removeSpan(text, 'OWASP')).text, /^Blade, Twig, Jira, AWS, S3$/m, 'the last item takes the comma before it');
+});
+
+test('an edit whose one side was shared when recorded is not found by that side alone', async () => {
+  const { removeSpan, applyReplacement, inverseEdit, undoEdit, withContext } = await edits;
+  // Two roles end on the same stack line; a bullet is cut from the first.
+  const stack = 'Technology Stack: PHP, Laravel.';
+  const text = `ROLE A\n• Built A.\n• Cut me.\n${stack}\nROLE B\n• Built B.\n${stack}\nEDUCATION`;
+  const cut = ok(removeSpan(text, '• Cut me.')).text;
+  const removal = withContext(cut, inverseEdit(text, cut));
+  // The bullet before it is rewritten, and role A's stack line gains a term: both sides moved.
+  const moved = ok(applyReplacement(cut, 'Built A.', 'Built A, faster.')).text.replace(`${stack}\nROLE B`, 'Technology Stack: PHP, Laravel, Redis.\nROLE B');
+  // Only role B's stack line still reads like the trail: that is not where the bullet was.
+  assert.equal(err(undoEdit(moved, removal)), 'moved-on');
 });
 
 test('removeSpan refuses the contact line — email and phone are not edits to make blind', async () => {
@@ -222,6 +268,27 @@ test('inverseEdit round-trips every operation', async () => {
   }
 });
 
+test('an edit with its context is undone after edits above it moved it', async () => {
+  const { applyReplacement, removeSpan, inverseEdit, undoEdit, withContext } = await edits;
+  const text = 'SUMMARY\nShort summary.\n\nEXPERIENCE\n• Led backend architecture.\n• Improved SEO rankings.';
+  // A removal below, then a longer summary above it: the removal's offset is stale.
+  const cut = ok(removeSpan(text, '• Improved SEO rankings.')).text;
+  const removal = withContext(cut, inverseEdit(text, cut));
+  const longer = ok(applyReplacement(cut, 'Short summary.', 'A much longer summary that pushes every line below it down.')).text;
+  const back = ok(undoEdit(longer, removal));
+  assert.match(back.text, /• Led backend architecture\.\n• Improved SEO rankings\.$/);
+  assert.match(back.text, /^SUMMARY\nA much longer summary/, 'the later edit above stays');
+});
+
+test('an edit with its context refuses when the text around it was rewritten', async () => {
+  const { applyReplacement, inverseEdit, undoEdit, withContext } = await edits;
+  const text = 'EXPERIENCE\n• Led backend architecture.\n• Improved SEO rankings.';
+  const after = ok(applyReplacement(text, 'Led backend architecture.', 'Owned the payments backend.')).text;
+  const edit = withContext(after, inverseEdit(text, after));
+  const typed = after.replace('Owned the payments backend.', 'Owned it all.');
+  assert.equal(err(undoEdit(typed, edit)), 'moved-on');
+});
+
 test('insertAfterLine adds the wording as the next line and inherits the bullet marker', async () => {
   const { insertAfterLine } = await edits;
   const r = ok(insertAfterLine(RESUME, 'Built a multi-gateway payment platform from scratch in Laravel.', 'Cut checkout failures 18% with retry queues.'));
@@ -235,7 +302,7 @@ test('insertAfterLine adds the wording as the next line and inherits the bullet 
 test('insertAfterLine does not double a marker the wording already carries, nor add one under a paragraph', async () => {
   const { insertAfterLine } = await edits;
   const withMarker = ok(insertAfterLine(RESUME, 'Improved SEO rankings', '- Already a bullet.'));
-  assert.match(withMarker.text, /^- Already a bullet\.$/m);
+  assert.match(withMarker.text, /^• Already a bullet\.$/m, 'the resume’s own marker, not the wording’s');
   assert.equal(withMarker.text.includes('• - '), false);
   const underProse = ok(insertAfterLine(RESUME, 'Senior engineer (10+ years)', 'Remote full-time since 2015.'));
   assert.match(underProse.text, /^Remote full-time since 2015\.$/m);
@@ -258,4 +325,11 @@ test('undoEdit refuses once the user has typed over the edit', async () => {
   assert.equal(err(undoEdit(after.replace('Delta', 'Echo'), edit)), 'moved-on');
   // And it still works on the untouched text.
   assert.equal(ok(undoEdit(after, edit)).text, text);
+});
+
+test('cutting the first item after a label takes the separator after it', async () => {
+  const { removeSpan } = await edits;
+  assert.equal(ok(removeSpan('Skills: Go, PHP, JavaScript', 'Go')).text, 'Skills: PHP, JavaScript');
+  assert.equal(ok(removeSpan('Tools — Docker, Git', 'Docker')).text, 'Tools — Git');
+  assert.equal(ok(removeSpan('Skills: Go', 'Go')).text, 'Skills:');
 });

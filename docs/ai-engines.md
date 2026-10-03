@@ -1,6 +1,6 @@
 # AI engines — setup guide
 
-The pipeline can run on any mix of five AI backends. You enable the ones you
+The pipeline can run on any mix of six AI backends. You enable the ones you
 have, put them in priority order on **`/settings` → AI engine**, and the app
 does the rest:
 

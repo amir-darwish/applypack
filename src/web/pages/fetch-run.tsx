@@ -2,6 +2,7 @@
 import type { FC } from 'hono/jsx';
 import { Layout } from '../layout';
 import { ActionForm, Button, Card, Hint, Notice } from '../ui';
+import { Icon } from '../icons';
 import { RunSteps, type StepView } from './run-steps';
 import { FETCH_FAILED, FETCH_RUN_STEPS, type FetchRun } from '../fetch-runs';
 
@@ -35,16 +36,14 @@ function stepView({ classify, scope }: Pick<FetchRun, 'classify' | 'scope'>): Re
 /** "Fetch now" — one form shared by Overview and /runs; a link to the live run while one is in flight. */
 export const FetchNowButton: FC<{ run: FetchRun | null }> = ({ run }) =>
   run ? (
-    <Button href={`/runs/fetch-now/${run.id}`} size="sm" variant="secondary">
+    <Button href={`/runs/fetch-now/${run.id}`} variant="secondary">
+      <Icon name="activity" size={16} />
       Fetching… watch
     </Button>
   ) : (
     <ActionForm action="/runs/fetch-now">
-      <Button
-        size="sm"
-        variant="secondary"
-        title="Run the hourly fetch now. While the pipeline is paused, new jobs are stored unscored."
-      >
+      <Button title="Run the hourly fetch now. While the pipeline is paused, new jobs are stored unscored.">
+        <Icon name="play" size={16} />
         Fetch now
       </Button>
     </ActionForm>
