@@ -579,7 +579,7 @@ export function buildAgyCliArgs(req: {
   return [
     '--output-format', 'json',
     '--disable-slash-commands',
-    '--dangerously-skip-permissions',
+    ...(req.webTools ? ['--dangerously-skip-permissions'] : []),
     ...(req.model ? ['--model', req.model] : []),
     `--prompt=${req.system}\n\n${req.user}`,
   ];

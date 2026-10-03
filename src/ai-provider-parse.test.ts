@@ -176,7 +176,6 @@ test('buildAgyCliArgs includes flags and formats prompt', () => {
   assert.deepEqual(plain, [
     '--output-format', 'json',
     '--disable-slash-commands',
-    '--dangerously-skip-permissions',
     '--model', 'gemini-3.8-flash-high',
     '--prompt=S\n\nU',
   ]);
@@ -185,7 +184,15 @@ test('buildAgyCliArgs includes flags and formats prompt', () => {
   assert.deepEqual(defaultModel, [
     '--output-format', 'json',
     '--disable-slash-commands',
+    '--prompt=S\n\nU',
+  ]);
+
+  const web = buildAgyCliArgs({ system: 'S', user: 'U', model: 'gemini-3.8-flash-high', webTools: true });
+  assert.deepEqual(web, [
+    '--output-format', 'json',
+    '--disable-slash-commands',
     '--dangerously-skip-permissions',
+    '--model', 'gemini-3.8-flash-high',
     '--prompt=S\n\nU',
   ]);
 });
