@@ -3,8 +3,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* A status pill's ground (ui.tsx TONE_SOFT): the tone at 10 % painted over
-   white, so the pill reads the same on every surface. */
+/* A status pill's ground (ui.tsx TONE_SOFT): the tone at 12 % painted over
+   white, so the pill reads the same on every surface (tokens.test.ts holds
+   the tone's text to AA on exactly this tint). */
 @layer components {
   .pill-ok,
   .pill-warn,
@@ -12,7 +13,7 @@
   .pill-info,
   .pill-violet {
     background-color: rgb(var(--surface-raised));
-    background-image: linear-gradient(rgb(var(--pill) / 0.1), rgb(var(--pill) / 0.1));
+    background-image: linear-gradient(rgb(var(--pill) / 0.12), rgb(var(--pill) / 0.12));
   }
   .pill-ok { --pill: var(--ok); }
   .pill-warn { --pill: var(--warn); }

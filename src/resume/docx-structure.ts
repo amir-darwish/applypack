@@ -55,7 +55,7 @@ export function docxStructure(bytes: Buffer): DocxStructure {
   try {
     doc = parseDocumentXml(part.toString('utf8'));
   } catch {
-    return { ...empty, notes: ['The document XML could not be parsed: Save keeps a text version.'] };
+    return { ...empty, notes: ['The document XML could not be parsed: Save keeps the clean version as a new .docx.'] };
   }
 
   const count = (ns: string, name: string) => doc.getElementsByTagNameNS(ns, name).length;
@@ -97,7 +97,7 @@ export function docxStructure(bytes: Buffer): DocxStructure {
       : tables === 0 && textBoxes === 0 && columns <= 1 && headerChars === 0 && footerChars === 0
         ? 'flow'
         : 'structural';
-  if (kind === 'unsupported' && total > 0) notes.unshift('Most of the text sits in text boxes: Save keeps a text version.');
+  if (kind === 'unsupported' && total > 0) notes.unshift('Most of the text sits in text boxes: Save keeps the clean version as a new .docx.');
 
   return { kind, lines: { total, editable }, tables, textBoxes, drawings, columns, headerChars, footerChars, math, hiddenRuns, whiteRuns, tinyRuns, notes };
 }
@@ -132,7 +132,7 @@ function marginChars(bytes: Buffer): { headerChars: number; footerChars: number 
  * so `withNote: false` keeps the line short.
  */
 export function describeStructure(s: DocxStructure, opts: { withNote?: boolean } = {}): string {
-  if (s.kind === 'unsupported') return 'This file cannot be edited in place: Save keeps a text version.';
+  if (s.kind === 'unsupported') return 'This file cannot be edited in place: Save keeps the clean version as a new .docx.';
   const lines = `${s.lines.editable} of ${s.lines.total} lines`;
   if (s.kind === 'flow') return `This file: editable in place, ${lines}.`;
   const note = opts.withNote === false ? '' : ` — ${s.notes[0] ?? 'some parts are not paragraphs'}`;

@@ -49,7 +49,9 @@ export const RunsPage: FC<RunsProps> = ({ runs, funnel, fetchRun, flash }) => {
   const earlierFailed = earlier.filter((r) => r.status === 'FAILED').length;
   return (
     <Layout title="Runs" active="runs">
-      <PageHeader title="Runs" meta={`last ${runs.length}`} actions={<FetchNowButton run={fetchRun} />} />
+      <PageHeader title="Runs" meta={`last ${runs.length}`} actions={<FetchNowButton run={fetchRun} />}>
+        What the search kept and why, and every scheduled run.
+      </PageHeader>
       <Flash flash={flash} />
 
       {funnelShown && <FunnelCard {...funnel} />}

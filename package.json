@@ -1,8 +1,8 @@
 {
   "name": "applypack",
-  "version": "2.39.0",
+  "version": "2.42.0",
   "private": true,
-  "description": "Runs on your own computer with npm start: an AI console for the whole job search that finds the postings, checks they're real, scores your resume without flattering it, drafts the cover letter, tracks the application. 33 sources, 5 swappable AI backends, your data in a Postgres of its own, Docker on a VPS if you like.",
+  "description": "Runs on your own computer with npm start: an AI console for the whole job search that finds the postings, checks they're real, scores your resume without flattering it, drafts the cover letter, tracks the application. 33 sources, 6 swappable AI backends, your data in a Postgres of its own, Docker on a VPS if you like.",
   "license": "MIT",
   "author": "Nazar Boyko (https://github.com/nazboyko)",
   "repository": {
@@ -60,7 +60,7 @@
     "@prisma/client": "^6.1.0",
     "@xmldom/xmldom": "0.9.12",
     "docx": "9.7.2",
-    "dotenv": "^18.0.3",
+    "dotenv": "^18.0.4",
     "embedded-postgres": "16.14.0-beta.17",
     "hono": "^4.13.9",
     "jszip": "3.10.2",

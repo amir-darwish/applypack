@@ -115,12 +115,41 @@ test('a wrapped PDF bullet is joined back into one bullet', () => {
   );
 });
 
-test('a trailing tech-stack line joins its role instead of becoming one', () => {
+test('a trailing tech-stack line joins its role, after its bullets, instead of becoming one', () => {
   for (const text of [DOCX_STYLE, PDF_STYLE]) {
     const work = structureFromText(text).work;
     assert.equal(work.length, 2, 'no phantom third role');
-    assert.match(work[0]?.summary ?? '', /Technology Stack: PHP, Laravel, MySQL\./);
+    assert.match(work[0]?.after ?? '', /Technology Stack: PHP, Laravel, MySQL\./);
+    assert.equal(work[0]?.summary, null, 'not a summary: the resume writes it after the bullets');
   }
+});
+
+test('the resume’s own section headings and the header lines no field reads are kept', () => {
+  const r = structureFromText(
+    'Nazar Boyko\nSenior Software Engineer\nAustin, Texas ∙ nb@example.com\nFully Work Authorized ∙ No Visa Sponsorship Required\n\nKEY SKILLS\nProgramming: PHP, Go\n\nPROFESSIONAL EXPERIENCE\nV Shred\nEngineer Jan 2020 – Present\n• Built things.',
+  );
+  assert.deepEqual(r.headings, { skills: 'KEY SKILLS', work: 'PROFESSIONAL EXPERIENCE' });
+  assert.deepEqual(r.basics.lines, ['Fully Work Authorized ∙ No Visa Sponsorship Required']);
+  assert.equal(r.basics.email, 'nb@example.com');
+});
+
+test('a skills line in capitals is a list, not a section heading', () => {
+  const r = structureFromText('Alex\n\nKEY SKILLS\nProgramming: PHP, Go\nAWS, S3, EC2, SQS, RDS, OWASP\n');
+  assert.deepEqual(Object.keys(r.headings), ['skills']);
+  assert.deepEqual(r.skills.at(-1)?.keywords, ['AWS', 'S3', 'EC2', 'SQS', 'RDS', 'OWASP']);
+});
+
+test('a title with its own separators is the label once, not a header line too', () => {
+  const r = structureFromText(
+    'Nazar Boyko\nProduct Lead - PHP/Laravel Engineer | Roadmap Ownership & Architecture\nAustin, Texas ∙ nb@example.com\nFully Work Authorized ∙ No Visa Sponsorship Required\n\nSKILLS\nPHP, Go',
+  );
+  assert.equal(r.basics.label, 'Product Lead - PHP/Laravel Engineer | Roadmap Ownership & Architecture');
+  assert.deepEqual(r.basics.lines, ['Fully Work Authorized ∙ No Visa Sponsorship Required']);
+});
+
+test('a long line marked as a heading is content, not a heading', () => {
+  const r = structureFromText('Alex\n\n## SKILLS PHP 8, Laravel, Docker MySQL, Redis ## EDUCATION BSc Computer Science, State University, 2012 | ## EXPERIENCE Marketplace Co\n');
+  assert.equal(Object.keys(r.headings).length, 0);
 });
 
 test('a labelled skills line becomes a group; a bare list becomes an unnamed one', () => {
@@ -160,4 +189,31 @@ test('joinWrapped keeps a finished sentence apart and joins a broken one', () =>
   assert.deepEqual(joinWrapped(['A line broken at the page', 'width, like this.']), ['A line broken at the page width, like this.']);
   assert.deepEqual(joinWrapped(['• First bullet', '• Second bullet']), ['• First bullet', '• Second bullet']);
   assert.deepEqual(joinWrapped(['Company,', 'Somewhere']), ['Company, Somewhere']);
+});
+
+test('a heading in ordinary case is a section when the whole line is one', () => {
+  const r = structureFromText(
+    'Dana Ruiz\nLisbon, Portugal | dana@example.com\n\nSummary\nFull-stack engineer.\n\nWork experience:\nSenior Developer - Harborline, 2022-present\n- Built the dispatch API\n\nEducation\nBSc Computer Science, 2019\n\nSkills & Tools\nTypeScript, React, PostgreSQL\n',
+  );
+  assert.deepEqual(r.headings, { summary: 'Summary', work: 'Work experience', education: 'Education', skills: 'Skills & Tools' });
+  assert.equal(r.basics.summary, 'Full-stack engineer.');
+  assert.equal(r.work.length, 1);
+  assert.deepEqual(r.basics.lines, []);
+});
+
+test('a wrapped line that opens with a section word stays content', () => {
+  const r = structureFromText('Alex\n\nSUMMARY\nTen years of backend work, with\nExperience in payments\nand logistics.\n');
+  assert.equal(Object.keys(r.headings).length, 1);
+  assert.match(r.basics.summary ?? '', /Experience in payments/);
+});
+
+test('a contact line that opens with the title gives the label, and a date takes its comma with it', () => {
+  const r = structureFromText(
+    'Dana Ruiz\nSenior Full-Stack Developer | dana@example.com | github.com/dana | Lisbon, Portugal\n\nExperience\nSenior Developer - Harborline (remote), 2022-present\n- Built the dispatch API\n',
+  );
+  assert.equal(r.basics.label, 'Senior Full-Stack Developer');
+  assert.deepEqual(r.basics.lines, []);
+  assert.equal(r.basics.location, 'Lisbon, Portugal');
+  assert.equal(r.work[0]?.position, 'Senior Developer - Harborline (remote)');
+  assert.equal(r.work[0]?.startDate, '2022');
 });

@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import PDFDocument from 'pdfkit';
 import type { JsonResume } from '../json-resume';
-import { planRender, type Run } from './sections';
-import { BUNDLED_FAMILY, isMetricTwin, type RenderKnobs } from './knobs';
+import { planRender, type RenderPlan, type Run } from './sections';
+import { BUNDLED_FAMILY, isMetricTwin, lookFor, type RenderKnobs } from './knobs';
 
 /*
  * The clean single-column .pdf (ADR 0039), the twin of clean-docx.ts: the same
@@ -34,6 +34,9 @@ const BULLET_INDENT_PT = 10;
 const RULE_WIDTH = 0.6;
 /** Least space between the two halves of a right-aligned line. */
 const GUTTER_PT = 12;
+/** A skills table's label column when the page did not say, and the space between the two columns. */
+const DEFAULT_LABEL_COLUMN_PT = 110;
+const PAIR_GAP_PT = 8;
 
 /**
  * pdfkit paginates for itself only when it is doing the layout. Every line and
@@ -44,7 +47,11 @@ function fitOnPage(doc: PDFKit.PDFDocument, needed: number): void {
 }
 
 export async function renderPdf(resume: JsonResume, knobs: RenderKnobs): Promise<Buffer> {
-  const plan = planRender(resume, knobs);
+  return drawPdf(planRender(resume, knobs), knobs);
+}
+
+/** The .pdf of a plan — the twin of clean-docx.ts's `drawDocx`. */
+export async function drawPdf(plan: RenderPlan, knobs: RenderKnobs): Promise<Buffer> {
   const name = plan.header.name ?? 'Resume';
   const doc = new PDFDocument({
     size: knobs.page,
@@ -75,37 +82,90 @@ export async function renderPdf(resume: JsonResume, knobs: RenderKnobs): Promise
 
   const accent = knobs.accentHex ? `#${knobs.accentHex}` : INK;
   const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const looks = knobs.looks;
+  // A run in the look its kind of line has on the user's own page, when the
+  // page said (pdf-layout.ts); otherwise in ours — the .docx makes the same call.
   const setRun = (r: Run, size: number) => {
-    doc.font(r.bold ? 'bold' : 'body').fontSize(size).fillColor(r.muted ? MUTED : INK);
+    const look = lookFor(knobs, r.role);
+    const bold = look ? look.bold : r.bold;
+    const colour = look?.color ? `#${look.color}` : r.accent && knobs.accentHex ? accent : r.muted ? MUTED : INK;
+    doc.font(bold ? 'bold' : 'body').fontSize(look?.pt ?? size).fillColor(colour);
   };
+  const align = knobs.nameCentered ? 'center' : 'left';
+  const bodyAlign = looks?.justify ? 'justify' : 'left';
 
   if (plan.header.name) {
-    doc.font('bold').fontSize(knobs.namePt).fillColor(INK)
-      .text(plan.header.name, { align: knobs.nameCentered ? 'center' : 'left' });
+    setRun({ text: '', bold: true, role: 'name' }, knobs.namePt);
+    doc.fontSize(knobs.namePt).text(plan.header.name, { align });
   }
   if (plan.header.label) {
-    doc.font('body').fontSize(knobs.headingPt).fillColor(MUTED)
-      .text(plan.header.label, { align: knobs.nameCentered ? 'center' : 'left' });
+    setRun({ text: '', muted: true, role: 'label' }, looks ? knobs.bodyPt : knobs.headingPt);
+    doc.text(plan.header.label, { align });
   }
   if (plan.header.contact) {
-    doc.font('body').fontSize(knobs.bodyPt).fillColor(MUTED)
-      .text(plan.header.contact, { align: knobs.nameCentered ? 'center' : 'left' });
+    const runs = plan.header.contactRuns;
+    const total = runs.reduce((w, r) => { setRun(r, knobs.bodyPt); return w + doc.widthOfString(r.text); }, 0);
+    if (looks && total <= width) {
+      // In runs, so a link keeps the colour the page gave it — placed by hand:
+      // pdfkit's continued text overprints itself when it is centred.
+      const y = doc.y;
+      let x = doc.page.margins.left + (align === 'center' ? (width - total) / 2 : 0);
+      for (const r of runs) {
+        setRun(r, knobs.bodyPt);
+        doc.text(r.text, x, y, { lineBreak: false });
+        x += doc.widthOfString(r.text);
+      }
+      doc.x = doc.page.margins.left;
+      doc.y = y + doc.currentLineHeight(true);
+    } else {
+      doc.font('body').fontSize(knobs.bodyPt).fillColor(MUTED).text(plan.header.contact, { align });
+    }
   }
+  for (const line of plan.header.extra) {
+    setRun({ text: '', muted: true, role: 'contact' }, knobs.bodyPt);
+    doc.text(line, { align });
+  }
+  if (looks?.headerRule) {
+    const y = doc.y + 3;
+    doc.moveTo(doc.page.margins.left, y).lineTo(doc.page.width - doc.page.margins.right, y).strokeColor(INK).lineWidth(RULE_WIDTH).stroke();
+    doc.y = y + 2;
+  }
+  const headingRule = looks ? looks.headingRule : true;
+  const headingColour = lookFor(knobs, 'heading')?.color;
 
   for (const block of plan.blocks) {
     switch (block.kind) {
       case 'heading': {
         doc.moveDown(0.5);
-        doc.font('bold').fontSize(knobs.headingPt).fillColor(accent);
+        const colour = headingColour ? `#${headingColour}` : accent;
+        doc.font(lookFor(knobs, 'heading')?.bold === false ? 'body' : 'bold').fontSize(knobs.headingPt).fillColor(colour);
         // A heading alone at the foot of a page is an orphan: take the rule
         // and one line of what follows with it.
         fitOnPage(doc, doc.currentLineHeight(true) * 3);
-        doc.text(block.text.toUpperCase());
-        const y = doc.y + 1;
-        doc.moveTo(doc.page.margins.left, y).lineTo(doc.page.width - doc.page.margins.right, y)
-          .strokeColor(accent).lineWidth(RULE_WIDTH).stroke();
+        doc.text(block.text.toUpperCase(), doc.page.margins.left, doc.y, { width });
+        if (headingRule) {
+          const y = doc.y + 1;
+          doc.moveTo(doc.page.margins.left, y).lineTo(doc.page.width - doc.page.margins.right, y)
+            .strokeColor(colour).lineWidth(RULE_WIDTH).stroke();
+        }
         doc.moveDown(0.3);
         doc.fillColor(INK);
+        break;
+      }
+      case 'pair': {
+        // The label right-aligned in its own column, the values wrapping in theirs, both from the same top.
+        const column = looks?.labelColumnPt ?? DEFAULT_LABEL_COLUMN_PT;
+        const left = doc.page.margins.left;
+        setRun({ text: '', role: 'skillValues' }, knobs.bodyPt);
+        fitOnPage(doc, doc.heightOfString(block.values, { width: width - column }));
+        const y = doc.y;
+        setRun({ text: '', bold: true, role: 'skillLabel' }, knobs.bodyPt);
+        doc.text(block.label, left, y, { width: column - PAIR_GAP_PT, align: 'right' });
+        const labelEnd = doc.y;
+        setRun({ text: '', role: 'skillValues' }, knobs.bodyPt);
+        doc.text(block.values, left + column, y, { width: width - column, align: 'left' });
+        doc.x = left;
+        doc.y = Math.max(labelEnd, doc.y);
         break;
       }
       case 'line': {
@@ -148,7 +208,7 @@ export async function renderPdf(resume: JsonResume, knobs: RenderKnobs): Promise
         break;
       }
       case 'bullet': {
-        doc.font('body').fontSize(knobs.bodyPt).fillColor(INK);
+        setRun({ text: '', role: 'body' }, knobs.bodyPt);
         fitOnPage(doc, doc.currentLineHeight(true));
         // The hanging indent pdfkit's `indent` does not give: the marker goes
         // in the gutter and the text wraps inside its own column, both drawn
@@ -157,13 +217,14 @@ export async function renderPdf(resume: JsonResume, knobs: RenderKnobs): Promise
         doc.text('•', doc.page.margins.left, y, { lineBreak: false, width: BULLET_INDENT_PT });
         doc.text(block.text, doc.page.margins.left + BULLET_INDENT_PT, y, {
           width: width - BULLET_INDENT_PT,
-          align: 'left',
+          align: bodyAlign,
         });
         doc.x = doc.page.margins.left;
         break;
       }
       case 'paragraph':
-        doc.font('body').fontSize(knobs.bodyPt).fillColor(INK).text(block.text, doc.page.margins.left, doc.y, { width });
+        setRun({ text: '', role: 'body' }, knobs.bodyPt);
+        doc.text(block.text, doc.page.margins.left, doc.y, { width, align: bodyAlign });
         doc.x = doc.page.margins.left;
         break;
       case 'gap':

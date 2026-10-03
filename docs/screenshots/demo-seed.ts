@@ -1,7 +1,7 @@
 import { prisma } from '../../src/db';
 import { createManualJob } from '../../src/jobs/manual-job';
-import { createProfile } from '../../src/profiles';
-import { setSetupCompleted, setAiEngineConfig } from '../../src/settings';
+import { createProfile, deleteProfile, listProfiles, setActiveProfile } from '../../src/profiles';
+import { setAiEngineConfig, setDiscoveryEnabled, setFetchingEnabled, setHnParserEnabled, setSetupCompleted } from '../../src/settings';
 import { JobStatus } from '@prisma/client';
 
 const DAY = 86_400_000;
@@ -100,9 +100,62 @@ async function main(): Promise<void> {
     });
     console.log(`job ${res.job.id}  ${r.fit}  ${r.status}  ${r.title}`);
   }
+  // The scratch install never reads a real board: a tick finds nothing to fetch and spends no AI.
+  await prisma.company.updateMany({ where: { atsType: { not: 'MANUAL' } }, data: { active: false } });
+  await setDiscoveryEnabled(false);
+  await setHnParserEnabled(false);
+  // A fresh install starts paused; the demo watches (with every source off, a tick finds nothing).
+  await setFetchingEnabled(true);
+  // The seeded search is the primary; the install's blank one would put the "every search is empty" banner on /jobs.
+  await setActiveProfile(profile.id);
+  for (const p of await listProfiles()) if (p.id !== profile.id) await deleteProfile(p.id);
+  await seedHistory();
   await setSetupCompleted();
-  console.log(`profile ${profile.id} active; setup completed`);
+  console.log(`profile ${profile.id} primary; setup completed`);
   await prisma.$disconnect();
+}
+
+/** Four months of the search funnel and the latest runs, so the Overview's chart and pipeline health have a past. */
+async function seedHistory(): Promise<void> {
+  let seed = 42;
+  const rand = (): number => ((seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648) / 2_147_483_648);
+  const HISTORY_DAYS = 120;
+  const today = Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate());
+  for (let ago = HISTORY_DAYS - 1; ago >= 0; ago--) {
+    const day = new Date(today - ago * DAY);
+    const weekend = day.getUTCDay() === 0 || day.getUTCDay() === 6;
+    // Today is half a day long; the search grew a little sharper over the four months.
+    const share = (ago === 0 ? 0.5 : 1) * (weekend ? 0.55 : 1);
+    const fetched = Math.round((380 + 140 * rand()) * share);
+    const rejected = Math.round(fetched * (0.7 + 0.08 * rand()));
+    const duplicate = Math.round(fetched * 0.06 * rand());
+    const classified = Math.max(0, fetched - rejected - duplicate);
+    const matched = Math.min(classified, Math.max(0, Math.round((1 + 4.5 * (1 - ago / HISTORY_DAYS) + 3.5 * (rand() - 0.45)) * share)));
+    const dismissed = classified - matched;
+    const counts = {
+      fetched, filterRejected: rejected, duplicate, classified, matched, alerted: matched, dismissed,
+      rejectedTitle: Math.round(rejected * 0.58), rejectedPlace: Math.round(rejected * 0.27),
+      rejectedWorkplace: Math.round(rejected * 0.1), rejectedExcluded: rejected - Math.round(rejected * 0.58) - Math.round(rejected * 0.27) - Math.round(rejected * 0.1),
+      dismissedLowFit: Math.round(dismissed * 0.8), dismissedLocation: dismissed - Math.round(dismissed * 0.8),
+    };
+    await prisma.funnelDay.upsert({ where: { day }, create: { day, counts }, update: { counts } });
+  }
+  const HOUR = DAY / 24;
+  for (let h = 12; h >= 0; h--) {
+    const startedAt = new Date(Math.floor(now / HOUR) * HOUR - h * HOUR + 17 * 60_000);
+    if (startedAt.getTime() > now) continue;
+    const fetched = 12 + Math.round(30 * rand());
+    const matched = rand() > 0.7 ? 1 : 0;
+    await prisma.cronRun.create({
+      data: { name: 'fetch', startedAt, finishedAt: new Date(startedAt.getTime() + 94_000), status: 'OK',
+        stats: { fetched, persisted: 2 + Math.round(4 * rand()), classified: 2 + matched, matched, alerted: matched } },
+    });
+  }
+  const morning = new Date(today + 8 * HOUR);
+  const digestAt = morning.getTime() < now ? morning : new Date(morning.getTime() - DAY);
+  await prisma.cronRun.create({ data: { name: 'digest', startedAt: digestAt, finishedAt: new Date(digestAt.getTime() + 2_000), status: 'OK', stats: { count: 6 } } });
+  const sunday = new Date(today - new Date(today).getUTCDay() * DAY + 3 * HOUR);
+  await prisma.cronRun.create({ data: { name: 'cleanup', startedAt: sunday, finishedAt: new Date(sunday.getTime() + 4_000), status: 'OK', stats: { deleted: 41 } } });
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

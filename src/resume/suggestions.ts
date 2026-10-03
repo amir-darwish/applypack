@@ -18,6 +18,7 @@ import { briefForPosting } from './brief';
 import { readBreakdown } from './score';
 import { loadKeywordMatcher } from './keyword-matcher';
 import { gateActions, gateRemovals } from './replacement-gate';
+import { rewriteRefusedLeads } from './rewrite';
 import { appliedWording, freshActions, rewritesOfApplied } from './applied';
 import { domainMismatch } from './domain';
 import { getLatestMatchForJob, getLatestVerificationContext, getResumeIndustries, listFacts, updateMatchSuggestions } from './store';
@@ -115,7 +116,7 @@ export async function suggestForMatch(
     },
     'resume: suggestions added',
   );
-  return row;
+  return rewriteRefusedLeads(row, job);
 }
 
 function isEmpty(s: MatchSuggestions): boolean {

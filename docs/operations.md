@@ -8,7 +8,7 @@
 | Page | URL | What it's for |
 | --- | --- | --- |
 | First run | `/welcome` | The five setup steps; `/` redirects here until you finish or skip |
-| Overview | `/` | Four counters by status (each opens its jobs), recent alerts, pipeline health, pause/resume, Fetch now |
+| Overview | `/` | Four status cards with their last fortnight (each opens its jobs), the matches chart (7–180 days, by technology) with the search funnel under it, recent alerts, pipeline health, recent activity, jobs by stack, pause/resume, Fetch now |
 | Jobs | `/jobs` | Filterable, sortable list of everything fetched |
 | Paste a job | `/jobs/new` | Save a posting by hand (LinkedIn, email, referral); it gets classified like any other |
 | Job detail | `/jobs/:id` | Four tabs — the posting with the AI verdict, resume match, cover letter, "is it real?" — beside status actions, details and tracking |
@@ -95,7 +95,7 @@ schedule saved, the search runs every hour and both summaries go out at
 | `mm * * * *` † | fetch | Every beat: re-check stored France Travail offers, and send what is waiting — matches held outside your alert hours, while Alerts were off or after a failed send, and careers-page changes not reported yet. Then, if fetching is on and the schedule says this hour searches: pull all sources → filter → classify → alert |
 | `0 * * * *` | digest | At each of your digest times: a recap of the new and alerted jobs since the last recap, to your alert targets |
 | `0 * * * *` | stale-applications | At your first digest time of the day: a nudge for applications quiet for 14+ days |
-| `0 3 * * 0` | cleanup | Drop dismissed jobs older than 30 days that you do not track, expired screenings and runs older than 90 days; trim usage counters to 60 days |
+| `0 3 * * 0` | cleanup | Drop dismissed jobs older than 30 days that you do not track, AI-call ledger rows older than 400 days, expired screenings and runs older than 90 days; check for a newer release when that is switched on |
 | `mm 4 * * 0` † | discovery | Re-probe pending company candidates |
 | `mm 6 1 * *` † | hn-hiring | Pull the monthly HN "Who is hiring" thread |
 

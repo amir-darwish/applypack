@@ -10,6 +10,8 @@ import {
   buildGeminiCliArgs,
   buildAgyCliArgs,
   buildOllamaChatBody,
+  CLAUDE_CODE_ISOLATION_ENV,
+  CLI_EFFORT_ENV,
   CLI_PROVIDER_ENV_KEYS,
   CLI_THINKING_CAP_ENV,
   cliRetryable,
@@ -470,13 +472,24 @@ test('the CLI reply keeps what the call spent — API time, output and thinking 
   assert.deepEqual(parseClaudeCodeOutput(ok('{}')).usage, { apiMs: undefined, outputTokens: undefined, thinkingTokens: undefined, turns: undefined });
 });
 
-test('tool-free CLI calls get the thinking cap; the verify call keeps the CLI default', () => {
-  assert.deepEqual(cliThinkingCap(false), { MAX_THINKING_TOKENS: '0' });
-  assert.deepEqual(cliThinkingCap(undefined), { MAX_THINKING_TOKENS: '0' });
+test('tool-free CLI calls get the thinking cap and an effort it allows; the verify call keeps the CLI default', () => {
+  const capped = { MAX_THINKING_TOKENS: '0', CLAUDE_CODE_EFFORT_LEVEL: 'high' };
+  assert.deepEqual(cliThinkingCap(false), capped);
+  assert.deepEqual(cliThinkingCap(undefined), capped);
   assert.deepEqual(cliThinkingCap(true), {});
-  assert.ok(CLI_PROVIDER_ENV_KEYS.claude_code?.includes(CLI_THINKING_CAP_ENV), 'the allowlist must let the cap through');
+  for (const key of [CLI_THINKING_CAP_ENV, CLI_EFFORT_ENV]) {
+    assert.ok(CLI_PROVIDER_ENV_KEYS.claude_code?.includes(key), `the allowlist must let ${key} through`);
+  }
+  // The user's own effort (xhigh in ~/.claude/settings.json) is overridden, never inherited.
   const env = buildCliEnv(CLI_PROVIDER_ENV_KEYS.claude_code ?? [], { PATH: '/bin', ...cliThinkingCap(false) });
   assert.equal(env.MAX_THINKING_TOKENS, '0');
+  assert.equal(env.CLAUDE_CODE_EFFORT_LEVEL, 'high');
+});
+
+test('every claude_code call reads no CLAUDE.md and no memory, and the allowlist lets that through', () => {
+  const env = buildCliEnv(CLI_PROVIDER_ENV_KEYS.claude_code ?? [], { PATH: '/bin', ...CLAUDE_CODE_ISOLATION_ENV });
+  assert.equal(env.CLAUDE_CODE_DISABLE_CLAUDE_MDS, '1');
+  assert.equal(env.CLAUDE_CODE_DISABLE_AUTO_MEMORY, '1');
 });
 
 test('the web tools filter through code execution only where the model can call tools programmatically (#161)', () => {

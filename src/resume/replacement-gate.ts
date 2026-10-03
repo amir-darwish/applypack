@@ -77,6 +77,17 @@ export interface RemovalGateReport {
 const BLOCK_NOTE = ' · not applied — ';
 const WARN_NOTE = ' · check: ';
 
+/**
+ * A refused wording's reason, read back off `why`: the gate writes it there and
+ * nowhere else, so a stored row carries it too. `refusal` is null when the
+ * action was not refused, and `why` is then returned whole.
+ */
+export function splitRefusal(action: Pick<MatchAction, 'why' | 'replacement'>): { why: string; refusal: string | null } {
+  const at = action.why.indexOf(BLOCK_NOTE);
+  if (action.replacement !== null || at < 0) return { why: action.why, refusal: null };
+  return { why: action.why.slice(0, at), refusal: action.why.slice(at + BLOCK_NOTE.length) };
+}
+
 /** Confirmed facts as lines the fact check can index — the same shape the cover letter feeds it. */
 function factLines(facts: FactLike[]): string[] {
   return facts

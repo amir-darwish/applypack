@@ -359,6 +359,22 @@ const SUGGEST_INPUT = {
   hardRequirements: [{ requirement: 'US work authorization', status: 'unknown' as const }],
 };
 
+test('summary rules: a pitch of 2-4 sentences, never a claim the resume cannot back', () => {
+  for (const system of [buildMatchPrompt('resume', JOB, 'full').system, buildSuggestionsPrompt('resume', JOB, SUGGEST_INPUT).system]) {
+    assert.match(system, /SUMMARY RULES/);
+    assert.match(system, /the BULLET RULES do not apply to it/);
+    assert.match(system, /2-4 sentences, three is the norm, at most ~75 words/);
+    assert.match(system, /WHO — the posting's role in its own words/);
+    assert.match(system, /PROOF — the strongest result/);
+    // The live failure: "PHP and\/or Java" mirrored into the summary, refused whole.
+    assert.match(system, /"PHP and\/or Java"[^.]*name only the one this resume has/);
+    assert.match(system, /years of experience exactly as the resume states them/);
+    // No summary at all is still owed one, as an addition under the headline.
+    assert.match(system, /A resume with no summary gets one as an addition/);
+  }
+  bothVariants(/off when it points elsewhere or the resume has none/);
+});
+
 test('suggestions prompt carries the stored verdicts and forbids re-judging them', () => {
   const { system, user } = buildSuggestionsPrompt('RESUME BODY', JOB, SUGGEST_INPUT);
   assert.match(system, /THE VERDICTS ARE FIXED/);
@@ -1059,6 +1075,25 @@ test('the rewrite prompt keeps the target and asks only for another sentence', (
   assert.match(user, /Wording the user rejected: Hardened the checkout flow\./);
   assert.match(user, /- WordPress \| must \| cannot_claim/);
   assert.match(user, /RESUME BODY/);
+});
+
+test('a rewrite knows which rules its section follows', () => {
+  const { system } = buildRewritePrompt('resume', JOB, { action: ACTION, keywords: [] });
+  assert.match(system, /a "summary" suggestion follows the SUMMARY RULES/);
+  assert.match(system, /a "title" suggestion is the headline alone/);
+  assert.match(system, /SUMMARY RULES/);
+  assert.match(system, /BULLET RULES — every other wording you return/);
+});
+
+test('a refused wording is written again with the refusal in sight', () => {
+  const { system, user } = buildRewritePrompt('resume', JOB, {
+    action: { ...ACTION, section: 'summary', replacement: null },
+    keywords: [],
+    refusal: 'claims "Java", which this resume has no evidence for',
+  });
+  assert.match(system, /REFUSED the last wording, that reason names what to leave out/);
+  assert.match(user, /The application REFUSED the last wording: claims "Java", which this resume has no evidence for/);
+  assert.doesNotMatch(user, /Wording the user rejected/);
 });
 
 test('an addition states its anchor instead of a span to replace', () => {
